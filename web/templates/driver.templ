@@ -1,0 +1,58 @@
+package templates
+
+import "strconv"
+import "github.com/buscompany/bus_fleet/internal/domain"
+
+// MyTripsPage is the driver's view: their own trips and nothing else. Mobile-first —
+// one card per trip, large touch targets. Step 4 turns this into the PWA.
+templ MyTripsPage(v View, trips []domain.DriverTrip) {
+	@Page(v, v.T("nav.my_trips")) {
+		<ul class="space-y-3">
+			for _, t := range trips {
+				<li class="rounded border border-slate-200 bg-white p-4">
+					<div class="flex flex-wrap items-baseline justify-between gap-2">
+						<span class="text-base font-semibold">{ t.Origin } → { t.Destination }</span>
+						<span class="rounded bg-slate-100 px-2 py-0.5 text-xs">{ v.TripStatus(t.Status) }</span>
+					</div>
+					<p class="mt-1 text-sm text-slate-600">
+						{ v.FmtTime(t.ScheduledStart) } – { v.FmtClock(t.ScheduledEnd) } · { t.BusPlate }
+					</p>
+					if t.ActualStart != nil {
+						<p class="mt-1 text-sm text-slate-600">
+							{ v.T("field.actual_start") }: { v.FmtTimePtr(t.ActualStart) }
+							if t.ActualEnd != nil {
+								· { v.T("field.actual_end") }: { v.FmtTimePtr(t.ActualEnd) }
+							}
+						</p>
+					}
+					if t.Notes != nil {
+						<p class="mt-1 text-sm text-slate-600">{ *t.Notes }</p>
+					}
+					<div class="mt-3">
+						switch t.Status {
+							case domain.TripPlanned:
+								@BigActionButton(v, "/my/trips/"+strconv.FormatInt(t.ID, 10)+"/start", "driver.start")
+							case domain.TripInProgress:
+								@BigActionButton(v, "/my/trips/"+strconv.FormatInt(t.ID, 10)+"/finish", "driver.finish")
+							default:
+								<p class="text-sm text-slate-500">{ v.T("driver.no_action") }</p>
+						}
+					</div>
+				</li>
+			}
+			if len(trips) == 0 {
+				<li class="rounded border border-slate-200 bg-white p-4 text-slate-500">{ v.T("driver.no_trips") }</li>
+			}
+		</ul>
+	}
+}
+
+// BigActionButton is a full-width touch target for the phone view.
+templ BigActionButton(v View, action, labelKey string) {
+	<form method="post" action={ templ.SafeURL(action) }>
+		@CSRFField(v)
+		<button type="submit" class="w-full rounded bg-slate-900 px-4 py-3 text-base font-medium text-white hover:bg-slate-700">
+			{ v.T(labelKey) }
+		</button>
+	</form>
+}

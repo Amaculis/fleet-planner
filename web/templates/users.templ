@@ -1,0 +1,99 @@
+package templates
+
+import "strconv"
+import "github.com/buscompany/bus_fleet/internal/domain"
+
+templ UsersPage(v View, users []domain.UserListItem) {
+	@Page(v, v.T("users.title")) {
+		<p class="mb-4"><a href="/users/new" class={ linkButton }>{ v.T("users.new") }</a></p>
+		<div class="overflow-x-auto">
+			<table class="w-full text-left text-sm">
+				<thead class="border-b border-slate-300">
+					<tr>
+						<th class="py-2 pr-4">{ v.T("field.email") }</th>
+						<th class="py-2 pr-4">{ v.T("field.role") }</th>
+						<th class="py-2 pr-4">{ v.T("field.driver") }</th>
+						<th class="py-2 pr-4">{ v.T("field.active") }</th>
+						<th class="py-2"><span class="sr-only">{ v.T("common.actions") }</span></th>
+					</tr>
+				</thead>
+				<tbody>
+					for _, u := range users {
+						<tr class="border-b border-slate-100">
+							<td class="py-2 pr-4 font-medium">{ u.Email }</td>
+							<td class="py-2 pr-4">{ v.Role(u.Role) }</td>
+							<td class="py-2 pr-4">{ v.Str(u.DriverName) }</td>
+							<td class="py-2 pr-4">{ yesNo(v, u.IsActive) }</td>
+							<td class="py-2 whitespace-nowrap">
+								if u.ID != v.Identity.UserID {
+									if u.IsActive {
+										@PostButton(v, "/users/"+strconv.FormatInt(u.ID, 10)+"/deactivate", "users.deactivate", dangerButton)
+									} else {
+										@PostButton(v, "/users/"+strconv.FormatInt(u.ID, 10)+"/activate", "users.activate", linkButton)
+									}
+								}
+								<a href={ templ.SafeURL("/users/" + strconv.FormatInt(u.ID, 10) + "/password") } class={ linkButton }>
+									{ v.T("users.set_password") }
+								</a>
+							</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		</div>
+	}
+}
+
+templ UserFormPage(v View, form UserForm) {
+	@Page(v, v.T("users.new")) {
+		<form method="post" action="/users" class="max-w-md space-y-4">
+			@CSRFField(v)
+			@Field(v, "email", "field.email") {
+				<input id="email" name="email" type="email" required maxlength="254" autocomplete="off" class={ inputClass }/>
+			}
+			@Field(v, "password", "field.password") {
+				<input id="password" name="password" type="password" required minlength="12" maxlength="1024"
+					autocomplete="new-password" class={ inputClass }/>
+			}
+			<p class="text-xs text-slate-500">{ v.T("users.password_hint") }</p>
+			@Field(v, "role", "field.role") {
+				<select id="role" name="role" required class={ inputClass }>
+					for _, role := range []domain.Role{domain.RoleDispatcher, domain.RoleAdmin, domain.RoleDriver} {
+						<option value={ string(role) }>{ v.Role(role) }</option>
+					}
+				</select>
+			}
+			@Field(v, "driver_id", "field.driver") {
+				<select id="driver_id" name="driver_id" class={ inputClass }>
+					<option value="">{ v.T("common.unset") }</option>
+					for _, d := range form.Drivers {
+						<option value={ strconv.FormatInt(d.ID, 10) }>{ d.FullName }</option>
+					}
+				</select>
+			}
+			<p class="text-xs text-slate-500">{ v.T("users.driver_hint") }</p>
+			<div class="flex gap-3">
+				<button type="submit" class={ primaryButton }>{ v.T("common.save") }</button>
+				<a href="/users" class={ linkButton }>{ v.T("common.cancel") }</a>
+			</div>
+		</form>
+	}
+}
+
+templ UserPasswordPage(v View, user domain.User) {
+	@Page(v, v.T("users.set_password")) {
+		<form method="post" action={ templ.SafeURL("/users/" + strconv.FormatInt(user.ID, 10) + "/password") } class="max-w-md space-y-4">
+			@CSRFField(v)
+			<p class="text-sm">{ user.Email }</p>
+			@Field(v, "password", "field.password") {
+				<input id="password" name="password" type="password" required minlength="12" maxlength="1024"
+					autocomplete="new-password" class={ inputClass }/>
+			}
+			<p class="text-xs text-slate-500">{ v.T("users.password_reset_hint") }</p>
+			<div class="flex gap-3">
+				<button type="submit" class={ primaryButton }>{ v.T("common.save") }</button>
+				<a href="/users" class={ linkButton }>{ v.T("common.cancel") }</a>
+			</div>
+		</form>
+	}
+}

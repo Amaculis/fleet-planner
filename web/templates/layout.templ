@@ -1,0 +1,63 @@
+package templates
+
+import "github.com/buscompany/bus_fleet/internal/i18n"
+import "github.com/buscompany/bus_fleet/internal/domain"
+
+// Layout is the shell for every page. templ escapes every { expression } by default;
+// nothing here uses templ.Raw, so user data can never become markup.
+//
+// The script tags carry the per-request CSP nonce: the policy allows no inline handlers
+// and no external origin, so an injected script tag cannot execute. htmx is vendored
+// into /static/js — self-hosted, never a CDN.
+templ Layout(p *i18n.Printer, nonce string, title string) {
+	<!DOCTYPE html>
+	<html lang={ p.Locale() }>
+		<head>
+			<meta charset="utf-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+			<meta name="color-scheme" content="light dark"/>
+			<meta name="theme-color" content="#0f172a"/>
+			<meta name="mobile-web-app-capable" content="yes"/>
+			<meta name="apple-mobile-web-app-capable" content="yes"/>
+			<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+			<link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png"/>
+			<link rel="icon" href="/static/icons/icon-192.png" sizes="192x192" type="image/png"/>
+			<title>{ title } — { p.T("app.name") }</title>
+			<link rel="stylesheet" href="/static/css/app.css"/>
+			<link rel="manifest" href="/static/manifest.webmanifest"/>
+			<script nonce={ nonce } src="/static/js/htmx.min.js" defer></script>
+			<script nonce={ nonce } src="/static/js/app.js" defer></script>
+		</head>
+		<body class="min-h-screen bg-slate-50 text-slate-900 antialiased">
+			<a href="#main" class="sr-only focus:not-sr-only">{ p.T("app.skip_to_content") }</a>
+			<main id="main" class="mx-auto w-full max-w-5xl px-4 py-6">
+				{ children... }
+			</main>
+		</body>
+	</html>
+}
+
+// Nav is rendered only for authenticated users. Which links appear is presentation:
+// each target route is independently guarded by RequireRole on the server.
+templ Nav(p *i18n.Printer, csrf string, identity domain.Identity) {
+	<nav class="mb-6 flex flex-wrap items-center gap-4 border-b border-slate-200 pb-3">
+		<span class="font-semibold">{ p.T("app.name") }</span>
+		if identity.Role == domain.RoleDriver {
+			<a class="hover:underline" href="/my/trips">{ p.T("nav.my_trips") }</a>
+		} else {
+			<a class="hover:underline" href="/timeline">{ p.T("nav.timeline") }</a>
+			<a class="hover:underline" href="/trips">{ p.T("nav.trips") }</a>
+			<a class="hover:underline" href="/buses">{ p.T("nav.buses") }</a>
+			<a class="hover:underline" href="/drivers">{ p.T("nav.drivers") }</a>
+		}
+		if identity.Role == domain.RoleAdmin {
+			<a class="hover:underline" href="/users">{ p.T("nav.users") }</a>
+		}
+		<form class="ml-auto" method="post" action="/logout">
+			<input type="hidden" name="csrf_token" value={ csrf }/>
+			<button type="submit" class="rounded border border-slate-300 px-3 py-1 hover:bg-slate-100">
+				{ p.T("nav.logout") }
+			</button>
+		</form>
+	</nav>
+}

@@ -1,0 +1,10 @@
+.env
+.env.*
+.git
+.claude
+bin
+tmp
+node_modules
+*.md
+web/static/css/app.css
+web/static/js/htmx.min.js

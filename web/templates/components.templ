@@ -1,0 +1,69 @@
+package templates
+
+// Shared building blocks. Repeated markup lives here as components rather than being
+// copy-pasted between pages.
+
+// Page is the standard authenticated page: shell, nav, heading, flash message, content.
+templ Page(v View, title string) {
+	@Layout(v.P, v.Nonce, title) {
+		@Nav(v.P, v.CSRF, v.Identity)
+		<h1 class="mb-4 text-xl font-semibold">{ title }</h1>
+		@Flash(v)
+		{ children... }
+	}
+}
+
+// Flash renders the page's notice or error, plus the overlapping trips when a booking
+// was refused — so the dispatcher sees exactly what is in the way.
+templ Flash(v View) {
+	if v.Message != "" {
+		if v.IsError {
+			<div role="alert" class="mb-4 rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-900">
+				<p>{ v.Message }</p>
+				if len(v.Conflicts) > 0 {
+					<ul class="mt-2 list-disc pl-5">
+						for _, c := range v.Conflicts {
+							<li>
+								{ c.Origin } → { c.Destination }
+								<span class="text-red-700">
+									({ v.FmtTime(c.Start) } – { v.FmtTime(c.End) })
+								</span>
+							</li>
+						}
+					</ul>
+				}
+			</div>
+		} else {
+			<div class="mb-4 rounded border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
+				{ v.Message }
+			</div>
+		}
+	}
+}
+
+// CSRFField is the hidden token every state-changing form must carry.
+templ CSRFField(v View) {
+	<input type="hidden" name="csrf_token" value={ v.CSRF }/>
+}
+
+// PostButton is a one-action form: a POST with a CSRF token, no JavaScript involved.
+// confirmKey, when set, asks the browser to confirm before submitting.
+templ PostButton(v View, action, labelKey, class string) {
+	<form method="post" action={ templ.SafeURL(action) } class="inline">
+		@CSRFField(v)
+		<button type="submit" class={ class }>{ v.T(labelKey) }</button>
+	</form>
+}
+
+// Field wraps a labelled input.
+templ Field(v View, id, labelKey string) {
+	<div>
+		<label for={ id } class="block text-sm font-medium">{ v.T(labelKey) }</label>
+		{ children... }
+	</div>
+}
+
+const inputClass = "mt-1 w-full rounded border border-slate-300 px-3 py-2"
+const primaryButton = "rounded bg-slate-900 px-3 py-2 text-white hover:bg-slate-700"
+const dangerButton = "rounded border border-red-300 px-3 py-1 text-sm text-red-800 hover:bg-red-50"
+const linkButton = "rounded border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100"

@@ -1,0 +1,14 @@
+/* Tailwind entry point. Built to web/static/css/app.css by `npm run build:css`
+   (and by the Docker build), never edited there. */
+@import "tailwindcss";
+
+/* templ files hold the class names; the generated *_templ.go files repeat them. */
+@source "../templates/**/*.templ";
+
+/* The timeline positions blocks with inline left/width percentages, which Tailwind
+   cannot see. Everything else about it is utility classes. */
+@theme {
+  --color-planned: oklch(0.72 0.11 250);
+  --color-running: oklch(0.74 0.14 150);
+  --color-done: oklch(0.65 0.02 250);
+}

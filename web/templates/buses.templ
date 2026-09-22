@@ -1,0 +1,109 @@
+package templates
+
+import "strconv"
+import "github.com/buscompany/bus_fleet/internal/domain"
+
+templ BusesPage(v View, buses []domain.Bus) {
+	@Page(v, v.T("buses.title")) {
+		if v.CanManageFleet() {
+			<p class="mb-4">
+				<a href="/buses/new" class={ linkButton }>{ v.T("buses.new") }</a>
+			</p>
+		}
+		<div class="overflow-x-auto">
+			<table class="w-full text-left text-sm">
+				<thead class="border-b border-slate-300">
+					<tr>
+						<th class="py-2 pr-4">{ v.T("field.plate") }</th>
+						<th class="py-2 pr-4">{ v.T("field.model") }</th>
+						<th class="py-2 pr-4">{ v.T("field.seats") }</th>
+						<th class="py-2 pr-4">{ v.T("field.status") }</th>
+						<th class="py-2 pr-4">{ v.T("field.insurance_expiry") }</th>
+						<th class="py-2 pr-4">{ v.T("field.inspection_expiry") }</th>
+						if v.CanManageFleet() {
+							<th class="py-2"><span class="sr-only">{ v.T("common.actions") }</span></th>
+						}
+					</tr>
+				</thead>
+				<tbody>
+					for _, bus := range buses {
+						<tr class="border-b border-slate-100">
+							<td class="py-2 pr-4 font-medium">{ bus.Plate }</td>
+							<td class="py-2 pr-4">{ bus.Model }</td>
+							<td class="py-2 pr-4">{ strconv.Itoa(int(bus.Seats)) }</td>
+							<td class="py-2 pr-4">{ v.BusStatus(bus.Status) }</td>
+							<td class="py-2 pr-4">{ v.FmtDate(bus.InsuranceExpiry) }</td>
+							<td class="py-2 pr-4">{ v.FmtDate(bus.InspectionExpiry) }</td>
+							if v.CanManageFleet() {
+								<td class="py-2 whitespace-nowrap">
+									<a href={ templ.SafeURL("/buses/" + strconv.FormatInt(bus.ID, 10) + "/edit") } class={ linkButton }>
+										{ v.T("common.edit") }
+									</a>
+									@PostButton(v, "/buses/"+strconv.FormatInt(bus.ID, 10)+"/delete", "common.delete", dangerButton)
+								</td>
+							}
+						</tr>
+					}
+					if len(buses) == 0 {
+						<tr><td colspan="7" class="py-4 text-slate-500">{ v.T("common.empty") }</td></tr>
+					}
+				</tbody>
+			</table>
+		</div>
+	}
+}
+
+templ BusFormPage(v View, bus domain.Bus, isNew bool) {
+	@Page(v, formTitle(v, isNew, "buses.new", "buses.edit")) {
+		<form method="post" action={ templ.SafeURL(busFormAction(bus, isNew)) } class="max-w-md space-y-4">
+			@CSRFField(v)
+			@Field(v, "plate", "field.plate") {
+				<input id="plate" name="plate" required maxlength="16" value={ bus.Plate } class={ inputClass }/>
+			}
+			@Field(v, "model", "field.model") {
+				<input id="model" name="model" required maxlength="120" value={ bus.Model } class={ inputClass }/>
+			}
+			@Field(v, "seats", "field.seats") {
+				<input id="seats" name="seats" type="number" min="1" max="120" required
+					value={ strconv.Itoa(int(bus.Seats)) } class={ inputClass }/>
+			}
+			@Field(v, "status", "field.status") {
+				<select id="status" name="status" class={ inputClass }>
+					for _, status := range []domain.BusStatus{domain.BusActive, domain.BusMaintenance, domain.BusRetired} {
+						if status == bus.Status {
+							<option value={ string(status) } selected>{ v.BusStatus(status) }</option>
+						} else {
+							<option value={ string(status) }>{ v.BusStatus(status) }</option>
+						}
+					}
+				</select>
+			}
+			@Field(v, "insurance_expiry", "field.insurance_expiry") {
+				<input id="insurance_expiry" name="insurance_expiry" type="date"
+					value={ v.FormDate(bus.InsuranceExpiry) } class={ inputClass }/>
+			}
+			@Field(v, "inspection_expiry", "field.inspection_expiry") {
+				<input id="inspection_expiry" name="inspection_expiry" type="date"
+					value={ v.FormDate(bus.InspectionExpiry) } class={ inputClass }/>
+			}
+			<div class="flex gap-3">
+				<button type="submit" class={ primaryButton }>{ v.T("common.save") }</button>
+				<a href="/buses" class={ linkButton }>{ v.T("common.cancel") }</a>
+			</div>
+		</form>
+	}
+}
+
+func busFormAction(bus domain.Bus, isNew bool) string {
+	if isNew {
+		return "/buses"
+	}
+	return "/buses/" + strconv.FormatInt(bus.ID, 10)
+}
+
+func formTitle(v View, isNew bool, newKey, editKey string) string {
+	if isNew {
+		return v.T(newKey)
+	}
+	return v.T(editKey)
+}

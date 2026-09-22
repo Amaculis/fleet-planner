@@ -1,0 +1,43 @@
+package templates
+
+import "github.com/buscompany/bus_fleet/internal/domain"
+import "github.com/buscompany/bus_fleet/internal/i18n"
+
+// HomePage is a placeholder landing page proving auth, RBAC and i18n end to end.
+// Step 4 replaces it with the timeline (dispatcher/admin) and the driver view.
+templ HomePage(p *i18n.Printer, nonce, csrf string, identity domain.Identity) {
+	@Layout(p, nonce, p.T("app.name")) {
+		@Nav(p, csrf, identity)
+		<p class="text-sm text-slate-600">
+			{ identity.Email } — { p.T("nav." + navKeyForRole(identity.Role)) }
+		</p>
+	}
+}
+
+// ErrorPage shows a translated message chosen by the handler. Internal error detail
+// never reaches the browser.
+templ ErrorPage(p *i18n.Printer, nonce, message string) {
+	@Layout(p, nonce, p.T("error.title")) {
+		<h1 class="mb-2 text-xl font-semibold">{ p.T("error.title") }</h1>
+		<p class="text-slate-700">{ message }</p>
+		<p class="mt-6"><a class="underline" href="/">{ p.T("common.back") }</a></p>
+	}
+}
+
+// navKeyForRole keeps the message id lookup out of the template body.
+func navKeyForRole(role domain.Role) string {
+	if role == domain.RoleDriver {
+		return "my_trips"
+	}
+	return "timeline"
+}
+
+// OfflinePage is what the service worker shows when the phone has no connection.
+// It is cached at install time, so it must not depend on any live data.
+templ OfflinePage(v View) {
+	@Layout(v.P, v.Nonce, v.T("offline.title")) {
+		<h1 class="mb-2 text-xl font-semibold">{ v.T("offline.title") }</h1>
+		<p class="text-slate-700">{ v.T("offline.body") }</p>
+		<p class="mt-6"><a class="underline" href="/my/trips">{ v.T("offline.retry") }</a></p>
+	}
+}

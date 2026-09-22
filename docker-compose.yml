@@ -1,0 +1,124 @@
+name: bus-fleet
+
+# Network layout - the DB is reachable only by app + migrate and has no internet route:
+#   edge     : caddy <-> internet (ACME, ports 80/443)
+#   frontend : caddy <-> app      (internal, no egress)
+#   backend  : app/migrate <-> db (internal, no egress)
+# Only caddy publishes ports. Each service gets only the secrets it needs.
+# Image tags are pinned; pin to @sha256 digests before the first production deploy.
+
+services:
+  caddy:
+    image: caddy:2.10.2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"   # HTTP/3
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:?APP_DOMAIN is required}
+      ACME_EMAIL: ${ACME_EMAIL:?ACME_EMAIL is required}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks: [edge, frontend]
+    depends_on:
+      app:
+        condition: service_healthy
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    security_opt: ["no-new-privileges:true"]
+
+  app:
+    build: .
+    image: bus-fleet-app:local
+    restart: unless-stopped
+    environment:
+      APP_ENV: production
+      APP_BASE_URL: https://${APP_DOMAIN}
+      LISTEN_ADDR: ":8080"
+      # Least-privilege role: DML on specific tables, INSERT/SELECT only on audit_log.
+      DATABASE_URL: postgres://fleet_app:${FLEET_APP_PASSWORD:?FLEET_APP_PASSWORD is required}@db:5432/fleet?sslmode=disable
+      # Keys the pre-login CSRF token (32 bytes, hex).
+      APP_SECRET: ${APP_SECRET:?APP_SECRET is required}
+      SESSION_IDLE_TIMEOUT: ${SESSION_IDLE_TIMEOUT:-4h}
+      SESSION_ABSOLUTE_TIMEOUT: ${SESSION_ABSOLUTE_TIMEOUT:-12h}
+      # Caddy is the only client that can reach the app and it overwrites
+      # X-Forwarded-For, so that header is trusted for rate limiting + audit IP.
+      TRUST_PROXY_HEADERS: "true"
+      LOG_LEVEL: info
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    networks: [frontend, backend]
+    user: "65532:65532"   # distroless nonroot
+    read_only: true
+    tmpfs: ["/tmp"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      # Self-probe subcommand: distroless has no shell, curl or wget. Built in step 2.
+      test: ["CMD", "/app/server", "healthcheck"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  # One-shot: applies pending migrations as the schema owner, then exits. The app only
+  # starts after it succeeds, and the app role itself can never run DDL.
+  migrate:
+    image: migrate/migrate:v4.18.3
+    restart: "no"
+    environment:
+      MIGRATE_URL: postgres://fleet_owner:${FLEET_OWNER_PASSWORD:?FLEET_OWNER_PASSWORD is required}@db:5432/fleet?sslmode=disable
+    entrypoint: ["/bin/sh", "-c", "exec migrate -path /migrations -database \"$$MIGRATE_URL\" up"]
+    volumes:
+      - ./db/migrations:/migrations:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    networks: [backend]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+
+  db:
+    image: postgres:17.6-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD:?POSTGRES_SUPERUSER_PASSWORD is required}
+      POSTGRES_DB: postgres
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
+      # Read only by deploy/postgres/init/01-roles.sh, on first initialisation.
+      FLEET_OWNER_PASSWORD: ${FLEET_OWNER_PASSWORD}
+      FLEET_APP_PASSWORD: ${FLEET_APP_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./deploy/postgres/init:/docker-entrypoint-initdb.d:ro
+    networks: [backend]
+    # No `ports:` - the DB is never published to the host.
+    # Inspect with: docker compose exec db psql -U postgres -d fleet
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d fleet"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    shm_size: 256mb
+    security_opt: ["no-new-privileges:true"]
+
+  # TODO (before "MVP done"): backup service - pg_dump -> age-encrypted -> EU object
+  # storage, on a schedule, plus a documented and *tested* restore.
+
+networks:
+  edge: {}
+  frontend:
+    internal: true
+  backend:
+    internal: true
+
+volumes:
+  pgdata: {}
+  caddy_data: {}
+  caddy_config: {}

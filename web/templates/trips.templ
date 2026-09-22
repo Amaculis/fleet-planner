@@ -1,0 +1,195 @@
+package templates
+
+import "strconv"
+import "time"
+import "github.com/buscompany/bus_fleet/internal/domain"
+
+templ TripsPage(v View, rows []TripRow, from, to string) {
+	@Page(v, v.T("trips.title")) {
+		<div class="mb-4 flex flex-wrap items-end gap-3">
+			<form method="get" action="/trips" class="flex items-end gap-2">
+				@Field(v, "from", "trips.from") {
+					<input id="from" name="from" type="date" value={ from } class={ inputClass }/>
+				}
+				@Field(v, "to", "trips.to") {
+					<input id="to" name="to" type="date" value={ to } class={ inputClass }/>
+				}
+				<button type="submit" class={ linkButton }>{ v.T("common.apply") }</button>
+			</form>
+			<a href="/trips/new" class={ linkButton }>{ v.T("trips.new") }</a>
+		</div>
+		<div class="overflow-x-auto">
+			<table class="w-full text-left text-sm">
+				<thead class="border-b border-slate-300">
+					<tr>
+						<th class="py-2 pr-4">{ v.T("trips.route") }</th>
+						<th class="py-2 pr-4">{ v.T("trips.window") }</th>
+						<th class="py-2 pr-4">{ v.T("field.status") }</th>
+						<th class="py-2 pr-4">{ v.T("field.bus") }</th>
+						<th class="py-2 pr-4">{ v.T("field.driver") }</th>
+						<th class="py-2"><span class="sr-only">{ v.T("common.actions") }</span></th>
+					</tr>
+				</thead>
+				<tbody>
+					for _, row := range rows {
+						<tr class="border-b border-slate-100">
+							<td class="py-2 pr-4 font-medium">{ row.Trip.Origin } → { row.Trip.Destination }</td>
+							<td class="py-2 pr-4 whitespace-nowrap">
+								{ v.FmtTime(row.Trip.ScheduledStart) } – { v.FmtClock(row.Trip.ScheduledEnd) }
+							</td>
+							<td class="py-2 pr-4">{ v.TripStatus(row.Trip.Status) }</td>
+							if row.Assignment != nil {
+								<td class="py-2 pr-4">{ row.Assignment.BusPlate }</td>
+								<td class="py-2 pr-4">{ row.Assignment.DriverName }</td>
+							} else {
+								<td class="py-2 pr-4 text-amber-700">{ v.T("trips.unassigned") }</td>
+								<td class="py-2 pr-4 text-amber-700">{ v.T("trips.unassigned") }</td>
+							}
+							<td class="py-2">
+								<a href={ templ.SafeURL("/trips/" + strconv.FormatInt(row.Trip.ID, 10)) } class={ linkButton }>
+									{ v.T("common.open") }
+								</a>
+							</td>
+						</tr>
+					}
+					if len(rows) == 0 {
+						<tr><td colspan="6" class="py-4 text-slate-500">{ v.T("common.empty") }</td></tr>
+					}
+				</tbody>
+			</table>
+		</div>
+	}
+}
+
+templ TripFormPage(v View, trip domain.Trip, isNew bool) {
+	@Page(v, formTitle(v, isNew, "trips.new", "trips.edit")) {
+		<form method="post" action={ templ.SafeURL(tripFormAction(trip, isNew)) } class="max-w-md space-y-4">
+			@CSRFField(v)
+			@Field(v, "origin", "field.origin") {
+				<input id="origin" name="origin" required maxlength="200" value={ trip.Origin } class={ inputClass }/>
+			}
+			@Field(v, "destination", "field.destination") {
+				<input id="destination" name="destination" required maxlength="200" value={ trip.Destination } class={ inputClass }/>
+			}
+			@Field(v, "scheduled_start", "field.scheduled_start") {
+				<input id="scheduled_start" name="scheduled_start" type="datetime-local" required
+					value={ formTimeValue(v, trip.ScheduledStart) } class={ inputClass }/>
+			}
+			@Field(v, "scheduled_end", "field.scheduled_end") {
+				<input id="scheduled_end" name="scheduled_end" type="datetime-local" required
+					value={ formTimeValue(v, trip.ScheduledEnd) } class={ inputClass }/>
+			}
+			@Field(v, "notes", "field.notes") {
+				<textarea id="notes" name="notes" rows="3" maxlength="2000" class={ inputClass }>{ optional(trip.Notes) }</textarea>
+			}
+			<div class="flex gap-3">
+				<button type="submit" class={ primaryButton }>{ v.T("common.save") }</button>
+				<a href="/trips" class={ linkButton }>{ v.T("common.cancel") }</a>
+			</div>
+		</form>
+	}
+}
+
+templ TripDetailPage(v View, d TripDetail) {
+	@Page(v, d.Trip.Origin+" → "+d.Trip.Destination) {
+		<dl class="mb-6 grid grid-cols-2 gap-2 text-sm sm:max-w-md">
+			<dt class="text-slate-500">{ v.T("trips.window") }</dt>
+			<dd>{ v.FmtTime(d.Trip.ScheduledStart) } – { v.FmtTime(d.Trip.ScheduledEnd) }</dd>
+			<dt class="text-slate-500">{ v.T("field.status") }</dt>
+			<dd>{ v.TripStatus(d.Trip.Status) }</dd>
+			<dt class="text-slate-500">{ v.T("field.actual_start") }</dt>
+			<dd>{ v.FmtTimePtr(d.Trip.ActualStart) }</dd>
+			<dt class="text-slate-500">{ v.T("field.actual_end") }</dt>
+			<dd>{ v.FmtTimePtr(d.Trip.ActualEnd) }</dd>
+			<dt class="text-slate-500">{ v.T("field.notes") }</dt>
+			<dd>{ v.Str(d.Trip.Notes) }</dd>
+		</dl>
+		<section class="mb-6">
+			<h2 class="mb-2 font-semibold">{ v.T("trips.assignment") }</h2>
+			if d.Assignment != nil {
+				<p class="mb-2 text-sm">
+					{ d.Assignment.BusPlate } · { d.Assignment.DriverName }
+				</p>
+			} else {
+				<p class="mb-2 text-sm text-amber-700">{ v.T("trips.unassigned") }</p>
+			}
+			<form method="post" action={ templ.SafeURL("/trips/" + strconv.FormatInt(d.Trip.ID, 10) + "/assign") } class="flex flex-wrap items-end gap-3">
+				@CSRFField(v)
+				@Field(v, "bus_id", "field.bus") {
+					<select id="bus_id" name="bus_id" required class={ inputClass }>
+						for _, bus := range d.Buses {
+							if d.Assignment != nil && d.Assignment.BusID == bus.ID {
+								<option value={ strconv.FormatInt(bus.ID, 10) } selected>{ bus.Plate } — { bus.Model }</option>
+							} else {
+								<option value={ strconv.FormatInt(bus.ID, 10) }>{ bus.Plate } — { bus.Model }</option>
+							}
+						}
+					</select>
+				}
+				@Field(v, "driver_id", "field.driver") {
+					<select id="driver_id" name="driver_id" required class={ inputClass }>
+						for _, driver := range d.Drivers {
+							if d.Assignment != nil && d.Assignment.DriverID == driver.ID {
+								<option value={ strconv.FormatInt(driver.ID, 10) } selected>{ driver.FullName }</option>
+							} else {
+								<option value={ strconv.FormatInt(driver.ID, 10) }>{ driver.FullName }</option>
+							}
+						}
+					</select>
+				}
+				<button type="submit" class={ primaryButton }>{ v.T("trips.assign") }</button>
+			</form>
+			if d.Assignment != nil {
+				<p class="mt-2">
+					@PostButton(v, "/trips/"+strconv.FormatInt(d.Trip.ID, 10)+"/unassign", "trips.unassign", dangerButton)
+				</p>
+			}
+		</section>
+		<section class="flex flex-wrap items-center gap-2">
+			<a href={ templ.SafeURL("/trips/" + strconv.FormatInt(d.Trip.ID, 10) + "/edit") } class={ linkButton }>
+				{ v.T("common.edit") }
+			</a>
+			for _, next := range nextStatuses(d.Trip.Status) {
+				@StatusButton(v, d.Trip.ID, next)
+			}
+			@PostButton(v, "/trips/"+strconv.FormatInt(d.Trip.ID, 10)+"/delete", "common.delete", dangerButton)
+			<a href="/trips" class={ linkButton }>{ v.T("common.back") }</a>
+		</section>
+	}
+}
+
+// StatusButton posts one allowed transition. The allowed set comes from the domain, so
+// the buttons and the server rule cannot drift apart — and the server checks anyway.
+templ StatusButton(v View, tripID int64, next domain.TripStatus) {
+	<form method="post" action={ templ.SafeURL("/trips/" + strconv.FormatInt(tripID, 10) + "/status") } class="inline">
+		@CSRFField(v)
+		<input type="hidden" name="status" value={ string(next) }/>
+		<button type="submit" class={ linkButton }>{ v.T("trips.mark_" + string(next)) }</button>
+	</form>
+}
+
+func nextStatuses(from domain.TripStatus) []domain.TripStatus {
+	all := []domain.TripStatus{domain.TripPlanned, domain.TripInProgress, domain.TripCompleted, domain.TripCancelled}
+	allowed := make([]domain.TripStatus, 0, len(all))
+	for _, to := range all {
+		if domain.CanTransitionTrip(from, to) {
+			allowed = append(allowed, to)
+		}
+	}
+	return allowed
+}
+
+func tripFormAction(trip domain.Trip, isNew bool) string {
+	if isNew {
+		return "/trips"
+	}
+	return "/trips/" + strconv.FormatInt(trip.ID, 10)
+}
+
+// formTimeValue leaves a brand-new trip's fields empty instead of printing a zero date.
+func formTimeValue(v View, t time.Time) string {
+	if t.IsZero() {
+		return ""
+	}
+	return v.FormTime(t)
+}

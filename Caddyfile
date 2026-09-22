@@ -1,0 +1,29 @@
+{
+	email {$ACME_EMAIL}
+	# The admin API stays off; nothing needs it inside the container.
+	admin off
+}
+
+{$APP_DOMAIN} {
+	encode zstd gzip
+
+	# Transport-level headers belong here. CSP, X-Content-Type-Options,
+	# X-Frame-Options and Referrer-Policy are set per-response by the app
+	# (it needs per-request CSP nonces).
+	header {
+		Strict-Transport-Security "max-age=63072000; includeSubDomains"
+		-Server
+	}
+
+	# Defence in depth; the app also caps request body size itself.
+	request_body {
+		max_size 1MB
+	}
+
+	# No trusted_proxies is configured, so Caddy replaces any client-supplied
+	# X-Forwarded-For with the real peer address before proxying.
+	reverse_proxy app:8080
+}
+
+# No access log on purpose: it would persist IP + URL pairs (personal data) outside
+# the audit log. Security-relevant events are audited in the DB instead.

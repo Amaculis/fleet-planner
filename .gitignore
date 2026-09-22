@@ -1,0 +1,16 @@
+# secrets
+.env
+.env.*
+!.env.example
+
+# build output
+/bin/
+/tmp/
+web/static/css/app.css
+node_modules/
+
+# editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

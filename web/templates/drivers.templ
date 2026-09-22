@@ -1,0 +1,136 @@
+package templates
+
+import "strconv"
+import "github.com/buscompany/bus_fleet/internal/domain"
+
+templ DriversPage(v View, drivers []domain.Driver) {
+	@Page(v, v.T("drivers.title")) {
+		if v.CanManageFleet() {
+			<p class="mb-4">
+				<a href="/drivers/new" class={ linkButton }>{ v.T("drivers.new") }</a>
+			</p>
+		}
+		<div class="overflow-x-auto">
+			<table class="w-full text-left text-sm">
+				<thead class="border-b border-slate-300">
+					<tr>
+						<th class="py-2 pr-4">{ v.T("field.full_name") }</th>
+						<th class="py-2 pr-4">{ v.T("field.phone") }</th>
+						<th class="py-2 pr-4">{ v.T("field.license_number") }</th>
+						<th class="py-2 pr-4">{ v.T("field.license_expiry") }</th>
+						<th class="py-2 pr-4">{ v.T("field.active") }</th>
+						if v.CanManageFleet() {
+							<th class="py-2"><span class="sr-only">{ v.T("common.actions") }</span></th>
+						}
+					</tr>
+				</thead>
+				<tbody>
+					for _, d := range drivers {
+						<tr class="border-b border-slate-100">
+							<td class="py-2 pr-4 font-medium">
+								{ d.FullName }
+								if d.IsAnonymized() {
+									<span class="ml-2 rounded bg-slate-200 px-2 py-0.5 text-xs">{ v.T("drivers.erased") }</span>
+								}
+							</td>
+							<td class="py-2 pr-4">{ v.Str(d.Phone) }</td>
+							<td class="py-2 pr-4">{ v.Str(d.LicenseNumber) }</td>
+							<td class="py-2 pr-4">{ v.FmtDate(d.LicenseExpiry) }</td>
+							<td class="py-2 pr-4">{ yesNo(v, d.IsActive) }</td>
+							if v.CanManageFleet() {
+								<td class="py-2 whitespace-nowrap">
+									if !d.IsAnonymized() {
+										<a href={ templ.SafeURL("/drivers/" + strconv.FormatInt(d.ID, 10) + "/edit") } class={ linkButton }>
+											{ v.T("common.edit") }
+										</a>
+										@PostButton(v, "/drivers/"+strconv.FormatInt(d.ID, 10)+"/anonymize", "drivers.erase", dangerButton)
+									}
+								</td>
+							}
+						</tr>
+					}
+					if len(drivers) == 0 {
+						<tr><td colspan="6" class="py-4 text-slate-500">{ v.T("common.empty") }</td></tr>
+					}
+				</tbody>
+			</table>
+		</div>
+		if v.CanManageFleet() {
+			<p class="mt-4 text-xs text-slate-500">{ v.T("drivers.erase_hint") }</p>
+		}
+	}
+}
+
+templ DriverFormPage(v View, d domain.Driver, isNew bool) {
+	@Page(v, formTitle(v, isNew, "drivers.new", "drivers.edit")) {
+		<form method="post" action={ templ.SafeURL(driverFormAction(d, isNew)) } class="max-w-md space-y-4">
+			@CSRFField(v)
+			@Field(v, "full_name", "field.full_name") {
+				<input id="full_name" name="full_name" required maxlength="200" value={ d.FullName } class={ inputClass }/>
+			}
+			@Field(v, "phone", "field.phone") {
+				<input id="phone" name="phone" type="tel" maxlength="32" value={ optional(d.Phone) } class={ inputClass }/>
+			}
+			@Field(v, "license_number", "field.license_number") {
+				<input id="license_number" name="license_number" maxlength="64" value={ optional(d.LicenseNumber) } class={ inputClass }/>
+			}
+			@Field(v, "license_expiry", "field.license_expiry") {
+				<input id="license_expiry" name="license_expiry" type="date" value={ v.FormDate(d.LicenseExpiry) } class={ inputClass }/>
+			}
+			<fieldset class="rounded border border-slate-200 p-3">
+				<legend class="px-1 text-sm font-medium">{ v.T("drivers.pay_section") }</legend>
+				<p class="mb-2 text-xs text-slate-500">{ v.T("drivers.pay_hint") }</p>
+				@Field(v, "hourly_rate", "field.hourly_rate") {
+					<input id="hourly_rate" name="hourly_rate" inputmode="decimal" value={ optional(d.HourlyRate) } class={ inputClass }/>
+				}
+				@Field(v, "pay_type", "field.pay_type") {
+					<select id="pay_type" name="pay_type" class={ inputClass }>
+						<option value="">{ v.T("common.unset") }</option>
+						for _, pt := range []domain.PayType{domain.PayHourly, domain.PayPerTrip, domain.PayMonthly} {
+							if d.PayType != nil && *d.PayType == pt {
+								<option value={ string(pt) } selected>{ v.T("pay_type." + string(pt)) }</option>
+							} else {
+								<option value={ string(pt) }>{ v.T("pay_type." + string(pt)) }</option>
+							}
+						}
+					</select>
+				}
+			</fieldset>
+			if !isNew {
+				<label class="flex items-center gap-2 text-sm">
+					if d.IsActive {
+						<input type="checkbox" name="is_active" value="true" checked/>
+					} else {
+						<input type="checkbox" name="is_active" value="true"/>
+					}
+					{ v.T("field.active") }
+				</label>
+			}
+			<div class="flex gap-3">
+				<button type="submit" class={ primaryButton }>{ v.T("common.save") }</button>
+				<a href="/drivers" class={ linkButton }>{ v.T("common.cancel") }</a>
+			</div>
+		</form>
+	}
+}
+
+func driverFormAction(d domain.Driver, isNew bool) string {
+	if isNew {
+		return "/drivers"
+	}
+	return "/drivers/" + strconv.FormatInt(d.ID, 10)
+}
+
+func optional(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
+}
+
+func yesNo(v View, b bool) string {
+	if b {
+		return v.T("common.yes")
+	}
+	return v.T("common.no")
+}

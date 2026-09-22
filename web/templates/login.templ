@@ -1,0 +1,55 @@
+package templates
+
+import "github.com/buscompany/bus_fleet/internal/i18n"
+
+// LoginPage renders the sign-in form. errorKey and noticeKey are message ids chosen by
+// the handler from a fixed set — never text taken from the request — so nothing a
+// client sends can be reflected back into the page.
+templ LoginPage(p *i18n.Printer, nonce, csrf, errorKey, noticeKey string) {
+	@Layout(p, nonce, p.T("login.title")) {
+		<div class="mx-auto mt-10 w-full max-w-sm">
+			<h1 class="mb-6 text-xl font-semibold">{ p.T("login.title") }</h1>
+			if noticeKey != "" {
+				<p class="mb-4 rounded border border-slate-300 bg-white px-3 py-2 text-sm">
+					{ p.T(noticeKey) }
+				</p>
+			}
+			if errorKey != "" {
+				<p role="alert" class="mb-4 rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800">
+					{ p.T(errorKey) }
+				</p>
+			}
+			<form method="post" action="/login" class="space-y-4">
+				<input type="hidden" name="csrf_token" value={ csrf }/>
+				<div>
+					<label for="email" class="block text-sm font-medium">{ p.T("login.email") }</label>
+					<input
+						id="email"
+						name="email"
+						type="email"
+						autocomplete="username"
+						inputmode="email"
+						required
+						maxlength="254"
+						class="mt-1 w-full rounded border border-slate-300 px-3 py-2"
+					/>
+				</div>
+				<div>
+					<label for="password" class="block text-sm font-medium">{ p.T("login.password") }</label>
+					<input
+						id="password"
+						name="password"
+						type="password"
+						autocomplete="current-password"
+						required
+						maxlength="1024"
+						class="mt-1 w-full rounded border border-slate-300 px-3 py-2"
+					/>
+				</div>
+				<button type="submit" class="w-full rounded bg-slate-900 px-3 py-2 text-white hover:bg-slate-700">
+					{ p.T("login.submit") }
+				</button>
+			</form>
+		</div>
+	}
+}

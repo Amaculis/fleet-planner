@@ -1,0 +1,120 @@
+package templates
+
+import "strconv"
+
+// TimelinePage draws one day: rows are buses, the x-axis is time, blocks are trips.
+//
+// Positions come from a generated stylesheet (t.CSS) carrying the request's nonce —
+// the CSP allows no inline style attributes, so nothing here sets style="".
+// On a phone the track scrolls horizontally with the bus column pinned to the left.
+templ TimelinePage(v View, t Timeline) {
+	@Page(v, v.T("timeline.title")) {
+		@TimelineStyle(v.Nonce, t.CSS)
+		<div class="mb-4 flex flex-wrap items-end gap-3">
+			<a class={ linkButton } href={ templ.SafeURL("/timeline?date=" + t.PrevDate) }>{ v.T("timeline.prev_day") }</a>
+			<a class={ linkButton } href={ templ.SafeURL("/timeline?date=" + t.Today) }>{ v.T("timeline.today") }</a>
+			<a class={ linkButton } href={ templ.SafeURL("/timeline?date=" + t.NextDate) }>{ v.T("timeline.next_day") }</a>
+			<form method="get" action="/timeline" class="flex items-end gap-2">
+				@Field(v, "date", "timeline.date") {
+					<input id="date" name="date" type="date" value={ v.FormDate(&t.Day) } class={ inputClass }/>
+				}
+				<button type="submit" class={ linkButton }>{ v.T("common.apply") }</button>
+			</form>
+		</div>
+		<p class="mb-3 flex flex-wrap gap-4 text-xs text-slate-600">
+			<span class="inline-flex items-center gap-1">
+				<span class="inline-block h-3 w-3 rounded bg-sky-700"></span>{ v.T("trip_status.planned") }
+			</span>
+			<span class="inline-flex items-center gap-1">
+				<span class="inline-block h-3 w-3 rounded bg-emerald-600"></span>{ v.T("trip_status.in_progress") }
+			</span>
+			<span class="inline-flex items-center gap-1">
+				<span class="inline-block h-3 w-3 rounded bg-slate-500"></span>{ v.T("trip_status.completed") }
+			</span>
+		</p>
+		<div class="overflow-x-auto rounded border border-slate-200 bg-white">
+			<div class="min-w-[56rem]">
+				<!-- hour ruler -->
+				<div class="flex border-b border-slate-200 bg-slate-50 text-xs text-slate-500">
+					<div class="sticky left-0 z-20 w-28 shrink-0 border-r border-slate-200 bg-slate-50 px-2 py-1">
+						{ v.T("field.bus") }
+					</div>
+					<div class="grid flex-1 grid-cols-[repeat(24,minmax(0,1fr))]">
+						for _, hour := range t.Hours {
+							<div class="border-l border-slate-200 px-1 py-1">{ twoDigits(hour) }</div>
+						}
+					</div>
+				</div>
+				for _, row := range t.Rows {
+					<div class="flex border-b border-slate-100 last:border-b-0">
+						<div class="sticky left-0 z-20 w-28 shrink-0 border-r border-slate-200 bg-white px-2 py-2 text-sm font-medium">
+							{ row.Bus.Plate }
+							<span class="block text-xs font-normal text-slate-500">{ v.BusStatus(row.Bus.Status) }</span>
+						</div>
+						<div class="relative h-12 flex-1">
+							<!-- hour gridlines -->
+							<div class="pointer-events-none absolute inset-0 grid grid-cols-[repeat(24,minmax(0,1fr))]">
+								for range t.Hours {
+									<div class="border-l border-slate-100"></div>
+								}
+							</div>
+							for _, block := range row.Blocks {
+								<a
+									id={ BlockID(row.Bus.ID, block.TripID) }
+									href={ templ.SafeURL("/trips/" + strconv.FormatInt(block.TripID, 10)) }
+									title={ blockTitle(v, block) }
+									class={ "absolute top-1 bottom-1 overflow-hidden rounded px-2 py-1 text-xs text-white " + block.BlockClass() }
+								>
+									<span class="block truncate font-medium">
+										if block.ContinuesBefore {
+											{ "‹ " }
+										}
+										{ block.Label() }
+										if block.ContinuesAfter {
+											{ " ›" }
+										}
+									</span>
+									<span class="block truncate text-white/80">{ block.DriverName }</span>
+								</a>
+							}
+						</div>
+					</div>
+				}
+				if len(t.Rows) == 0 {
+					<p class="p-4 text-sm text-slate-500">{ v.T("timeline.no_buses") }</p>
+				}
+			</div>
+		</div>
+		if len(t.Unassigned) > 0 {
+			<section class="mt-6">
+				<h2 class="mb-2 font-semibold text-amber-800">{ v.T("timeline.unassigned") }</h2>
+				<ul class="space-y-2">
+					for _, trip := range t.Unassigned {
+						<li class="rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm">
+							<a class="font-medium underline" href={ templ.SafeURL("/trips/" + strconv.FormatInt(trip.ID, 10)) }>
+								{ trip.Origin } → { trip.Destination }
+							</a>
+							<span class="ml-2 text-slate-600">
+								{ v.FmtClock(trip.ScheduledStart) } – { v.FmtClock(trip.ScheduledEnd) }
+							</span>
+						</li>
+					}
+				</ul>
+			</section>
+		}
+	}
+}
+
+// blockTitle is the hover/long-press detail: the full route, times and driver.
+func blockTitle(v View, b TimelineBlock) string {
+	return b.Origin + " → " + b.Destination + "\n" +
+		v.FmtTime(b.Start) + " – " + v.FmtTime(b.End) + "\n" +
+		b.DriverName + " · " + v.TripStatus(b.Status)
+}
+
+func twoDigits(n int) string {
+	if n < 10 {
+		return "0" + strconv.Itoa(n)
+	}
+	return strconv.Itoa(n)
+}
