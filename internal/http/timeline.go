@@ -44,6 +44,23 @@ func (s *Server) handleTimeline(w http.ResponseWriter, r *http.Request) {
 	}
 
 	timeline := buildTimeline(dayStart, dayEnd, buses, assignments, trips, s.cfg.Location)
+
+	// An empty day is easy to mistake for "nothing is planned at all" rather than
+	// "nothing is planned today" — point at the next day that actually has something,
+	// so the dispatcher never has to click through days blind.
+	if !timeline.HasBlocks {
+		if next, err := s.assignments.NextUpcoming(ctx, identity, dayEnd); err != nil {
+			s.abort(w, r, err)
+			return
+		} else if next != nil {
+			loc := s.cfg.Location
+			if loc == nil {
+				loc = time.UTC
+			}
+			timeline.NextTripDate = next.In(loc).Format("2006-01-02")
+		}
+	}
+
 	s.render(w, r, http.StatusOK, templates.TimelinePage(s.view(r), timeline))
 }
 
@@ -128,6 +145,14 @@ func buildTimeline(
 		hours = append(hours, h)
 	}
 
+	hasBlocks := false
+	for _, row := range rows {
+		if len(row.Blocks) > 0 {
+			hasBlocks = true
+			break
+		}
+	}
+
 	return templates.Timeline{
 		Day:        dayStart,
 		PrevDate:   dayStart.AddDate(0, 0, -1).In(loc).Format("2006-01-02"),
@@ -137,6 +162,7 @@ func buildTimeline(
 		Unassigned: unassigned,
 		Hours:      hours,
 		CSS:        timelineCSS(rows),
+		HasBlocks:  hasBlocks,
 	}
 }
 

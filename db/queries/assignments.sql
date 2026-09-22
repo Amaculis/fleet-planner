@@ -60,3 +60,17 @@ JOIN trips t ON t.id = a.trip_id
 WHERE tstzrange(a.scheduled_start, a.scheduled_end, '[)')
       && tstzrange(@range_start, @range_end, '[)')
 ORDER BY b.plate, a.scheduled_start;
+
+-- name: NextAssignmentStart :one
+-- Powers the timeline's "no trips today" hint: the earliest non-cancelled booking that
+-- starts on or after the given moment, so an empty day can point at the next one that
+-- actually has something on it instead of leaving the dispatcher guessing.
+-- No match returns pgx.ErrNoRows, translated to domain.ErrNotFound like every other
+-- single-row lookup in this file -- a plain nullable aggregate would need a pointer
+-- return type sqlc cannot infer here, so LIMIT 1 is the simpler, consistent choice.
+SELECT a.scheduled_start
+FROM assignments a
+WHERE a.trip_status <> 'cancelled'
+  AND a.scheduled_start >= @after
+ORDER BY a.scheduled_start
+LIMIT 1;

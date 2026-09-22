@@ -144,6 +144,12 @@ type Timeline struct {
 	// CSS positions the blocks. It is generated from computed numbers and rendered in
 	// a nonce'd <style> element, because the CSP allows no inline style attributes.
 	CSS string
+	// HasBlocks is false when nothing is scheduled on this day at all (distinct from
+	// "no buses exist"), so the page can tell "nothing today" apart from "nothing ever".
+	HasBlocks bool
+	// NextTripDate, set only when HasBlocks is false, is the nearest upcoming day
+	// (YYYY-MM-DD) that has a booking, so an empty day is never a dead end.
+	NextTripDate string
 }
 
 type TimelineRow struct {

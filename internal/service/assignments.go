@@ -45,6 +45,22 @@ func (s *AssignmentService) GetForTrip(ctx context.Context, actor domain.Identit
 	return s.repo.GetAssignmentForTrip(ctx, tripID)
 }
 
+// NextUpcoming answers "when is the next trip after this day?" for the timeline's empty
+// state. A nil result (no error) means nothing is scheduled that far out, not a failure.
+func (s *AssignmentService) NextUpcoming(ctx context.Context, actor domain.Identity, after time.Time) (*time.Time, error) {
+	if err := requireRole(actor, domain.RoleAdmin, domain.RoleDispatcher); err != nil {
+		return nil, err
+	}
+	start, err := s.repo.NextAssignmentStart(ctx, after)
+	if errors.Is(err, domain.ErrNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &start, nil
+}
+
 // Assign books a bus and a driver onto a trip, replacing any existing assignment.
 func (s *AssignmentService) Assign(ctx context.Context, actor domain.Identity, tripID, busID, driverID int64, meta Meta) (domain.Assignment, error) {
 	if err := requireRole(actor, domain.RoleAdmin, domain.RoleDispatcher); err != nil {

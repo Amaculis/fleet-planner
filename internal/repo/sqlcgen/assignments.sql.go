@@ -277,3 +277,25 @@ func (q *Queries) ListAssignmentsInRange(ctx context.Context, arg ListAssignment
 	}
 	return items, nil
 }
+
+const nextAssignmentStart = `-- name: NextAssignmentStart :one
+SELECT a.scheduled_start
+FROM assignments a
+WHERE a.trip_status <> 'cancelled'
+  AND a.scheduled_start >= $1
+ORDER BY a.scheduled_start
+LIMIT 1
+`
+
+// Powers the timeline's "no trips today" hint: the earliest non-cancelled booking that
+// starts on or after the given moment, so an empty day can point at the next one that
+// actually has something on it instead of leaving the dispatcher guessing.
+// No match returns pgx.ErrNoRows, translated to domain.ErrNotFound like every other
+// single-row lookup in this file -- a plain nullable aggregate would need a pointer
+// return type sqlc cannot infer here, so LIMIT 1 is the simpler, consistent choice.
+func (q *Queries) NextAssignmentStart(ctx context.Context, after time.Time) (time.Time, error) {
+	row := q.db.QueryRow(ctx, nextAssignmentStart, after)
+	var scheduled_start time.Time
+	err := row.Scan(&scheduled_start)
+	return scheduled_start, err
+}

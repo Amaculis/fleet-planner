@@ -121,3 +121,13 @@ func (r *Repo) ListAssignmentsInRange(ctx context.Context, from, to time.Time) (
 	}
 	return details, nil
 }
+
+// NextAssignmentStart returns the earliest non-cancelled booking starting on or after
+// after. Returns domain.ErrNotFound when nothing is scheduled that far out.
+func (r *Repo) NextAssignmentStart(ctx context.Context, after time.Time) (time.Time, error) {
+	start, err := r.q.NextAssignmentStart(ctx, after)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("finding next assignment: %w", translate(err))
+	}
+	return start, nil
+}

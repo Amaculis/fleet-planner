@@ -20,7 +20,18 @@ templ TimelinePage(v View, t Timeline) {
 				}
 				<button type="submit" class={ linkButton }>{ v.T("common.apply") }</button>
 			</form>
+			<a class={ linkButton } href="/trips">{ v.T("timeline.view_list") }</a>
 		</div>
+		if !t.HasBlocks {
+			<div class="mb-4 rounded border border-sky-300 bg-sky-50 px-3 py-2 text-sm text-sky-900">
+				{ v.T("timeline.nothing_today") }
+				if t.NextTripDate != "" {
+					<a class="ml-1 font-medium underline" href={ templ.SafeURL("/timeline?date=" + t.NextTripDate) }>
+						{ v.T("timeline.jump_to_next", t.NextTripDate) }
+					</a>
+				}
+			</div>
+		}
 		<p class="mb-3 flex flex-wrap gap-4 text-xs text-slate-600">
 			<span class="inline-flex items-center gap-1">
 				<span class="inline-block h-3 w-3 rounded bg-sky-700"></span>{ v.T("trip_status.planned") }

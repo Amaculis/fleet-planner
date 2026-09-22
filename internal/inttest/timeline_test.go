@@ -54,6 +54,9 @@ func TestTimelineRendersTheDay(t *testing.T) {
 	if strings.Contains(body, "style=\"left") {
 		t.Error("a block used an inline style attribute, which the CSP forbids")
 	}
+	if strings.Contains(body, "Nothing scheduled on this day.") {
+		t.Error("the empty-day hint showed on a day that has a trip")
+	}
 
 	// A different day shows no blocks.
 	empty := c.body("/timeline?date=" + baseDay.AddDate(0, 0, 7).Format("2006-01-02"))
@@ -66,6 +69,50 @@ func TestTimelineRendersTheDay(t *testing.T) {
 	resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("a malformed date gave status %d, want 200", resp.StatusCode)
+	}
+}
+
+// TestTimelineEmptyDaySuggestsNextTrip: a dispatcher opening the timeline on a day with
+// nothing scheduled must not be left guessing which day to click to next — the page
+// itself points at the nearest day that has a booking.
+func TestTimelineEmptyDaySuggestsNextTrip(t *testing.T) {
+	ctx := context.Background()
+	e := newEnv(t)
+
+	admin := e.newAdmin("admin@example.lv", testPassword)
+	actor := e.identityFor(admin, nil)
+	bus := e.newBus("AA-1111")
+	driver := e.newDriver("Driver A")
+
+	// A trip three days out, assigned so it counts as a real booking.
+	future := e.newTrip("Riga", "Moscow", 24*3+8, 24*3+12)
+	if _, err := e.assignments.Assign(ctx, actor, future.ID, bus.ID, driver.ID, service.Meta{}); err != nil {
+		t.Fatalf("assigning: %v", err)
+	}
+
+	base := e.serve(t)
+	c := newClient(t, base)
+	c.login("admin@example.lv")
+
+	// baseDay itself has nothing on it.
+	body := c.body("/timeline?date=" + baseDay.Format("2006-01-02"))
+
+	wantDate := baseDay.AddDate(0, 0, 3).Format("2006-01-02")
+	if !strings.Contains(body, "Nothing scheduled on this day.") {
+		t.Error("an empty day gave no indication that it was empty")
+	}
+	if !strings.Contains(body, "/timeline?date="+wantDate) {
+		t.Errorf("the empty-day hint does not link to %s, the day with the next trip", wantDate)
+	}
+
+	// A day with nothing booked anywhere in the future gets no dangling suggestion.
+	farBody := c.body("/timeline?date=" + baseDay.AddDate(0, 0, 30).Format("2006-01-02"))
+	if !strings.Contains(farBody, "Nothing scheduled on this day.") {
+		t.Error("a day after the last trip should still say it is empty")
+	}
+	if strings.Count(farBody, "timeline?date=") > 3 {
+		// prev/today/next nav links only — no extra "jump to next trip" link.
+		t.Error("a day with no future trips at all should not suggest a next one")
 	}
 }
 
