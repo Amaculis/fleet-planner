@@ -7,6 +7,9 @@
 /bin/
 /tmp/
 web/static/css/app.css
+web/static/js/calendar-island.js
+web/static/css/calendar-island.css
+web/static/js/calendar-assets/
 node_modules/
 
 # editor / OS

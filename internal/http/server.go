@@ -108,6 +108,20 @@ func (s *Server) Routes() http.Handler {
 	// Static assets: embedded in the binary, long-lived cache, no cookies needed.
 	r.Handle("/static/*", s.staticHandler())
 
+	// lx-ui's pre-compiled dist bundle computes its own asset URLs — chunk imports and
+	// its @font-face url()s alike — as new URL(path, window.location.origin) /
+	// root-relative paths, resolving to the site root (/js/..., /css/..., /lx-fonts/...)
+	// regardless of where the files were actually deployed (/static/...). That logic
+	// is compiled into the dependency, not something this app's own Vite config
+	// controls. main.js also sets createLx's publicUrl option, which may be the
+	// "intended" fix — unverified without a real browser — so both are in place:
+	// whichever one lx-ui's runtime actually honours, the files exist where it looks.
+	// Named prefixes only (never the whole /static/ tree) so this can't shadow a real
+	// app route later.
+	r.Handle("/js/*", s.rootStaticHandler())
+	r.Handle("/css/*", s.rootStaticHandler())
+	r.Handle("/lx-fonts/*", s.rootStaticHandler())
+
 	// The service worker must be served from the root to control the whole origin;
 	// /static/sw.js would only ever control /static/.
 	r.Get("/sw.js", s.handleServiceWorker)
@@ -203,6 +217,16 @@ func (s *Server) staticHandler() http.Handler {
 		w.Header().Set("Cache-Control", "public, max-age=3600")
 		fs.ServeHTTP(w, r)
 	}))
+}
+
+// rootStaticHandler serves the same embedded tree with no prefix stripped — see the
+// comment above its /js/ and /css/ mount points in Routes().
+func (s *Server) rootStaticHandler() http.Handler {
+	fs := http.FileServer(http.FS(web.StaticFS()))
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "public, max-age=3600")
+		fs.ServeHTTP(w, r)
+	})
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {

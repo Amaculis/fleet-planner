@@ -67,12 +67,15 @@ templ DriverFormPage(v View, d domain.Driver, isNew bool) {
 			@CSRFField(v)
 			@Field(v, "full_name", "field.full_name") {
 				<input id="full_name" name="full_name" required maxlength="200" value={ d.FullName } class={ inputClass }/>
+				@LxTextField(v, "full_name", true, false)
 			}
 			@Field(v, "phone", "field.phone") {
 				<input id="phone" name="phone" type="tel" maxlength="32" value={ optional(d.Phone) } class={ inputClass }/>
+				@LxTextField(v, "phone", false, false)
 			}
 			@Field(v, "license_number", "field.license_number") {
 				<input id="license_number" name="license_number" maxlength="64" value={ optional(d.LicenseNumber) } class={ inputClass }/>
+				@LxTextField(v, "license_number", false, false)
 			}
 			@Field(v, "license_expiry", "field.license_expiry") {
 				<input id="license_expiry" name="license_expiry" type="date" value={ v.FormDate(d.LicenseExpiry) } class={ inputClass }/>
@@ -94,24 +97,39 @@ templ DriverFormPage(v View, d domain.Driver, isNew bool) {
 							}
 						}
 					</select>
+					@LxSelectField(v, "pay_type", payTypeItems(v), true)
 				}
 			</fieldset>
 			if !isNew {
-				<label class="flex items-center gap-2 text-sm">
+				<label id="is_active-label" class="flex items-center gap-2 text-sm">
 					if d.IsActive {
-						<input type="checkbox" name="is_active" value="true" checked/>
+						<input id="is_active" type="checkbox" name="is_active" value="true" checked/>
 					} else {
-						<input type="checkbox" name="is_active" value="true"/>
+						<input id="is_active" type="checkbox" name="is_active" value="true"/>
 					}
 					{ v.T("field.active") }
 				</label>
+				@LxToggleField(v, "is_active", v.T("field.active"))
 			}
 			<div class="flex gap-3">
-				<button type="submit" class={ primaryButton }>{ v.T("common.save") }</button>
+				<button id="save-button" type="submit" class={ primaryButton }>{ v.T("common.save") }</button>
+				@LxActionButton(v, "save-button", "common.save")
 				<a href="/drivers" class={ linkButton }>{ v.T("common.cancel") }</a>
 			</div>
 		</form>
 	}
+}
+
+// payTypeItems mirrors the <option> list above exactly, so the lx-ui dropdown and the
+// plain <select> it enhances can never show different choices. "unset" is left to the
+// LxSelectField's own nullable clear affordance rather than an explicit item.
+func payTypeItems(v View) []LxItem {
+	types := []domain.PayType{domain.PayHourly, domain.PayPerTrip, domain.PayMonthly}
+	items := make([]LxItem, len(types))
+	for i, pt := range types {
+		items[i] = LxItem{ID: string(pt), Name: v.T("pay_type." + string(pt))}
+	}
+	return items
 }
 
 func driverFormAction(d domain.Driver, isNew bool) string {

@@ -1,13 +1,24 @@
 package templates
 
+import "encoding/json"
+import "strconv"
+
 // Shared building blocks. Repeated markup lives here as components rather than being
 // copy-pasted between pages.
 
 // Page is the standard authenticated page: shell, nav, heading, flash message, content.
+//
+// The lx-ui field island assets (self-hosted — see vite.calendar.config.mjs) are
+// loaded here rather than per-page: several pages now use one or more field islands,
+// and loading the script where nothing on the page uses it just finds zero
+// `[data-lx-field]` elements and no-ops, which is simpler than tracking which pages
+// need it.
 templ Page(v View, title string) {
 	@Layout(v.P, v.Nonce, title) {
-		@Nav(v.P, v.CSRF, v.Identity)
-		<h1 class="mb-4 text-xl font-semibold">{ title }</h1>
+		@Nav(v)
+		<link rel="stylesheet" href="/static/css/calendar-island.css"/>
+		<script type="module" nonce={ v.Nonce } src="/static/js/calendar-island.js"></script>
+		<h1 class="mb-4 text-xl font-semibold tracking-tight text-slate-900">{ title }</h1>
 		@Flash(v)
 		{ children... }
 	}
@@ -15,28 +26,43 @@ templ Page(v View, title string) {
 
 // Flash renders the page's notice or error, plus the overlapping trips when a booking
 // was refused — so the dispatcher sees exactly what is in the way.
+//
+// The plain banner (id="flash-banner") is real and complete on its own. Beside it is a
+// hidden LxInfoBox island that replaces just the banner visually on a successful mount.
+// The conflicts list is deliberately kept outside the hideable banner: LxInfoBox takes
+// no slot content, only label/description strings, so folding the conflicts into that
+// would either lose their structure or vanish along with the banner once the island
+// takes over. It stays plain HTML, always rendered, enhanced or not.
 templ Flash(v View) {
 	if v.Message != "" {
 		if v.IsError {
-			<div role="alert" class="mb-4 rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-900">
+			<div id="flash-banner" role="alert" class="mb-4 flex gap-2 rounded-xl border border-red-200 bg-red-50 px-3.5 py-3 text-sm text-red-900 shadow-sm">
+				<svg viewBox="0 0 20 20" fill="currentColor" class="mt-0.5 h-4 w-4 shrink-0 text-red-500" aria-hidden="true">
+					<path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495ZM10 6a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 10 6Zm0 8a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clip-rule="evenodd"></path>
+				</svg>
 				<p>{ v.Message }</p>
-				if len(v.Conflicts) > 0 {
-					<ul class="mt-2 list-disc pl-5">
-						for _, c := range v.Conflicts {
-							<li>
-								{ c.Origin } → { c.Destination }
-								<span class="text-red-700">
-									({ v.FmtTime(c.Start) } – { v.FmtTime(c.End) })
-								</span>
-							</li>
-						}
-					</ul>
-				}
 			</div>
+			<div hidden data-lx-field data-kind="notification" data-input-id="flash-banner" data-variant="error" data-label={ v.Message } data-locale={ v.BCP47() }></div>
+			if len(v.Conflicts) > 0 {
+				<ul class="mb-4 list-disc pl-5 text-sm text-red-800">
+					for _, c := range v.Conflicts {
+						<li>
+							{ c.Origin } → { c.Destination }
+							<span class="text-red-700">
+								({ v.FmtTime(c.Start) } – { v.FmtTime(c.End) })
+							</span>
+						</li>
+					}
+				</ul>
+			}
 		} else {
-			<div class="mb-4 rounded border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
-				{ v.Message }
+			<div id="flash-banner" class="mb-4 flex gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-3 text-sm text-emerald-900 shadow-sm">
+				<svg viewBox="0 0 20 20" fill="currentColor" class="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" aria-hidden="true">
+					<path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd"></path>
+				</svg>
+				<p>{ v.Message }</p>
 			</div>
+			<div hidden data-lx-field data-kind="notification" data-input-id="flash-banner" data-variant="success" data-label={ v.Message } data-locale={ v.BCP47() }></div>
 		}
 	}
 }
@@ -47,7 +73,6 @@ templ CSRFField(v View) {
 }
 
 // PostButton is a one-action form: a POST with a CSRF token, no JavaScript involved.
-// confirmKey, when set, asks the browser to confirm before submitting.
 templ PostButton(v View, action, labelKey, class string) {
 	<form method="post" action={ templ.SafeURL(action) } class="inline">
 		@CSRFField(v)
@@ -55,15 +80,137 @@ templ PostButton(v View, action, labelKey, class string) {
 	</form>
 }
 
-// Field wraps a labelled input.
+// Field wraps a labelled input. The label carries a predictable id (<field-id>-label)
+// so anything needing aria-labelledby — currently just the calendar island — can find
+// it without every call site inventing its own id.
 templ Field(v View, id, labelKey string) {
 	<div>
-		<label for={ id } class="block text-sm font-medium">{ v.T(labelKey) }</label>
+		<label id={ id + "-label" } for={ id } class="block text-sm font-medium text-slate-700">{ v.T(labelKey) }</label>
 		{ children... }
 	</div>
 }
 
-const inputClass = "mt-1 w-full rounded border border-slate-300 px-3 py-2"
-const primaryButton = "rounded bg-slate-900 px-3 py-2 text-white hover:bg-slate-700"
-const dangerButton = "rounded border border-red-300 px-3 py-1 text-sm text-red-800 hover:bg-red-50"
-const linkButton = "rounded border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100"
+// Badge renders a coloured status pill — see View.TripStatusBadgeClass /
+// BusStatusBadgeClass for the colour rules.
+templ Badge(class, label string) {
+	<span class={ class }>{ label }</span>
+}
+
+// ---------------------------------------------------------------------------
+// lx-ui field islands
+//
+// Each of these renders a hidden mount point next to a real, working native field
+// (already emitted by the call site — a plain <input>, <select> or checkbox). Nothing
+// here is the source of truth for the field's value: the native element still carries
+// the field's `name` and is still what the form actually submits. See main.js and
+// docs/lx-ui-integration.md for the mount/fallback contract these divs opt into.
+//
+// One honest gap: browsers skip HTML5 constraint validation (the built-in "this field
+// is required" tooltip) on a field once it is hidden, which happens here the moment an
+// island mounts successfully. The lx-ui components show their own required/invalid
+// state instead, but the real enforcement — as everywhere else in this app — is
+// server-side validation, which every one of these fields already has and is already
+// tested; an empty required field that slips past the browser is caught there instead,
+// one round trip later rather than instantly. Documented, not hidden.
+// ---------------------------------------------------------------------------
+
+// LxItem is one option in an LxSelectField — mirrors lx-ui's ValuePicker items shape
+// ({id, name}), built server-side from the exact same enum or list the plain <option>
+// elements next to it already render, so the two can never drift apart.
+type LxItem struct {
+	ID   string
+	Name string
+}
+
+func lxItemsJSON(items []LxItem) string {
+	raw, err := json.Marshal(items)
+	if err != nil {
+		return "[]" // never fails in practice: LxItem is two plain strings
+	}
+	return string(raw)
+}
+
+// LxTextField enhances the native input with id inputID (already rendered by the call
+// site) with LxTextInput. uppercase matches the field's own normalisation (bus plates).
+templ LxTextField(v View, inputID string, required, uppercase bool) {
+	<div
+		hidden
+		data-lx-field
+		data-kind="text"
+		data-input-id={ inputID }
+		data-required={ strconv.FormatBool(required) }
+		data-uppercase={ strconv.FormatBool(uppercase) }
+		data-locale={ v.BCP47() }
+		data-labelledby={ inputID + "-label" }
+	></div>
+}
+
+// LxToggleField enhances the native checkbox with id inputID with LxToggle.
+templ LxToggleField(v View, inputID, label string) {
+	<div
+		hidden
+		data-lx-field
+		data-kind="toggle"
+		data-input-id={ inputID }
+		data-label={ label }
+		data-locale={ v.BCP47() }
+		data-labelledby={ inputID + "-label" }
+	></div>
+}
+
+// LxSelectField enhances the native <select> with id inputID with LxValuePicker in its
+// dropdown variant. nullable matches whether the native <select> has an empty/"unset"
+// option (pay type, the driver picker) as opposed to a fixed required enum (status, role).
+templ LxSelectField(v View, inputID string, items []LxItem, nullable bool) {
+	<div
+		hidden
+		data-lx-field
+		data-kind="select"
+		data-input-id={ inputID }
+		data-items={ lxItemsJSON(items) }
+		data-nullable={ strconv.FormatBool(nullable) }
+		data-required={ strconv.FormatBool(!nullable) }
+		data-locale={ v.BCP47() }
+		data-labelledby={ inputID + "-label" }
+	></div>
+}
+
+// LxActionButton enhances the native <button> with id buttonID (already rendered by
+// the call site, inside its real <form>) with LxButton. Scoped to one primary button
+// per form — see web/vue/chrome/ActionButton.vue for why per-row table buttons are
+// deliberately excluded. Clicking the island calls .click() on the real button, which
+// triggers the same native form submission a direct click would; nothing here is a
+// second, parallel submission path.
+templ LxActionButton(v View, buttonID, labelKey string) {
+	<div
+		hidden
+		data-lx-field
+		data-kind="button"
+		data-input-id={ buttonID }
+		data-label={ v.T(labelKey) }
+		data-button-kind="primary"
+		data-locale={ v.BCP47() }
+	></div>
+}
+
+// Card wraps content — a table, a form section — in the app's standard panel chrome.
+templ Card() {
+	<div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+		{ children... }
+	</div>
+}
+
+const inputClass = "mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+
+const primaryButton = "inline-flex items-center justify-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2"
+
+const dangerButton = "inline-flex items-center justify-center rounded-lg border border-red-200 bg-white px-3 py-1.5 text-sm font-medium text-red-700 shadow-sm transition hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1"
+
+const linkButton = "inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1"
+
+// tableHead / tableRow are the shared list-page table classes: a compact, uppercase
+// header and a hover state per row, matched across buses/drivers/trips/users.
+const tableHeadClass = "bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500"
+const tableRowClass = "border-b border-slate-100 last:border-b-0 transition hover:bg-slate-50"
+const tableCellClass = "px-4 py-3"
+const tableHeadCellClass = "px-4 py-2.5"

@@ -7,7 +7,7 @@
 //
 // Served from /sw.js so its scope is the whole origin.
 
-const VERSION = "v1";
+const VERSION = "v2"; // bumped: fixes stale-forever caching of /static/* (see below)
 const SHELL_CACHE = `fleet-shell-${VERSION}`;
 
 const SHELL = [
@@ -51,20 +51,26 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
 
-  // App shell: cache first, then network.
+  // App shell: stale-while-revalidate, not cache-first. A driver offline still gets an
+  // instant response from cache, but every online load also kicks off a background
+  // fetch that refreshes the cache for next time. Plain cache-first would otherwise
+  // serve the *first ever* fetched copy of each file forever for a given browser: none
+  // of these filenames are content-hashed, VERSION only changes when this file's own
+  // bytes do, and none of that happens just because a deploy shipped a new
+  // calendar-island.js or app.css. That combination is exactly what made an earlier
+  // deploy invisible to a browser that had already cached the previous one.
   if (url.pathname.startsWith("/static/")) {
     event.respondWith(
-      caches.match(request).then(
-        (cached) =>
-          cached ||
-          fetch(request).then((response) => {
-            if (response.ok) {
-              const copy = response.clone();
-              caches.open(SHELL_CACHE).then((cache) => cache.put(request, copy));
-            }
+      caches.open(SHELL_CACHE).then(async (cache) => {
+        const cached = await cache.match(request);
+        const network = fetch(request)
+          .then((response) => {
+            if (response.ok) cache.put(request, response.clone());
             return response;
           })
-      )
+          .catch(() => null);
+        return cached || (await network) || Response.error();
+      })
     );
     return;
   }

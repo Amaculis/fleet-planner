@@ -132,6 +132,53 @@ func TestTimelineIsClosedToDrivers(t *testing.T) {
 	}
 }
 
+// TestCalendarIslandProgressiveEnhancement checks the one contract that matters for the
+// lx-ui island: the page must be fully usable before any JavaScript runs. It cannot
+// drive an actual browser (no headless browser is available in this environment), so it
+// verifies the HTML the server sends and that the island's assets are actually served —
+// not that the widget renders or behaves once mounted. See docs/lx-ui-integration.md.
+func TestCalendarIslandProgressiveEnhancement(t *testing.T) {
+	e := newEnv(t)
+	e.newAdmin("admin@example.lv", testPassword)
+
+	base := e.serve(t)
+	c := newClient(t, base)
+	c.login("admin@example.lv")
+
+	body := c.body("/timeline")
+
+	if !strings.Contains(body, `id="date" name="date" type="date"`) {
+		t.Fatal("the real, working date input is missing — without it, a failed island mount leaves no way to pick a date")
+	}
+	if !strings.Contains(body, `data-kind="calendar"`) {
+		t.Fatal("the calendar island's mount point is missing")
+	}
+	// The mount point must start hidden: main.js only reveals it after a successful
+	// mount, so a page where the script never runs must show the native input instead.
+	if idx := strings.Index(body, `data-kind="calendar"`); idx == -1 || !strings.Contains(body[max(0, idx-40):idx], "hidden") {
+		t.Error("the calendar island's mount point does not start hidden")
+	}
+	if !strings.Contains(body, `<link rel="stylesheet" href="/static/css/calendar-island.css"`) {
+		t.Error("the island's stylesheet is not linked")
+	}
+	if !strings.Contains(body, `src="/static/js/calendar-island.js"`) {
+		t.Error("the island's script is not linked")
+	}
+	// The script must carry the same per-request CSP nonce as every other script on
+	// the page — the CSP allows no unnonced script to execute.
+	if !strings.Contains(body, `type="module" nonce=`) {
+		t.Error("the island's script tag carries no nonce and would be blocked by the CSP")
+	}
+
+	for _, asset := range []string{"/static/js/calendar-island.js", "/static/css/calendar-island.css"} {
+		resp := c.get(asset)
+		resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			t.Errorf("GET %s: status %d, want 200 (run `npm run build:calendar` if this is a fresh checkout)", asset, resp.StatusCode)
+		}
+	}
+}
+
 // TestPWAEndpoints: the driver PWA needs its worker at the root and an offline page
 // that works without a session.
 func TestPWAEndpoints(t *testing.T) {
@@ -179,6 +226,28 @@ func TestPWAEndpoints(t *testing.T) {
 			if !strings.HasPrefix(body, "\x89PNG\r\n\x1a\n") {
 				t.Errorf("%s is not a PNG (%d bytes)", icon, len(body))
 			}
+		}
+	})
+
+	// lx-ui's pre-compiled dist bundle requests its own lazy component chunks at the
+	// site root (/js/calendar-assets/..., /css/...) rather than under /static/ — see
+	// docs/lx-ui-integration.md. The same embedded tree is mirrored at root so those
+	// requests resolve regardless of which URL scheme lx-ui's runtime actually uses.
+	t.Run("the static tree is mirrored at /js/ and /css/ for lx-ui's own chunk loader", func(t *testing.T) {
+		resp := c.get("/js/calendar-island.js")
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			t.Errorf("GET /js/calendar-island.js: status %d, want 200", resp.StatusCode)
+		}
+		resp2 := c.get("/css/calendar-island.css")
+		defer resp2.Body.Close()
+		if resp2.StatusCode != http.StatusOK {
+			t.Errorf("GET /css/calendar-island.css: status %d, want 200", resp2.StatusCode)
+		}
+		resp3 := c.get("/lx-fonts/IBMPlexSansVar.ttf")
+		defer resp3.Body.Close()
+		if resp3.StatusCode != http.StatusOK {
+			t.Errorf("GET /lx-fonts/IBMPlexSansVar.ttf: status %d, want 200", resp3.StatusCode)
 		}
 	})
 }
