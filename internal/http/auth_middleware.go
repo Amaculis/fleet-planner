@@ -3,6 +3,7 @@ package http
 import (
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/buscompany/bus_fleet/internal/auth"
 	"github.com/buscompany/bus_fleet/internal/domain"
@@ -105,6 +106,13 @@ func (s *Server) CSRF(next http.Handler) http.Handler {
 func (s *Server) RequireAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if _, ok := IdentityFrom(r.Context()); !ok {
+			if isAPI(r) {
+				// The SPA's own router decides where to send an anonymous caller
+				// (see portal/src/router/events.js) — a redirect here would just
+				// hand axios an HTML login page where it expects JSON.
+				s.writeJSON(w, r, http.StatusUnauthorized, apiError{Error: s.printerFor(r).T("error.forbidden")})
+				return
+			}
 			if isHTMX(r) {
 				// Tell htmx to reload the page so the login form replaces the fragment.
 				w.Header().Set("HX-Redirect", "/login")
@@ -128,6 +136,10 @@ func (s *Server) RequireRole(allowed ...domain.Role) func(http.Handler) http.Han
 			identity, ok := IdentityFrom(r.Context())
 			if !ok {
 				// Defensive: RequireAuth should already have run.
+				if isAPI(r) {
+					s.writeJSON(w, r, http.StatusUnauthorized, apiError{Error: s.printerFor(r).T("error.forbidden")})
+					return
+				}
 				http.Redirect(w, r, "/login", http.StatusSeeOther)
 				return
 			}
@@ -143,9 +155,17 @@ func (s *Server) RequireRole(allowed ...domain.Role) func(http.Handler) http.Han
 				"role", string(identity.Role),
 				"method", r.Method,
 				"path", r.URL.Path)
+			if isAPI(r) {
+				s.writeJSON(w, r, http.StatusForbidden, apiError{Error: s.printerFor(r).T("error.forbidden")})
+				return
+			}
 			s.renderError(w, r, http.StatusForbidden, "error.forbidden")
 		})
 	}
 }
 
 func isHTMX(r *http.Request) bool { return r.Header.Get("HX-Request") == "true" }
+
+// isAPI reports whether r is a call to the JSON API (portal/), rather than a
+// server-rendered page or an htmx fragment request.
+func isAPI(r *http.Request) bool { return strings.HasPrefix(r.URL.Path, "/api/") }

@@ -229,6 +229,35 @@ func TestSecurityHeaders(t *testing.T) {
 	}
 }
 
+// TestSecurityHeadersRelaxesStyleSrcOnlyForThePortal: lx-ui applies styling via
+// runtime :style bindings that no nonce can cover, so /app/ trades its style-src
+// nonce for 'unsafe-inline' there (see the comment in SecurityHeaders). Every other
+// route — including the script-src nonce, everywhere — must stay exactly as strict
+// as before.
+func TestSecurityHeadersRelaxesStyleSrcOnlyForThePortal(t *testing.T) {
+	s := testServer(t)
+
+	rec := httptest.NewRecorder()
+	s.SecurityHeaders(okHandler()).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/app/buses", nil))
+	csp := rec.Header().Get("Content-Security-Policy")
+	if !strings.Contains(csp, "style-src 'self' 'unsafe-inline'") {
+		t.Errorf("CSP for /app/ = %q, want a style-src with 'unsafe-inline' and no nonce", csp)
+	}
+	if !strings.Contains(csp, "script-src 'self' 'nonce-") {
+		t.Errorf("CSP for /app/ = %q, script-src must still be nonce-only", csp)
+	}
+
+	rec2 := httptest.NewRecorder()
+	s.SecurityHeaders(okHandler()).ServeHTTP(rec2, httptest.NewRequest(http.MethodGet, "/trips", nil))
+	csp2 := rec2.Header().Get("Content-Security-Policy")
+	if strings.Contains(csp2, "unsafe-inline") {
+		t.Errorf("CSP for /trips = %q, the server-rendered app must not get the relaxed style-src", csp2)
+	}
+	if !strings.Contains(csp2, "style-src 'self' 'nonce-") {
+		t.Errorf("CSP for /trips = %q, want a nonce-only style-src", csp2)
+	}
+}
+
 func TestClientIPTrustsProxyOnlyWhenConfigured(t *testing.T) {
 	s := testServer(t)
 

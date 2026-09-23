@@ -11,6 +11,15 @@ web/static/js/calendar-island.js
 web/static/css/calendar-island.css
 web/static/js/calendar-assets/
 node_modules/
+portal/dist/
+portal/public/themes/
+portal/playwright-report/
+portal/test-results/
+portal/blob-report/
+portal/e2e/.auth/
+
+# Claude Code runtime state (not a project asset — .claude/skills/ is, stays tracked)
+.claude/scheduled_tasks.lock
 
 # editor / OS
 .vscode/

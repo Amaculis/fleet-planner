@@ -61,13 +61,30 @@ func (s *Server) SecurityHeaders(next http.Handler) http.Handler {
 		}
 		nonce := base64.RawStdEncoding.EncodeToString(raw)
 
-		h := w.Header()
-		h.Set("Content-Security-Policy", strings.Join([]string{
+		// lx-ui (portal/, mounted at /app/) sets positioning/sizing through Vue
+		// :style bindings — inline style="" attributes assigned at runtime, which no
+		// nonce can ever authorize (a nonce only covers a <style> tag or <link>
+		// present in the HTML source, never an attribute a script sets later). The
+		// CSP-correct tool for exactly this is style-src-attr, scoped to inline
+		// attributes only — tried first here, but real-browser testing showed at
+		// least one engine reports the violation against style-src instead, meaning
+		// it doesn't understand style-src-attr and silently ignores it rather than
+		// falling back to honouring it. Per the CSP spec, 'unsafe-inline' is ignored
+		// by any browser that understands nonce-sources at all once a nonce-source is
+		// present in the same directive — so style-src for /app/ drops its nonce
+		// entirely rather than keep a nonce that would silently defeat the
+		// 'unsafe-inline' meant to replace it. The SPA has no server-rendered inline
+		// <style nonce> blocks to lose (its CSS is Vite-built external stylesheets,
+		// already covered by 'self') — this costs nothing there. Every other route
+		// keeps the strict nonce-only style-src.
+		styleSrc := "style-src 'self' 'nonce-" + nonce + "'"
+		if strings.HasPrefix(r.URL.Path, "/app/") {
+			styleSrc = "style-src 'self' 'unsafe-inline'"
+		}
+		directives := []string{
 			"default-src 'none'",
 			"script-src 'self' 'nonce-" + nonce + "'",
-			// The nonce covers the timeline's generated position rules; there is still
-			// no unsafe-inline, so an injected style attribute cannot apply.
-			"style-src 'self' 'nonce-" + nonce + "'",
+			styleSrc,
 			"img-src 'self' data:",
 			"font-src 'self'",
 			"connect-src 'self'",
@@ -75,7 +92,9 @@ func (s *Server) SecurityHeaders(next http.Handler) http.Handler {
 			"frame-ancestors 'none'",
 			"base-uri 'none'",
 			"manifest-src 'self'",
-		}, "; "))
+		}
+		h := w.Header()
+		h.Set("Content-Security-Policy", strings.Join(directives, "; "))
 		h.Set("X-Content-Type-Options", "nosniff")
 		h.Set("X-Frame-Options", "DENY")
 		h.Set("Referrer-Policy", "same-origin")

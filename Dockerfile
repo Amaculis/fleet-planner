@@ -29,6 +29,26 @@ RUN mkdir -p web/static/css web/static/js web/static/lx-fonts \
 # list) — lx-ui ships ~50 across five other font families (Poppins, Ubuntu, Roboto,
 # Geist, Departure) for themes this app doesn't use; no reason to ship those too.
 
+# --- portal: the lx-ui Vue SPA (see docs/lx-ui-integration.md) ----------------------
+# A separate stage, not part of `assets`: this is a full npm project of its own
+# (portal/package.json), not a handful of files copied into web/static, and its
+# output is NOT go:embed'd into the binary (see config.PortalDir) — it is copied
+# straight into the runtime image below and served from disk.
+FROM node:22-alpine AS portal
+WORKDIR /src/portal
+COPY portal/package.json portal/package-lock.json ./
+# npm install, not ci: `npm ci` repeatedly failed here with "Missing: @esbuild/...
+# from lock file" for optional per-platform esbuild binaries — reproducible even
+# starting from a lockfile just generated fresh inside this exact image, so it isn't
+# the earlier Windows-vs-Linux mismatch this comment used to describe. package.json
+# pins vite (and now @playwright/test) to exact versions, which is what actually
+# stops the different-rolldown-version problem `npm ci` was originally reached for;
+# `npm install` self-heals a lockfile npm's own optional-dependency bookkeeping
+# didn't fully write out, the same way the `assets` stage above already does.
+RUN npm install --no-audit --no-fund
+COPY portal ./
+RUN npm run build
+
 # --- binary -------------------------------------------------------------------------
 FROM golang:1.26-alpine AS build
 WORKDIR /src
@@ -45,6 +65,10 @@ RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/server 
 # --- runtime: distroless, no shell, no package manager, nonroot ---------------------
 FROM gcr.io/distroless/static-debian12:nonroot
 COPY --from=build /out/server /app/server
+# PORTAL_DIR defaults to "portal/dist", read relative to the working directory the
+# binary runs in — set it to match wherever this lands if that ever changes.
+COPY --from=portal /src/portal/dist /app/portal/dist
+WORKDIR /app
 USER 65532:65532
 EXPOSE 8080
 ENTRYPOINT ["/app/server"]
