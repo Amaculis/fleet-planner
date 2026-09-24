@@ -12,23 +12,33 @@ import useAuthStore from "@/stores/auth";
 // stores/auth.js) back on every state-changing request, via the same X-CSRF-Token
 // header the server-rendered app's htmx forms already use
 // (internal/http/auth_middleware.go's CSRF middleware).
-export default () => {
-  const http = axios.create({
-    baseURL: APP_CONFIG.apiUrl,
-    withCredentials: true,
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-    },
-  });
+// A single shared instance, not one per call: harmless in the real app either way
+// (the interceptor reads the CSRF token fresh on every request regardless of when
+// the instance was created), but it's what lets demo mode (see src/demo/mockApi.js)
+// attach an axios-mock-adapter to "the" axios instance and have every service call
+// in the app hit it — axios-mock-adapter mocks a specific instance, and
+// axios.create() would otherwise hand back an unmocked instance on every call.
+let http = null;
 
-  http.interceptors.request.use((config) => {
-    const auth = useAuthStore();
-    if (auth.csrfToken) {
-      config.headers["X-CSRF-Token"] = auth.csrfToken;
-    }
-    return config;
-  });
+export default () => {
+  if (!http) {
+    http = axios.create({
+      baseURL: APP_CONFIG.apiUrl,
+      withCredentials: true,
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+    });
+
+    http.interceptors.request.use((config) => {
+      const auth = useAuthStore();
+      if (auth.csrfToken) {
+        config.headers["X-CSRF-Token"] = auth.csrfToken;
+      }
+      return config;
+    });
+  }
 
   return http;
 };

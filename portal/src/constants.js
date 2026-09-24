@@ -14,4 +14,7 @@ export const APP_CONFIG = {
   defaultLocale: "en",
   fallbackLocale: "en",
   supportedLocales: ["en", "lv", "ru"],
+  // Only true for the GitHub Pages build (`npm run build:demo`) — see
+  // src/demo/mockApi.js. The regular build the Go server embeds never sets this.
+  demo: import.meta.env.VITE_DEMO === "true",
 };
