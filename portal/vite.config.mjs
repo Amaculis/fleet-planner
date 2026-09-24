@@ -2,12 +2,34 @@ import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
 import { fileURLToPath, URL } from "url";
 
+// Rewrites the lx-ui carbon theme's hardcoded-absolute font URLs
+// (url(/lx-fonts/IBMPlexMono-Regular.ttf), see lx-fonts-carbon.css) to be
+// base-prefixed, for the GitHub Pages demo build only. The real build leaves
+// these untouched on purpose: internal/http/server.go serves the exact same
+// files at literal /lx-fonts/* (see the Dockerfile's copy step), which only
+// works because the real app is deployed at its domain's root — rewriting them
+// there would break font loading, not fix it. GitHub Pages project sites are
+// served from a /<repo>/ subpath, where the un-rewritten absolute path resolves
+// to a location this project doesn't control at all.
+function rewriteFontPathsForSubpath(base) {
+  return {
+    name: "rewrite-lx-font-paths",
+    generateBundle(_, bundle) {
+      for (const file of Object.values(bundle)) {
+        if (file.type === "asset" && file.fileName.endsWith(".css") && typeof file.source === "string") {
+          file.source = file.source.replaceAll("url(/lx-fonts/", `url(${base}lx-fonts/`);
+        }
+      }
+    },
+  };
+}
+
 // No env-driven backend URL / createHtmlPlugin templating here — see
 // src/constants.js for why: this app is always same-origin with its own API, so
 // there is nothing to substitute per environment.
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   base: "/app/",
-  plugins: [vue()],
+  plugins: [vue(), ...(mode === "demo" ? [rewriteFontPathsForSubpath("/fleet-planner/")] : [])],
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
@@ -42,4 +64,4 @@ export default defineConfig({
       "/api": { target: "http://localhost:8080", changeOrigin: true },
     },
   },
-});
+}));

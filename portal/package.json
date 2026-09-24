@@ -7,13 +7,16 @@
   "scripts": {
     "dev": "vite --host",
     "build": "vite build",
+    "build:demo": "node scripts/copy-demo-fonts.mjs && vite build --mode demo --outDir dist-demo --base=/fleet-planner/",
     "preview": "vite preview",
+    "preview:demo": "vite preview --outDir dist-demo --base=/fleet-planner/",
     "test": "vitest --run",
     "test:e2e": "playwright test"
   },
   "dependencies": {
     "@dativa-lv/lx-ui": "2.3.3",
     "axios": "^1.7.9",
+    "axios-mock-adapter": "^2.1.0",
     "pinia": "^2.1.7",
     "vue": "3.5.43",
     "vue-i18n": "^9.14.2",
