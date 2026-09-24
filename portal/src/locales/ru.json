@@ -155,7 +155,12 @@
   },
   "trips": {
     "assignment": "Автобус и водитель",
-    "unassigned": "Не назначен"
+    "unassigned": "Не назначен",
+    "unassignedHint": "Автобус и водитель ещё не назначены.",
+    "markAs": "Отметить как",
+    "durationDays": "{n} д",
+    "durationHours": "{n} ч",
+    "durationMinutes": "{n} мин"
   },
   "common": {
     "yes": "Да",

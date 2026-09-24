@@ -155,7 +155,12 @@
   },
   "trips": {
     "assignment": "Bus & driver",
-    "unassigned": "Unassigned"
+    "unassigned": "Unassigned",
+    "unassignedHint": "No bus or driver assigned yet.",
+    "markAs": "Mark as",
+    "durationDays": "{n}d",
+    "durationHours": "{n}h",
+    "durationMinutes": "{n}m"
   },
   "common": {
     "yes": "Yes",

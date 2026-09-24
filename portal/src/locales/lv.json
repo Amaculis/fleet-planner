@@ -155,7 +155,12 @@
   },
   "trips": {
     "assignment": "Autobuss un vadītājs",
-    "unassigned": "Nav norīkots"
+    "unassigned": "Nav norīkots",
+    "unassignedHint": "Vēl nav piešķirts autobuss vai vadītājs.",
+    "markAs": "Atzīmēt kā",
+    "durationDays": "{n} d.",
+    "durationHours": "{n} st.",
+    "durationMinutes": "{n} min."
   },
   "common": {
     "yes": "Jā",
