@@ -54,3 +54,78 @@ test("driver: my trips loads with no console errors", async ({ page }) => {
   await expect(page.getByText(/my trips|mani reisi|мои рейсы/i).first()).toBeVisible();
   expect(errors, `console errors on my/trips:\n${errors.join("\n")}`).toEqual([]);
 });
+
+test("driver: start and finish a trip from my trips", async ({ page }) => {
+  const suffix = Date.now() % 100000;
+  const driverName = `E2E Driver ${suffix}`;
+  const email = `e2e-driver-${suffix}@example.com`;
+  const password = "correct-horse-battery-staple";
+
+  await page.goto("/app/");
+  const setup = await page.evaluate(
+    async ({ driverName, email, password, suffix }) => {
+      const me = await fetch("/api/auth/me").then((r) => r.json());
+      const driverResp = await fetch("/api/drivers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": me.csrfToken },
+        body: JSON.stringify({ fullName: driverName, licenseExpiry: "", isActive: true }),
+      });
+      const driver = await driverResp.json();
+      await fetch("/api/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": me.csrfToken },
+        body: JSON.stringify({ email, password, role: "driver", driverId: driver.id }),
+      });
+      const busesResp = await fetch("/api/buses?assignable=1").then((r) => r.json());
+      // Trip must be in its scheduled window (not far in the future) since the driver's
+      // start/finish actions are for a trip that's actually happening now.
+      const start = new Date(Date.now() - 5 * 60 * 1000);
+      const end = new Date(Date.now() + 60 * 60 * 1000);
+      const pad = (n) => String(n).padStart(2, "0");
+      const fmt = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      const tripResp = await fetch("/api/trips", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": me.csrfToken },
+        body: JSON.stringify({ origin: `StartFinishOrigin${suffix}`, destination: "Dest", scheduledStart: fmt(start), scheduledEnd: fmt(end), notes: null }),
+      });
+      const trip = await tripResp.json();
+      let assigned = false;
+      for (const bus of busesResp) {
+        const r = await fetch(`/api/trips/${trip.id}/assign`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-CSRF-Token": me.csrfToken },
+          body: JSON.stringify({ busId: bus.id, driverId: driver.id }),
+        });
+        if (r.status === 200) {
+          assigned = true;
+          break;
+        }
+      }
+      return { assigned };
+    },
+    { driverName, email, password, suffix }
+  );
+  expect(setup.assigned, "setting up a planned trip for the test driver").toBe(true);
+
+  await page.context().clearCookies();
+  const errors = trackConsoleErrors(page);
+  await page.goto("/app/login");
+  await page.getByRole("textbox", { name: /email/i }).fill(email);
+  await page.locator('input[type="password"]').fill(password);
+  await page.getByRole("button", { name: /sign in/i }).click();
+  await page.waitForURL(/\/app\/(dashboard)?$/);
+
+  await page.goto("/app/my/trips");
+  await page.waitForTimeout(500);
+
+  await expect(page.getByText(`StartFinishOrigin${suffix}`)).toBeVisible();
+  await page.getByRole("button", { name: /^start trip$/i }).click();
+  await expect(page.getByText(/^in progress$/i)).toBeVisible();
+
+  await page.getByRole("button", { name: /^finish trip$/i }).click();
+  await expect(page.getByText(/^completed$/i)).toBeVisible();
+  await expect(page.getByRole("button", { name: /^start trip$/i })).not.toBeVisible();
+  await expect(page.getByRole("button", { name: /^finish trip$/i })).not.toBeVisible();
+
+  expect(errors, `console errors starting/finishing a trip:\n${errors.join("\n")}`).toEqual([]);
+});
