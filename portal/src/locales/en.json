@@ -162,6 +162,9 @@
     "durationHours": "{n}h",
     "durationMinutes": "{n}m"
   },
+  "myTrips": {
+    "empty": "No trips assigned to you yet."
+  },
   "common": {
     "yes": "Yes",
     "no": "No",

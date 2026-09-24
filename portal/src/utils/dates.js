@@ -47,3 +47,19 @@ export function parseServerTimestamp(s) {
   const [hh, mm] = (timePart || "00:00").split(":").map(Number);
   return new Date(y, m - 1, d, hh, mm);
 }
+
+// Shared with TripDetail.vue, TripList.vue and MyTrips.vue — locale is passed in
+// rather than read from a hook here since this is a plain module, not a component.
+export function formatDateTime(date, locale) {
+  return date.toLocaleString(locale, {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+export function formatTime(date, locale) {
+  return date.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
+}

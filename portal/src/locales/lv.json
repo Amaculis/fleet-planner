@@ -162,6 +162,9 @@
     "durationHours": "{n} st.",
     "durationMinutes": "{n} min."
   },
+  "myTrips": {
+    "empty": "Jums vēl nav piešķirtu reisu."
+  },
   "common": {
     "yes": "Jā",
     "no": "Nē",

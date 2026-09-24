@@ -162,6 +162,9 @@
     "durationHours": "{n} ч",
     "durationMinutes": "{n} мин"
   },
+  "myTrips": {
+    "empty": "Вам пока не назначено ни одного рейса."
+  },
   "common": {
     "yes": "Да",
     "no": "Нет",

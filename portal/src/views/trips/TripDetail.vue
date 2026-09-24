@@ -5,7 +5,7 @@ import { useI18n } from "vue-i18n";
 import { LxButton, LxInfoBox, LxLoader, LxValuePicker } from "@dativa-lv/lx-ui";
 import { getTrip, deleteTrip, setTripStatus, assignTrip, unassignTrip } from "@/services/trips";
 import { getBuses, getDrivers } from "@/services/fleet";
-import { parseServerTimestamp } from "@/utils/dates";
+import { parseServerTimestamp, formatDateTime as formatDateTimeShared, formatTime as formatTimeShared } from "@/utils/dates";
 import useNotifyStore from "@/stores/notify";
 import useConfirmStore from "@/stores/confirm";
 import useErrors from "@/hooks/errors";
@@ -119,17 +119,10 @@ const startDate = computed(() => (trip.value ? parseServerTimestamp(trip.value.s
 const endDate = computed(() => (trip.value ? parseServerTimestamp(trip.value.scheduledEnd) : null));
 
 function formatDateTime(date) {
-  return date.toLocaleString(i18n.locale.value, {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return formatDateTimeShared(date, i18n.locale.value);
 }
 function formatTime(date) {
-  return date.toLocaleTimeString(i18n.locale.value, { hour: "2-digit", minute: "2-digit" });
+  return formatTimeShared(date, i18n.locale.value);
 }
 const sameDay = computed(
   () => startDate.value && endDate.value && startDate.value.toDateString() === endDate.value.toDateString()

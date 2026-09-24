@@ -4,6 +4,7 @@ import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { LxDataGrid, LxButton } from "@dativa-lv/lx-ui";
 import { getTrips } from "@/services/trips";
+import { parseServerTimestamp, formatDateTime } from "@/utils/dates";
 import useNotifyStore from "@/stores/notify";
 import useDataGridTexts from "@/hooks/dataGridTexts";
 import useErrors from "@/hooks/errors";
@@ -19,7 +20,7 @@ const loading = ref(false);
 
 const columnDefinitions = computed(() => [
   { id: "route", attributeName: "route", name: i18n.t("fields.origin"), kind: "primary" },
-  { id: "scheduledStart", attributeName: "scheduledStart", name: i18n.t("fields.scheduledStart") },
+  { id: "scheduledStartLabel", attributeName: "scheduledStartLabel", name: i18n.t("fields.scheduledStart") },
   { id: "statusLabel", attributeName: "statusLabel", name: i18n.t("fields.status") },
   { id: "assignmentLabel", attributeName: "assignmentLabel", name: i18n.t("trips.assignment") },
 ]);
@@ -30,6 +31,7 @@ const rows = computed(() =>
   trips.value.map((t) => ({
     ...t,
     route: `${t.origin} → ${t.destination}`,
+    scheduledStartLabel: formatDateTime(parseServerTimestamp(t.scheduledStart), i18n.locale.value),
     statusLabel: i18n.t(`tripStatus.${t.status}`),
     assignmentLabel: t.assignment
       ? `${t.assignment.busPlate} · ${t.assignment.driverName}`
