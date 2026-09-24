@@ -2,7 +2,7 @@
 import { ref, computed, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
-import { LxButton, LxInfoBox, LxLoader, LxValuePicker } from "@dativa-lv/lx-ui";
+import { LxButton, LxInfoBox, LxLoader, LxRow, LxValuePicker } from "@dativa-lv/lx-ui";
 import { getTrip, deleteTrip, setTripStatus, assignTrip, unassignTrip } from "@/services/trips";
 import { getBuses, getDrivers } from "@/services/fleet";
 import { parseServerTimestamp, formatDateTime as formatDateTimeShared, formatTime as formatTimeShared } from "@/utils/dates";
@@ -215,8 +215,12 @@ onMounted(load);
         </template>
         <template v-else>
           <p class="trip-unassigned-hint">{{ i18n.t("trips.unassignedHint") }}</p>
-          <LxValuePicker v-model="selectedBusId" :items="busItems" variant="dropdown" selection-kind="single" />
-          <LxValuePicker v-model="selectedDriverId" :items="driverItems" variant="dropdown" selection-kind="single" />
+          <LxRow :label="i18n.t('fields.bus')">
+            <LxValuePicker v-model="selectedBusId" :items="busItems" variant="dropdown" selection-kind="single" />
+          </LxRow>
+          <LxRow :label="i18n.t('fields.driver')">
+            <LxValuePicker v-model="selectedDriverId" :items="driverItems" variant="dropdown" selection-kind="single" />
+          </LxRow>
           <LxButton :label="i18n.t('actions.assign')" kind="primary" :loading="busy" @click="assign" />
         </template>
       </div>
