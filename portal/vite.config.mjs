@@ -64,4 +64,12 @@ export default defineConfig(({ mode }) => ({
       "/api": { target: "http://localhost:8080", changeOrigin: true },
     },
   },
+  test: {
+    environment: "jsdom",
+    // Vitest's own default include glob (**/*.{test,spec}.*) also matches
+    // e2e/*.spec.js — those are Playwright specs, not Vitest ones, and running
+    // them under Vitest fails outright (no browser context, no fixtures). Scoping
+    // to src/ keeps `npm run test` to this project's actual unit tests.
+    include: ["src/**/*.test.js"],
+  },
 }));
