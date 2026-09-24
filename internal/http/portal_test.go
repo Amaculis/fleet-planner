@@ -23,7 +23,7 @@ func TestPortalHandler(t *testing.T) {
 	s.cfg.PortalDir = dir
 	h := s.portalHandler()
 
-	t.Run("a real asset is served", func(t *testing.T) {
+	t.Run("a real asset is served and cached", func(t *testing.T) {
 		w := httptest.NewRecorder()
 		h.ServeHTTP(w, httptest.NewRequest("GET", "/app/assets/app.js", nil))
 		if w.Code != 200 {
@@ -32,9 +32,12 @@ func TestPortalHandler(t *testing.T) {
 		if w.Body.String() != "console.log(1)" {
 			t.Errorf("body = %q", w.Body.String())
 		}
+		if cc := w.Header().Get("Cache-Control"); cc != "public, max-age=3600" {
+			t.Errorf("Cache-Control = %q, want a hashed asset to be cacheable", cc)
+		}
 	})
 
-	t.Run("a client-side route falls back to the SPA shell", func(t *testing.T) {
+	t.Run("a client-side route falls back to the SPA shell, never cached", func(t *testing.T) {
 		w := httptest.NewRecorder()
 		h.ServeHTTP(w, httptest.NewRequest("GET", "/app/dashboard", nil))
 		if w.Code != 200 {
@@ -42,6 +45,9 @@ func TestPortalHandler(t *testing.T) {
 		}
 		if w.Body.String() != "<html>shell</html>" {
 			t.Errorf("body = %q, want the SPA shell", w.Body.String())
+		}
+		if cc := w.Header().Get("Cache-Control"); cc != "no-store" {
+			t.Errorf("Cache-Control = %q, want no-store", cc)
 		}
 	})
 
@@ -53,11 +59,19 @@ func TestPortalHandler(t *testing.T) {
 		}
 	})
 
-	t.Run("the root path serves the shell", func(t *testing.T) {
+	// Regression: rel defaults to "index.html" for the root path, and index.html is
+	// a real file on disk — so this used to take the cacheable-asset branch above
+	// (a plain visit to /app/, the app's actual entry point, got cached for an
+	// hour), even though the no-store branch's own comment already said index.html
+	// must never be cached.
+	t.Run("the root path's SPA shell is never cached", func(t *testing.T) {
 		w := httptest.NewRecorder()
 		h.ServeHTTP(w, httptest.NewRequest("GET", "/app/", nil))
 		if w.Code != 200 || w.Body.String() != "<html>shell</html>" {
 			t.Errorf("status %d, body %q", w.Code, w.Body.String())
+		}
+		if cc := w.Header().Get("Cache-Control"); cc != "no-store" {
+			t.Errorf("Cache-Control = %q, want no-store", cc)
 		}
 	})
 }

@@ -47,9 +47,40 @@
     "logout": "Log out"
   },
   "timeline": {
-    "previousDay": "Previous day",
     "today": "Today",
-    "nextDay": "Next day"
+    "previous": { "day": "Previous day", "week": "Previous week", "month": "Previous month" },
+    "next": { "day": "Next day", "week": "Next week", "month": "Next month" },
+    "viewDay": "Day",
+    "viewWeek": "Week",
+    "viewMonth": "Month",
+    "noBuses": "No buses to show",
+    "more": "more",
+    "continues": "Continues from a previous day"
+  },
+  "dashboard": {
+    "greeting": "Welcome back, {email}",
+    "activeBuses": "Active buses",
+    "activeDrivers": "Active drivers",
+    "tripsToday": "Trips today",
+    "tripsThisWeek": "Trips this week",
+    "inProgressNow": "In progress now",
+    "unassignedTrips": "Unassigned trips",
+    "needsAttention": "Needs attention",
+    "expiringSoon": "Documents expiring soon",
+    "noExpiring": "Nothing expiring in the next 30 days.",
+    "expiry": {
+      "insurance": "insurance",
+      "inspection": "inspection",
+      "license": "license"
+    },
+    "daysLeft": "{n} days left",
+    "expiredDaysAgo": "Expired {n} days ago",
+    "upcomingTrips": "Upcoming trips",
+    "noUpcoming": "No upcoming trips.",
+    "today": "Today",
+    "myTripsToday": "My trips today",
+    "myTripsThisWeek": "My trips this week",
+    "nextTrip": "Next trip"
   },
   "fields": {
     "plate": "Plate",

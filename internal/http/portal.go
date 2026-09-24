@@ -25,22 +25,29 @@ func (s *Server) portalHandler() http.Handler {
 			rel = "index.html"
 		}
 
-		if f, err := dir.Open("/" + rel); err == nil {
-			f.Close()
-			w.Header().Set("Cache-Control", "public, max-age=3600")
-			assets.ServeHTTP(w, r)
-			return
+		// index.html itself must never take the cacheable-asset branch below, even
+		// though it's a real file that "/" resolves to (rel defaults to it above) —
+		// it's the one file whose content legitimately changes between deploys at a
+		// fixed URL (unlike the content-hashed assets it references), and a stale
+		// cached copy keeps referencing yesterday's JS/CSS hashes. Confirmed live: a
+		// plain visit to /app/ was caching index.html for an hour, silently masking a
+		// just-deployed CSS fix behind the previous build until the cache expired.
+		if rel != "index.html" {
+			if f, err := dir.Open("/" + rel); err == nil {
+				f.Close()
+				w.Header().Set("Cache-Control", "public, max-age=3600")
+				assets.ServeHTTP(w, r)
+				return
+			}
+
+			if filepath.Ext(rel) != "" {
+				http.NotFound(w, r)
+				return
+			}
 		}
 
-		if filepath.Ext(rel) != "" {
-			http.NotFound(w, r)
-			return
-		}
-
-		// No matching file, and the path names a route rather than an asset: hand
-		// back the SPA shell itself. Never cached — it is the one file whose content
-		// can legitimately change between deploys at a fixed URL, unlike the
-		// content-hashed asset files it references.
+		// Either the path names a route rather than an asset (SPA shell as a
+		// client-side-routing fallback), or it resolved to index.html directly.
 		w.Header().Set("Cache-Control", "no-store")
 		http.ServeFile(w, r, filepath.Join(string(dir), "index.html"))
 	})

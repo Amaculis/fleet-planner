@@ -47,9 +47,40 @@
     "logout": "Выйти"
   },
   "timeline": {
-    "previousDay": "Предыдущий день",
     "today": "Сегодня",
-    "nextDay": "Следующий день"
+    "previous": { "day": "Предыдущий день", "week": "Предыдущая неделя", "month": "Предыдущий месяц" },
+    "next": { "day": "Следующий день", "week": "Следующая неделя", "month": "Следующий месяц" },
+    "viewDay": "День",
+    "viewWeek": "Неделя",
+    "viewMonth": "Месяц",
+    "noBuses": "Нет автобусов для отображения",
+    "more": "ещё",
+    "continues": "Продолжается с предыдущего дня"
+  },
+  "dashboard": {
+    "greeting": "Добро пожаловать, {email}",
+    "activeBuses": "Активные автобусы",
+    "activeDrivers": "Активные водители",
+    "tripsToday": "Рейсы сегодня",
+    "tripsThisWeek": "Рейсы на этой неделе",
+    "inProgressNow": "Сейчас в пути",
+    "unassignedTrips": "Неназначенные рейсы",
+    "needsAttention": "Требует внимания",
+    "expiringSoon": "Скоро истекает срок",
+    "noExpiring": "В ближайшие 30 дней ничего не истекает.",
+    "expiry": {
+      "insurance": "страховка",
+      "inspection": "техосмотр",
+      "license": "водительское удостоверение"
+    },
+    "daysLeft": "Осталось {n} дн.",
+    "expiredDaysAgo": "Истёк {n} дн. назад",
+    "upcomingTrips": "Предстоящие рейсы",
+    "noUpcoming": "Нет предстоящих рейсов.",
+    "today": "Сегодня",
+    "myTripsToday": "Мои рейсы сегодня",
+    "myTripsThisWeek": "Мои рейсы на этой неделе",
+    "nextTrip": "Следующий рейс"
   },
   "fields": {
     "plate": "Номер",

@@ -14,6 +14,9 @@ import {
   LxDateTimePicker,
   LxToggle,
   LxBadge,
+  LxContentSwitcher,
+  LxTile,
+  LxIcon,
 } from "@dativa-lv/lx-ui";
 
 // Reset & fonts (always required).
@@ -43,6 +46,13 @@ import "@dativa-lv/lx-ui/dist/styles/lx-badges.css"; // LxBadge
 import "@dativa-lv/lx-ui/dist/styles/lx-info-boxes.css"; // LxInfoBox — distinct from lx-notifications.css
 import "@dativa-lv/lx-ui/dist/styles/lx-expanders.css"; // LxAccessibilitySettings
 import "@dativa-lv/lx-ui/dist/styles/lx-stack.css"; // LxAccessibilitySettings' internal LxStack
+import "@dativa-lv/lx-ui/dist/styles/lx-content-switchers.css"; // LxContentSwitcher (Timeline view mode)
+import "@dativa-lv/lx-ui/dist/styles/lx-lists.css"; // LxTile (Dashboard)
+import "@dativa-lv/lx-ui/dist/styles/lx-popovers.css"; // LxValuePicker's dropdown variant and
+// LxAccessibilitySettings' theme picker both load from the same DropDownMenu chunk (confirmed
+// via dativa-lv-lx-ui.esm.js: LxValuePicker = import("./DropDownMenu-*.js").then(e =>
+// e.ValuePicker_exports)) and its popover panel (.lx-dropdown-panel etc.) is defined here, not
+// in lx-value-pickers.css — without it the panel renders unstyled/unsized ("big logo" bug).
 
 import App from "@/App.vue";
 import router from "@/router";
@@ -68,7 +78,7 @@ app.use(createLx, {
   preload: {
     components: [
       LxShell, LxButton, LxTextInput, LxErrorPage, LxAccessibilitySettings, LxLoaderView, LxInfoBox,
-      LxDataGrid, LxValuePicker, LxDateTimePicker, LxToggle, LxBadge,
+      LxDataGrid, LxValuePicker, LxDateTimePicker, LxToggle, LxBadge, LxContentSwitcher, LxTile, LxIcon,
     ],
   },
   publicUrl: window.location.origin + APP_CONFIG.publicUrl,

@@ -13,7 +13,9 @@ test.describe("login", () => {
   test("login works and reaches the dashboard with no console errors", async ({ page }) => {
     const errors = trackConsoleErrors(page);
     await login(page, ADMIN_EMAIL, ADMIN_PASSWORD);
-    await expect(page.getByText(ADMIN_EMAIL)).toBeVisible();
+    // Disambiguate: the shell's user menu AND the dashboard's greeting heading both
+    // show the email once tiles/greeting were added to Dashboard.vue.
+    await expect(page.getByRole("heading", { name: new RegExp(ADMIN_EMAIL) })).toBeVisible();
     expect(errors, `console errors on login:\n${errors.join("\n")}`).toEqual([]);
   });
 });

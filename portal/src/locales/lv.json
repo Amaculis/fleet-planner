@@ -47,9 +47,40 @@
     "logout": "Iziet"
   },
   "timeline": {
-    "previousDay": "Iepriekšējā diena",
     "today": "Šodien",
-    "nextDay": "Nākamā diena"
+    "previous": { "day": "Iepriekšējā diena", "week": "Iepriekšējā nedēļa", "month": "Iepriekšējais mēnesis" },
+    "next": { "day": "Nākamā diena", "week": "Nākamā nedēļa", "month": "Nākamais mēnesis" },
+    "viewDay": "Diena",
+    "viewWeek": "Nedēļa",
+    "viewMonth": "Mēnesis",
+    "noBuses": "Nav autobusu, ko rādīt",
+    "more": "vairāk",
+    "continues": "Turpinās no iepriekšējās dienas"
+  },
+  "dashboard": {
+    "greeting": "Laipni lūdzam, {email}",
+    "activeBuses": "Aktīvie autobusi",
+    "activeDrivers": "Aktīvie vadītāji",
+    "tripsToday": "Reisi šodien",
+    "tripsThisWeek": "Reisi šonedēļ",
+    "inProgressNow": "Šobrīd notiek",
+    "unassignedTrips": "Nepiešķirti reisi",
+    "needsAttention": "Pievērst uzmanību",
+    "expiringSoon": "Drīz beigsies derīguma termiņš",
+    "noExpiring": "Tuvāko 30 dienu laikā nekas nebeidzas.",
+    "expiry": {
+      "insurance": "apdrošināšana",
+      "inspection": "tehniskā apskate",
+      "license": "vadītāja apliecība"
+    },
+    "daysLeft": "Atlikušas {n} dienas",
+    "expiredDaysAgo": "Beidzās pirms {n} dienām",
+    "upcomingTrips": "Gaidāmie reisi",
+    "noUpcoming": "Nav gaidāmu reisu.",
+    "today": "Šodien",
+    "myTripsToday": "Mani reisi šodien",
+    "myTripsThisWeek": "Mani reisi šonedēļ",
+    "nextTrip": "Nākamais reiss"
   },
   "fields": {
     "plate": "Numura zīme",
