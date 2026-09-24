@@ -44,6 +44,11 @@ test("driver: add, edit, anonymize", async ({ page }) => {
   await page.getByLabel(/full name/i).fill(name);
   await page.getByRole("button", { name: /save/i }).click();
   await expect(page).toHaveURL(/\/app\/drivers$/, { timeout: 10000 });
+  // LxDataGrid virtualizes rows (hasVirtualization defaults to true) — with 50+
+  // drivers from earlier test runs, a freshly created row's DOM node genuinely
+  // doesn't exist yet outside the rendered window, not just off-screen. Search
+  // narrows the grid down to the one match instead of scrolling to find it.
+  await page.getByRole("textbox", { name: /search/i }).fill(name);
   await expect(page.getByText(name)).toBeVisible();
 
   const row = page.getByRole("row", { name: new RegExp(name) });
@@ -52,6 +57,10 @@ test("driver: add, edit, anonymize", async ({ page }) => {
   await page.getByLabel(/phone/i).fill("20000000");
   await page.getByRole("button", { name: /save/i }).click();
   await expect(page).toHaveURL(/\/app\/drivers$/, { timeout: 10000 });
+
+  // The edit round trip remounts the list (searchTerm is component-local state),
+  // so the search box is empty again — same virtualization reasoning as above.
+  await page.getByRole("textbox", { name: /search/i }).fill(name);
 
   // Anonymize (GDPR erasure) — the driver's name is replaced, so it must stop
   // appearing under its original name.
@@ -120,6 +129,9 @@ test("user: add, activate/deactivate", async ({ page }) => {
   await page.locator('input[type="password"]').fill("correct-horse-battery-staple");
   await page.getByRole("button", { name: /save/i }).click();
   await expect(page).toHaveURL(/\/app\/users$/, { timeout: 10000 });
+  // Same reasoning as the driver test above: LxDataGrid virtualizes rows, so a
+  // freshly created user's row may not exist in the DOM yet without searching.
+  await page.getByRole("textbox", { name: /search/i }).fill(email);
   await expect(page.getByText(email)).toBeVisible();
 
   // Deactivate, then reactivate — the one row action users currently have.

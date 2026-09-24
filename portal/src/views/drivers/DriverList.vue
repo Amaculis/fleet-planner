@@ -18,6 +18,7 @@ const errors = useErrors();
 
 const drivers = ref([]);
 const loading = ref(false);
+const searchTerm = ref("");
 
 const columnDefinitions = computed(() => [
   { id: "fullName", attributeName: "fullName", name: i18n.t("fields.fullName"), kind: "primary" },
@@ -30,12 +31,15 @@ const actionDefinitions = computed(() => [
   { id: "anonymize", name: i18n.t("actions.anonymize"), icon: "delete", destructive: true },
 ]);
 
-const rows = computed(() =>
-  drivers.value.map((d) => ({
+const rows = computed(() => {
+  const mapped = drivers.value.map((d) => ({
     ...d,
     activeLabel: d.anonymized ? "—" : d.isActive ? i18n.t("common.yes") : i18n.t("common.no"),
-  }))
-);
+  }));
+  const q = searchTerm.value.trim().toLowerCase();
+  if (!q) return mapped;
+  return mapped.filter((d) => d.fullName.toLowerCase().includes(q) || d.phone?.toLowerCase().includes(q));
+});
 
 async function load() {
   loading.value = true;
@@ -73,6 +77,8 @@ onMounted(load);
 <template>
   <LxDataGrid
     show-toolbar
+    has-search
+    v-model:search-string="searchTerm"
     :texts="dataGridTexts"
     :label="i18n.t('pages.drivers.title')"
     :column-definitions="columnDefinitions"

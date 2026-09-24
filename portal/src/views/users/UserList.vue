@@ -16,6 +16,7 @@ const errors = useErrors();
 
 const users = ref([]);
 const loading = ref(false);
+const searchTerm = ref("");
 
 const columnDefinitions = computed(() => [
   { id: "email", attributeName: "email", name: i18n.t("fields.email"), kind: "primary" },
@@ -29,13 +30,16 @@ const actionDefinitions = computed(() => [
   { id: "toggleActive", name: i18n.t("actions.toggleActive"), icon: "switch" },
 ]);
 
-const rows = computed(() =>
-  users.value.map((u) => ({
+const rows = computed(() => {
+  const mapped = users.value.map((u) => ({
     ...u,
     roleLabel: i18n.t(`roles.${u.role}`),
     activeLabel: u.isActive ? i18n.t("common.yes") : i18n.t("common.no"),
-  }))
-);
+  }));
+  const q = searchTerm.value.trim().toLowerCase();
+  if (!q) return mapped;
+  return mapped.filter((u) => u.email.toLowerCase().includes(q));
+});
 
 async function load() {
   loading.value = true;
@@ -71,6 +75,8 @@ onMounted(load);
 <template>
   <LxDataGrid
     show-toolbar
+    has-search
+    v-model:search-string="searchTerm"
     :texts="dataGridTexts"
     :label="i18n.t('pages.users.title')"
     :column-definitions="columnDefinitions"
