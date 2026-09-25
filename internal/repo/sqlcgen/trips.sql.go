@@ -11,10 +11,10 @@ import (
 )
 
 const createTrip = `-- name: CreateTrip :one
-INSERT INTO trips (origin, destination, scheduled_start, scheduled_end, notes)
-VALUES ($1, $2, $3, $4, $5)
+INSERT INTO trips (origin, destination, scheduled_start, scheduled_end, payment_status, notes)
+VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING id, origin, destination, scheduled_start, scheduled_end, actual_start, actual_end,
-          status, notes, created_at, updated_at
+          status, notes, created_at, updated_at, payment_status
 `
 
 type CreateTripParams struct {
@@ -22,6 +22,7 @@ type CreateTripParams struct {
 	Destination    string
 	ScheduledStart time.Time
 	ScheduledEnd   time.Time
+	PaymentStatus  PaymentStatus
 	Notes          *string
 }
 
@@ -31,6 +32,7 @@ func (q *Queries) CreateTrip(ctx context.Context, arg CreateTripParams) (Trip, e
 		arg.Destination,
 		arg.ScheduledStart,
 		arg.ScheduledEnd,
+		arg.PaymentStatus,
 		arg.Notes,
 	)
 	var i Trip
@@ -46,6 +48,7 @@ func (q *Queries) CreateTrip(ctx context.Context, arg CreateTripParams) (Trip, e
 		&i.Notes,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.PaymentStatus,
 	)
 	return i, err
 }
@@ -81,10 +84,24 @@ type FinishTripAsDriverParams struct {
 	DriverID int64
 }
 
+type FinishTripAsDriverRow struct {
+	ID             int64
+	Origin         string
+	Destination    string
+	ScheduledStart time.Time
+	ScheduledEnd   time.Time
+	ActualStart    *time.Time
+	ActualEnd      *time.Time
+	Status         TripStatus
+	Notes          *string
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
 // payroll-seam: actual_end closes the worked-time window.
-func (q *Queries) FinishTripAsDriver(ctx context.Context, arg FinishTripAsDriverParams) (Trip, error) {
+func (q *Queries) FinishTripAsDriver(ctx context.Context, arg FinishTripAsDriverParams) (FinishTripAsDriverRow, error) {
 	row := q.db.QueryRow(ctx, finishTripAsDriver, arg.TripID, arg.DriverID)
-	var i Trip
+	var i FinishTripAsDriverRow
 	err := row.Scan(
 		&i.ID,
 		&i.Origin,
@@ -103,7 +120,7 @@ func (q *Queries) FinishTripAsDriver(ctx context.Context, arg FinishTripAsDriver
 
 const getTrip = `-- name: GetTrip :one
 SELECT id, origin, destination, scheduled_start, scheduled_end, actual_start, actual_end,
-       status, notes, created_at, updated_at
+       status, notes, created_at, updated_at, payment_status
 FROM trips
 WHERE id = $1
 `
@@ -123,6 +140,7 @@ func (q *Queries) GetTrip(ctx context.Context, id int64) (Trip, error) {
 		&i.Notes,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.PaymentStatus,
 	)
 	return i, err
 }
@@ -140,10 +158,24 @@ type GetTripForDriverParams struct {
 	DriverID int64
 }
 
+type GetTripForDriverRow struct {
+	ID             int64
+	Origin         string
+	Destination    string
+	ScheduledStart time.Time
+	ScheduledEnd   time.Time
+	ActualStart    *time.Time
+	ActualEnd      *time.Time
+	Status         TripStatus
+	Notes          *string
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
 // Ownership in the WHERE clause: a trip id that is not the caller's returns no row.
-func (q *Queries) GetTripForDriver(ctx context.Context, arg GetTripForDriverParams) (Trip, error) {
+func (q *Queries) GetTripForDriver(ctx context.Context, arg GetTripForDriverParams) (GetTripForDriverRow, error) {
 	row := q.db.QueryRow(ctx, getTripForDriver, arg.TripID, arg.DriverID)
-	var i Trip
+	var i GetTripForDriverRow
 	err := row.Scan(
 		&i.ID,
 		&i.Origin,
@@ -229,8 +261,9 @@ func (q *Queries) ListTripsForDriver(ctx context.Context, arg ListTripsForDriver
 }
 
 const listTripsInRange = `-- name: ListTripsInRange :many
+
 SELECT id, origin, destination, scheduled_start, scheduled_end, actual_start, actual_end,
-       status, notes, created_at, updated_at
+       status, notes, created_at, updated_at, payment_status
 FROM trips
 WHERE tstzrange(scheduled_start, scheduled_end, '[)') && tstzrange($1, $2, '[)')
 ORDER BY scheduled_start, id
@@ -241,6 +274,10 @@ type ListTripsInRangeParams struct {
 	RangeEnd   interface{}
 }
 
+// Column lists below put payment_status last, matching its physical position from the
+// ALTER TABLE that added it (see 0006_trip_payment_status.up.sql) — the repo layer
+// converts these row types to sqlcgen.Trip via a plain Go type conversion, which needs
+// identical field order, not just identical field sets.
 // Planning list and (step 4) the timeline: trips whose window touches [$1, $2).
 func (q *Queries) ListTripsInRange(ctx context.Context, arg ListTripsInRangeParams) ([]Trip, error) {
 	rows, err := q.db.Query(ctx, listTripsInRange, arg.RangeStart, arg.RangeEnd)
@@ -263,6 +300,7 @@ func (q *Queries) ListTripsInRange(ctx context.Context, arg ListTripsInRangePara
 			&i.Notes,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.PaymentStatus,
 		); err != nil {
 			return nil, err
 		}
@@ -279,7 +317,7 @@ UPDATE trips
 SET status = $2
 WHERE id = $1
 RETURNING id, origin, destination, scheduled_start, scheduled_end, actual_start, actual_end,
-          status, notes, created_at, updated_at
+          status, notes, created_at, updated_at, payment_status
 `
 
 type SetTripStatusParams struct {
@@ -302,6 +340,7 @@ func (q *Queries) SetTripStatus(ctx context.Context, arg SetTripStatusParams) (T
 		&i.Notes,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.PaymentStatus,
 	)
 	return i, err
 }
@@ -324,12 +363,26 @@ type StartTripAsDriverParams struct {
 	DriverID int64
 }
 
+type StartTripAsDriverRow struct {
+	ID             int64
+	Origin         string
+	Destination    string
+	ScheduledStart time.Time
+	ScheduledEnd   time.Time
+	ActualStart    *time.Time
+	ActualEnd      *time.Time
+	Status         TripStatus
+	Notes          *string
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
 // payroll-seam: actual_start is the worked-time clock payroll will sum.
 // The driver id is matched in SQL, so a forged trip id cannot touch another driver's
 // trip: a mismatch returns no row, which the service maps to "not found".
-func (q *Queries) StartTripAsDriver(ctx context.Context, arg StartTripAsDriverParams) (Trip, error) {
+func (q *Queries) StartTripAsDriver(ctx context.Context, arg StartTripAsDriverParams) (StartTripAsDriverRow, error) {
 	row := q.db.QueryRow(ctx, startTripAsDriver, arg.TripID, arg.DriverID)
-	var i Trip
+	var i StartTripAsDriverRow
 	err := row.Scan(
 		&i.ID,
 		&i.Origin,
@@ -348,10 +401,11 @@ func (q *Queries) StartTripAsDriver(ctx context.Context, arg StartTripAsDriverPa
 
 const updateTrip = `-- name: UpdateTrip :one
 UPDATE trips
-SET origin = $2, destination = $3, scheduled_start = $4, scheduled_end = $5, notes = $6
+SET origin = $2, destination = $3, scheduled_start = $4, scheduled_end = $5,
+    payment_status = $6, notes = $7
 WHERE id = $1
 RETURNING id, origin, destination, scheduled_start, scheduled_end, actual_start, actual_end,
-          status, notes, created_at, updated_at
+          status, notes, created_at, updated_at, payment_status
 `
 
 type UpdateTripParams struct {
@@ -360,6 +414,7 @@ type UpdateTripParams struct {
 	Destination    string
 	ScheduledStart time.Time
 	ScheduledEnd   time.Time
+	PaymentStatus  PaymentStatus
 	Notes          *string
 }
 
@@ -372,6 +427,7 @@ func (q *Queries) UpdateTrip(ctx context.Context, arg UpdateTripParams) (Trip, e
 		arg.Destination,
 		arg.ScheduledStart,
 		arg.ScheduledEnd,
+		arg.PaymentStatus,
 		arg.Notes,
 	)
 	var i Trip
@@ -387,6 +443,7 @@ func (q *Queries) UpdateTrip(ctx context.Context, arg UpdateTripParams) (Trip, e
 		&i.Notes,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.PaymentStatus,
 	)
 	return i, err
 }

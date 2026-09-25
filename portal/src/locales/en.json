@@ -106,12 +106,19 @@
     "role": "Role",
     "driver": "Driver",
     "bus": "Bus",
-    "none": "None"
+    "none": "None",
+    "paymentStatus": "Payment status"
   },
   "busStatus": {
     "active": "In service",
     "maintenance": "In maintenance",
     "retired": "Retired"
+  },
+  "paymentStatus": {
+    "unpaid": "Unpaid",
+    "reserved": "Reserved",
+    "advance_paid": "Advance paid",
+    "paid": "Paid in full"
   },
   "payType": {
     "hourly": "Hourly",

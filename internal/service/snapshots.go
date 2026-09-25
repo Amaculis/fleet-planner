@@ -64,6 +64,7 @@ type tripSnapshot struct {
 	ActualStart    *string `json:"actual_start,omitempty"` // payroll-seam
 	ActualEnd      *string `json:"actual_end,omitempty"`   // payroll-seam
 	Status         string  `json:"status"`
+	PaymentStatus  string  `json:"payment_status"`
 	Notes          *string `json:"notes,omitempty"`
 }
 
@@ -76,6 +77,7 @@ func snapshotTrip(t domain.Trip) tripSnapshot {
 		ActualStart:    formatTimestampPtr(t.ActualStart),
 		ActualEnd:      formatTimestampPtr(t.ActualEnd),
 		Status:         string(t.Status),
+		PaymentStatus:  string(t.PaymentStatus),
 		Notes:          t.Notes,
 	}
 }

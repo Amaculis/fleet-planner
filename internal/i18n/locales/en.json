@@ -74,6 +74,7 @@
   "field.origin": "From",
   "field.password": "Password",
   "field.pay_type": "Pay type",
+  "field.payment_status": "Payment status",
   "field.phone": "Phone",
   "field.plate": "Plate",
   "field.role": "Role",

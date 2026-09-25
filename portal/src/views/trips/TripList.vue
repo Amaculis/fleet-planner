@@ -22,6 +22,7 @@ const columnDefinitions = computed(() => [
   { id: "route", attributeName: "route", name: i18n.t("fields.origin"), kind: "primary" },
   { id: "scheduledStartLabel", attributeName: "scheduledStartLabel", name: i18n.t("fields.scheduledStart") },
   { id: "statusLabel", attributeName: "statusLabel", name: i18n.t("fields.status") },
+  { id: "paymentStatusLabel", attributeName: "paymentStatusLabel", name: i18n.t("fields.paymentStatus") },
   { id: "assignmentLabel", attributeName: "assignmentLabel", name: i18n.t("trips.assignment") },
 ]);
 
@@ -33,6 +34,7 @@ const rows = computed(() =>
     route: `${t.origin} → ${t.destination}`,
     scheduledStartLabel: formatDateTime(parseServerTimestamp(t.scheduledStart), i18n.locale.value),
     statusLabel: i18n.t(`tripStatus.${t.status}`),
+    paymentStatusLabel: i18n.t(`paymentStatus.${t.paymentStatus}`),
     assignmentLabel: t.assignment
       ? `${t.assignment.busPlate} · ${t.assignment.driverName}`
       : i18n.t("trips.unassigned"),

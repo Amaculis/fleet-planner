@@ -1,38 +1,44 @@
+-- Column lists below put payment_status last, matching its physical position from the
+-- ALTER TABLE that added it (see 0006_trip_payment_status.up.sql) — the repo layer
+-- converts these row types to sqlcgen.Trip via a plain Go type conversion, which needs
+-- identical field order, not just identical field sets.
+
 -- name: ListTripsInRange :many
 -- Planning list and (step 4) the timeline: trips whose window touches [$1, $2).
 SELECT id, origin, destination, scheduled_start, scheduled_end, actual_start, actual_end,
-       status, notes, created_at, updated_at
+       status, notes, created_at, updated_at, payment_status
 FROM trips
 WHERE tstzrange(scheduled_start, scheduled_end, '[)') && tstzrange(@range_start, @range_end, '[)')
 ORDER BY scheduled_start, id;
 
 -- name: GetTrip :one
 SELECT id, origin, destination, scheduled_start, scheduled_end, actual_start, actual_end,
-       status, notes, created_at, updated_at
+       status, notes, created_at, updated_at, payment_status
 FROM trips
 WHERE id = $1;
 
 -- name: CreateTrip :one
-INSERT INTO trips (origin, destination, scheduled_start, scheduled_end, notes)
-VALUES ($1, $2, $3, $4, $5)
+INSERT INTO trips (origin, destination, scheduled_start, scheduled_end, payment_status, notes)
+VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING id, origin, destination, scheduled_start, scheduled_end, actual_start, actual_end,
-          status, notes, created_at, updated_at;
+          status, notes, created_at, updated_at, payment_status;
 
 -- name: UpdateTrip :one
 -- Rescheduling an assigned trip cascades the new window onto its assignment, where the
 -- EXCLUDE constraints re-check it — so moving a trip into a clash fails here.
 UPDATE trips
-SET origin = $2, destination = $3, scheduled_start = $4, scheduled_end = $5, notes = $6
+SET origin = $2, destination = $3, scheduled_start = $4, scheduled_end = $5,
+    payment_status = $6, notes = $7
 WHERE id = $1
 RETURNING id, origin, destination, scheduled_start, scheduled_end, actual_start, actual_end,
-          status, notes, created_at, updated_at;
+          status, notes, created_at, updated_at, payment_status;
 
 -- name: SetTripStatus :one
 UPDATE trips
 SET status = $2
 WHERE id = $1
 RETURNING id, origin, destination, scheduled_start, scheduled_end, actual_start, actual_end,
-          status, notes, created_at, updated_at;
+          status, notes, created_at, updated_at, payment_status;
 
 -- name: DeleteTrip :execrows
 -- Blocked by the assignments FK while the trip is assigned; cancel it instead.

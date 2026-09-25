@@ -99,6 +99,50 @@ func (ns NullPayType) Value() (driver.Value, error) {
 	return string(ns.PayType), nil
 }
 
+type PaymentStatus string
+
+const (
+	PaymentStatusUnpaid      PaymentStatus = "unpaid"
+	PaymentStatusReserved    PaymentStatus = "reserved"
+	PaymentStatusAdvancePaid PaymentStatus = "advance_paid"
+	PaymentStatusPaid        PaymentStatus = "paid"
+)
+
+func (e *PaymentStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = PaymentStatus(s)
+	case string:
+		*e = PaymentStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for PaymentStatus: %T", src)
+	}
+	return nil
+}
+
+type NullPaymentStatus struct {
+	PaymentStatus PaymentStatus
+	Valid         bool // Valid is true if PaymentStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullPaymentStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.PaymentStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.PaymentStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullPaymentStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.PaymentStatus), nil
+}
+
 type TripStatus string
 
 const (
@@ -258,6 +302,7 @@ type Trip struct {
 	Notes          *string
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
+	PaymentStatus  PaymentStatus
 }
 
 type User struct {

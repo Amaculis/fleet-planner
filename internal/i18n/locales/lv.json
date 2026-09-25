@@ -74,6 +74,7 @@
   "field.origin": "No",
   "field.password": "Parole",
   "field.pay_type": "Samaksas veids",
+  "field.payment_status": "Apmaksas statuss",
   "field.phone": "Tālrunis",
   "field.plate": "Numura zīme",
   "field.role": "Loma",

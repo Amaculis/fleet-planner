@@ -71,6 +71,7 @@ export function buildFixtures() {
 
         const roll = (dayOffset * 31 + b * 7 + s + 1000) % 15;
         const status = roll === 0 ? "cancelled" : dayOffset < 0 && roll % 4 === 0 ? "completed" : "planned";
+        const paymentStatus = ["unpaid", "reserved", "advance_paid", "paid"][roll % 4];
         const trip = {
           id: id(),
           origin,
@@ -78,6 +79,7 @@ export function buildFixtures() {
           scheduledStart: ts(iso, startT),
           scheduledEnd: ts(iso, endT),
           status,
+          paymentStatus,
           notes: null,
           assignment: null,
         };
@@ -98,6 +100,7 @@ export function buildFixtures() {
     scheduledStart: ts(addDays(isoToday, 2), "08:00"),
     scheduledEnd: ts(addDays(isoToday, 5), "18:00"),
     status: "planned",
+    paymentStatus: "advance_paid",
     notes: "Cross-border charter",
     assignment: { busId: buses[0].id, busPlate: buses[0].plate, driverId: drivers[0].id, driverName: drivers[0].fullName },
   });
@@ -108,6 +111,7 @@ export function buildFixtures() {
     scheduledStart: ts(addDays(isoToday, 12), "07:00"),
     scheduledEnd: ts(addDays(isoToday, 13), "20:00"),
     status: "planned",
+    paymentStatus: "reserved",
     notes: null,
     assignment: { busId: buses[0].id, busPlate: buses[0].plate, driverId: drivers[0].id, driverName: drivers[0].fullName },
   });

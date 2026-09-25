@@ -38,6 +38,7 @@ func (r *Repo) CreateTrip(ctx context.Context, t domain.Trip) (domain.Trip, erro
 		Destination:    t.Destination,
 		ScheduledStart: t.ScheduledStart,
 		ScheduledEnd:   t.ScheduledEnd,
+		PaymentStatus:  sqlcgen.PaymentStatus(t.PaymentStatus),
 		Notes:          t.Notes,
 	})
 	if err != nil {
@@ -55,6 +56,7 @@ func (r *Repo) UpdateTrip(ctx context.Context, t domain.Trip) (domain.Trip, erro
 		Destination:    t.Destination,
 		ScheduledStart: t.ScheduledStart,
 		ScheduledEnd:   t.ScheduledEnd,
+		PaymentStatus:  sqlcgen.PaymentStatus(t.PaymentStatus),
 		Notes:          t.Notes,
 	})
 	if err != nil {
@@ -100,7 +102,7 @@ func (r *Repo) ListTripsForDriver(ctx context.Context, driverID int64, since tim
 	trips := make([]domain.DriverTrip, 0, len(rows))
 	for _, row := range rows {
 		trips = append(trips, domain.DriverTrip{
-			Trip: domain.Trip{
+			Trip: driverTripFromRow(driverTripRow{
 				ID:             row.ID,
 				Origin:         row.Origin,
 				Destination:    row.Destination,
@@ -108,11 +110,11 @@ func (r *Repo) ListTripsForDriver(ctx context.Context, driverID int64, since tim
 				ScheduledEnd:   row.ScheduledEnd,
 				ActualStart:    row.ActualStart,
 				ActualEnd:      row.ActualEnd,
-				Status:         domain.TripStatus(row.Status),
+				Status:         row.Status,
 				Notes:          row.Notes,
 				CreatedAt:      row.CreatedAt,
 				UpdatedAt:      row.UpdatedAt,
-			},
+			}),
 			BusPlate: row.BusPlate,
 		})
 	}
@@ -128,7 +130,7 @@ func (r *Repo) GetTripForDriver(ctx context.Context, tripID, driverID int64) (do
 	if err != nil {
 		return domain.Trip{}, fmt.Errorf("getting driver trip: %w", translate(err))
 	}
-	return tripFromRow(sqlcgen.Trip(row)), nil
+	return driverTripFromRow(driverTripRow(row)), nil
 }
 
 // StartTripAsDriver and FinishTripAsDriver match the driver id inside the UPDATE, so a
@@ -143,7 +145,7 @@ func (r *Repo) StartTripAsDriver(ctx context.Context, tripID, driverID int64) (d
 	if err != nil {
 		return domain.Trip{}, fmt.Errorf("starting trip: %w", translate(err))
 	}
-	return tripFromRow(sqlcgen.Trip(row)), nil
+	return driverTripFromRow(driverTripRow(row)), nil
 }
 
 func (r *Repo) FinishTripAsDriver(ctx context.Context, tripID, driverID int64) (domain.Trip, error) {
@@ -154,5 +156,5 @@ func (r *Repo) FinishTripAsDriver(ctx context.Context, tripID, driverID int64) (
 	if err != nil {
 		return domain.Trip{}, fmt.Errorf("finishing trip: %w", translate(err))
 	}
-	return tripFromRow(sqlcgen.Trip(row)), nil
+	return driverTripFromRow(driverTripRow(row)), nil
 }

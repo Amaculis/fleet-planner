@@ -150,6 +150,9 @@ func validateTrip(t domain.Trip) (domain.Trip, error) {
 		}
 		t.Notes = trimOptional(t.Notes)
 	}
+	if _, ok := domain.ParsePaymentStatus(string(t.PaymentStatus)); !ok {
+		return t, unknownValue("field.payment_status")
+	}
 	// Times are stored and compared in UTC; the view layer formats them per locale.
 	t.ScheduledStart = t.ScheduledStart.UTC()
 	t.ScheduledEnd = t.ScheduledEnd.UTC()

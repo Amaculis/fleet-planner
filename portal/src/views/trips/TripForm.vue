@@ -2,7 +2,7 @@
 import { ref, computed, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
-import { LxSection, LxRow, LxTextInput, LxTextArea, LxButton, LxInfoBox } from "@dativa-lv/lx-ui";
+import { LxSection, LxRow, LxTextInput, LxTextArea, LxButton, LxInfoBox, LxValuePicker } from "@dativa-lv/lx-ui";
 import { getTrip, createTrip, updateTrip } from "@/services/trips";
 import DateTimeField from "@/components/DateTimeField.vue";
 import useErrors from "@/hooks/errors";
@@ -19,10 +19,15 @@ const origin = ref("");
 const destination = ref("");
 const scheduledStart = ref("");
 const scheduledEnd = ref("");
+const paymentStatus = ref("unpaid");
 const notes = ref("");
 
 const saving = ref(false);
 const errorMessage = ref("");
+
+const paymentStatusItems = computed(() =>
+  ["unpaid", "reserved", "advance_paid", "paid"].map((id) => ({ id, name: i18n.t(`paymentStatus.${id}`) }))
+);
 
 async function load() {
   if (isNew.value) return;
@@ -32,6 +37,7 @@ async function load() {
     destination.value = trip.destination;
     scheduledStart.value = trip.scheduledStart;
     scheduledEnd.value = trip.scheduledEnd;
+    paymentStatus.value = trip.paymentStatus;
     notes.value = trip.notes ?? "";
   } catch (error) {
     errorMessage.value = i18n.t(errors.get(error).message);
@@ -46,6 +52,7 @@ async function save() {
     destination: destination.value,
     scheduledStart: scheduledStart.value,
     scheduledEnd: scheduledEnd.value,
+    paymentStatus: paymentStatus.value,
     notes: notes.value || null,
   };
   try {
@@ -79,6 +86,9 @@ onMounted(load);
     </LxRow>
     <LxRow :label="i18n.t('fields.scheduledEnd')" required>
       <DateTimeField v-model="scheduledEnd" />
+    </LxRow>
+    <LxRow :label="i18n.t('fields.paymentStatus')" required>
+      <LxValuePicker v-model="paymentStatus" :items="paymentStatusItems" variant="dropdown" selection-kind="single" required />
     </LxRow>
     <LxRow :label="i18n.t('fields.notes')">
       <LxTextArea v-model="notes" />

@@ -26,6 +26,13 @@ const STATUS_CLASS = {
   cancelled: "trip-status-cancelled",
 };
 
+const PAYMENT_STATUS_CLASS = {
+  unpaid: "trip-payment-unpaid",
+  reserved: "trip-payment-reserved",
+  advance_paid: "trip-payment-advance-paid",
+  paid: "trip-payment-paid",
+};
+
 const i18n = useI18n();
 const route = useRoute();
 const router = useRouter();
@@ -154,6 +161,7 @@ onMounted(load);
         <h2 class="trip-route">{{ trip.origin }} → {{ trip.destination }}</h2>
         <div class="trip-header-meta">
           <span class="trip-status-badge" :class="STATUS_CLASS[trip.status]">{{ i18n.t(`tripStatus.${trip.status}`) }}</span>
+          <span class="trip-payment-badge" :class="PAYMENT_STATUS_CLASS[trip.paymentStatus]">{{ i18n.t(`paymentStatus.${trip.paymentStatus}`) }}</span>
           <span class="trip-duration">{{ durationLabel }}</span>
         </div>
       </div>
@@ -284,6 +292,30 @@ onMounted(load);
 .trip-status-cancelled {
   background: var(--color-region);
   color: var(--color-placeholder);
+}
+.trip-payment-badge {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 1rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border: 1px solid var(--color-region);
+}
+.trip-payment-unpaid {
+  background: var(--color-region);
+  color: var(--color-placeholder);
+}
+.trip-payment-reserved {
+  background: var(--color-new-background, var(--color-blue-background));
+  color: var(--color-new-foreground, var(--color-blue-foreground));
+}
+.trip-payment-advance-paid {
+  background: var(--color-ongoing-background, var(--color-orange-background));
+  color: var(--color-ongoing-foreground, var(--color-orange-foreground));
+}
+.trip-payment-paid {
+  background: var(--color-finished-background, var(--color-green-background));
+  color: var(--color-finished-foreground, var(--color-green-foreground));
 }
 .trip-panels {
   display: grid;

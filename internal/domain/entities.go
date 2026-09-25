@@ -126,6 +126,25 @@ func CanTransitionTrip(from, to TripStatus) bool {
 	return false
 }
 
+// PaymentStatus mirrors the Postgres enum payment_status. It tracks what the client
+// has paid for a trip — planner-only (admin/dispatcher); never exposed to a driver.
+type PaymentStatus string
+
+const (
+	PaymentUnpaid      PaymentStatus = "unpaid"
+	PaymentReserved    PaymentStatus = "reserved"
+	PaymentAdvancePaid PaymentStatus = "advance_paid"
+	PaymentPaid        PaymentStatus = "paid"
+)
+
+func ParsePaymentStatus(s string) (PaymentStatus, bool) {
+	switch PaymentStatus(s) {
+	case PaymentUnpaid, PaymentReserved, PaymentAdvancePaid, PaymentPaid:
+		return PaymentStatus(s), true
+	}
+	return "", false
+}
+
 type Trip struct {
 	ID             int64
 	Origin         string
@@ -136,9 +155,13 @@ type Trip struct {
 	ActualStart *time.Time
 	ActualEnd   *time.Time
 	Status      TripStatus
-	Notes       *string
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	// PaymentStatus is planner-only — see the type's own doc comment. Deliberately
+	// absent from every driver-facing query and API shape (ListTripsForDriver,
+	// apiDriverTrip, ...), not just hidden by the frontend.
+	PaymentStatus PaymentStatus
+	Notes         *string
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 }
 
 // WorkedDuration is the payroll seam made explicit: once a trip is completed, this is

@@ -112,6 +112,43 @@ func tripFromRow(row sqlcgen.Trip) domain.Trip {
 		ActualStart:    row.ActualStart,
 		ActualEnd:      row.ActualEnd,
 		Status:         domain.TripStatus(row.Status),
+		PaymentStatus:  domain.PaymentStatus(row.PaymentStatus),
+		Notes:          row.Notes,
+		CreatedAt:      row.CreatedAt,
+		UpdatedAt:      row.UpdatedAt,
+	}
+}
+
+// driverTripRow matches the shape shared by every driver-scoped trip query's row type
+// (GetTripForDriverRow, StartTripAsDriverRow, FinishTripAsDriverRow — see trips.sql):
+// identical fields/order/types lets a plain conversion (driverTripRow(row)) turn any of
+// them into this one shared shape below, the same trick tripFromRow itself relies on.
+// None of these queries select payment_status at all, so there is no field to drop —
+// that's what actually keeps it out of a driver's own trips, not just this omission.
+type driverTripRow struct {
+	ID             int64
+	Origin         string
+	Destination    string
+	ScheduledStart time.Time
+	ScheduledEnd   time.Time
+	ActualStart    *time.Time
+	ActualEnd      *time.Time
+	Status         sqlcgen.TripStatus
+	Notes          *string
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
+func driverTripFromRow(row driverTripRow) domain.Trip {
+	return domain.Trip{
+		ID:             row.ID,
+		Origin:         row.Origin,
+		Destination:    row.Destination,
+		ScheduledStart: row.ScheduledStart,
+		ScheduledEnd:   row.ScheduledEnd,
+		ActualStart:    row.ActualStart,
+		ActualEnd:      row.ActualEnd,
+		Status:         domain.TripStatus(row.Status),
 		Notes:          row.Notes,
 		CreatedAt:      row.CreatedAt,
 		UpdatedAt:      row.UpdatedAt,

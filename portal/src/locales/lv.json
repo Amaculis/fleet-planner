@@ -106,12 +106,19 @@
     "role": "Loma",
     "driver": "Vadītājs",
     "bus": "Autobuss",
-    "none": "Nav"
+    "none": "Nav",
+    "paymentStatus": "Apmaksas statuss"
   },
   "busStatus": {
     "active": "Ekspluatācijā",
     "maintenance": "Remontā",
     "retired": "Norakstīts"
+  },
+  "paymentStatus": {
+    "unpaid": "Nav apmaksāts",
+    "reserved": "Rezervēts",
+    "advance_paid": "Avanss samaksāts",
+    "paid": "Pilnībā apmaksāts"
   },
   "payType": {
     "hourly": "Par stundu",

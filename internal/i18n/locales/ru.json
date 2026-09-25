@@ -74,6 +74,7 @@
   "field.origin": "Откуда",
   "field.password": "Пароль",
   "field.pay_type": "Тип оплаты",
+  "field.payment_status": "Статус оплаты",
   "field.phone": "Телефон",
   "field.plate": "Номер",
   "field.role": "Роль",

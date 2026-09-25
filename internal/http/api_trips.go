@@ -24,10 +24,14 @@ type apiTrip struct {
 	ActualStart    string         `json:"actualStart,omitempty"`
 	ActualEnd      string         `json:"actualEnd,omitempty"`
 	Status         string         `json:"status"`
+	PaymentStatus  string         `json:"paymentStatus"`
 	Notes          *string        `json:"notes,omitempty"`
 	Assignment     *apiAssignment `json:"assignment,omitempty"`
 }
 
+// apiTripFrom is used only by the planner-facing endpoints (list/detail/create/update —
+// all RequireRole(admin, dispatcher), see server.go), so including PaymentStatus here is
+// safe; the separate driver-facing apiDriverTrip in api_driver.go has no such field.
 func (s *Server) apiTripFrom(t domain.Trip) apiTrip {
 	out := apiTrip{
 		ID:             t.ID,
@@ -36,6 +40,7 @@ func (s *Server) apiTripFrom(t domain.Trip) apiTrip {
 		ScheduledStart: formatTimestamp(t.ScheduledStart, s.cfg.Location),
 		ScheduledEnd:   formatTimestamp(t.ScheduledEnd, s.cfg.Location),
 		Status:         string(t.Status),
+		PaymentStatus:  string(t.PaymentStatus),
 		Notes:          t.Notes,
 	}
 	if t.ActualStart != nil {
@@ -52,6 +57,7 @@ type apiTripRequest struct {
 	Destination    string  `json:"destination"`
 	ScheduledStart string  `json:"scheduledStart"`
 	ScheduledEnd   string  `json:"scheduledEnd"`
+	PaymentStatus  string  `json:"paymentStatus"`
 	Notes          *string `json:"notes"`
 }
 
@@ -146,7 +152,17 @@ func (s *Server) handleAPITripGet(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) tripFromJSON(req apiTripRequest, id int64) (domain.Trip, error) {
-	trip := domain.Trip{ID: id, Origin: req.Origin, Destination: req.Destination, Notes: req.Notes}
+	// Defaults to "unpaid" when omitted — validateTrip still rejects anything else that
+	// isn't one of the four known values, this just keeps an absent field from being
+	// treated as an invalid one.
+	paymentStatus := domain.PaymentStatus(req.PaymentStatus)
+	if paymentStatus == "" {
+		paymentStatus = domain.PaymentUnpaid
+	}
+	trip := domain.Trip{
+		ID: id, Origin: req.Origin, Destination: req.Destination,
+		PaymentStatus: paymentStatus, Notes: req.Notes,
+	}
 	var err error
 	if trip.ScheduledStart, err = jsonTimestamp(req.ScheduledStart, "field.scheduled_start", s.cfg.Location); err != nil {
 		return trip, err

@@ -106,12 +106,19 @@
     "role": "Роль",
     "driver": "Водитель",
     "bus": "Автобус",
-    "none": "Нет"
+    "none": "Нет",
+    "paymentStatus": "Статус оплаты"
   },
   "busStatus": {
     "active": "В строю",
     "maintenance": "На обслуживании",
     "retired": "Списан"
+  },
+  "paymentStatus": {
+    "unpaid": "Не оплачено",
+    "reserved": "Забронировано",
+    "advance_paid": "Внесён аванс",
+    "paid": "Оплачено полностью"
   },
   "payType": {
     "hourly": "Почасовая",
