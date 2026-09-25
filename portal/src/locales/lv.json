@@ -10,6 +10,12 @@
     "lv": "Latvian (Latviešu)",
     "ru": "Russian (Русский)"
   },
+  "demo": {
+    "banner": "Demo versija — dati ir fiktīvi, nekas netiek saglabāts.",
+    "source": "Pirmkods",
+    "viewingAs": "Skatās kā:",
+    "resetData": "Atiestatīt demo datus"
+  },
   "pages": {
     "home": { "title": "Sākums" },
     "dashboard": { "title": "Panelis", "role": "Loma" },
@@ -175,7 +181,10 @@
   "common": {
     "yes": "Jā",
     "no": "Nē",
-    "unset": "—"
+    "unset": "—",
+    "all": "Visi",
+    "active": "Aktīvs",
+    "inactive": "Neaktīvs"
   },
   "dataGrid": {
     "emptyValue": "Nav norādīts",

@@ -2,7 +2,7 @@
 import { ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
-import { LxDataGrid, LxButton } from "@dativa-lv/lx-ui";
+import { LxDataGrid, LxButton, LxValuePicker } from "@dativa-lv/lx-ui";
 import { getUsers, activateUser, deactivateUser } from "@/services/users";
 import useNotifyStore from "@/stores/notify";
 import useDataGridTexts from "@/hooks/dataGridTexts";
@@ -17,6 +17,21 @@ const errors = useErrors();
 const users = ref([]);
 const loading = ref(false);
 const searchTerm = ref("");
+const roleFilter = ref("all");
+const activeFilter = ref("all");
+
+const roleFilterItems = computed(() => [
+  { id: "all", name: i18n.t("common.all") },
+  { id: "admin", name: i18n.t("roles.admin") },
+  { id: "dispatcher", name: i18n.t("roles.dispatcher") },
+  { id: "driver", name: i18n.t("roles.driver") },
+]);
+
+const activeFilterItems = computed(() => [
+  { id: "all", name: i18n.t("common.all") },
+  { id: "active", name: i18n.t("common.active") },
+  { id: "inactive", name: i18n.t("common.inactive") },
+]);
 
 const columnDefinitions = computed(() => [
   { id: "email", attributeName: "email", name: i18n.t("fields.email"), kind: "primary" },
@@ -36,9 +51,12 @@ const rows = computed(() => {
     roleLabel: i18n.t(`roles.${u.role}`),
     activeLabel: u.isActive ? i18n.t("common.yes") : i18n.t("common.no"),
   }));
+  const byRole = roleFilter.value === "all" ? mapped : mapped.filter((u) => u.role === roleFilter.value);
+  const byActive =
+    activeFilter.value === "all" ? byRole : byRole.filter((u) => u.isActive === (activeFilter.value === "active"));
   const q = searchTerm.value.trim().toLowerCase();
-  if (!q) return mapped;
-  return mapped.filter((u) => u.email.toLowerCase().includes(q));
+  if (!q) return byActive;
+  return byActive.filter((u) => u.email.toLowerCase().includes(q));
 });
 
 async function load() {
@@ -86,7 +104,20 @@ onMounted(load);
     @action-click="onActionClick"
   >
     <template #toolbar>
+      <div class="list-filter">
+        <LxValuePicker v-model="roleFilter" :items="roleFilterItems" variant="dropdown" selection-kind="single" />
+      </div>
+      <div class="list-filter">
+        <LxValuePicker v-model="activeFilter" :items="activeFilterItems" variant="dropdown" selection-kind="single" />
+      </div>
       <LxButton :label="i18n.t('pages.users.new')" icon="add" @click="router.push({ name: 'userNew' })" />
     </template>
   </LxDataGrid>
 </template>
+
+<style scoped>
+.list-filter {
+  width: 12rem;
+  flex-shrink: 0;
+}
+</style>

@@ -10,6 +10,12 @@
     "lv": "Latvian (Latviešu)",
     "ru": "Russian (Русский)"
   },
+  "demo": {
+    "banner": "Demo — fake data, nothing is saved.",
+    "source": "Source",
+    "viewingAs": "Viewing as:",
+    "resetData": "Reset demo data"
+  },
   "pages": {
     "home": { "title": "Home" },
     "dashboard": { "title": "Dashboard", "role": "Role" },
@@ -175,7 +181,10 @@
   "common": {
     "yes": "Yes",
     "no": "No",
-    "unset": "—"
+    "unset": "—",
+    "all": "All",
+    "active": "Active",
+    "inactive": "Inactive"
   },
   "dataGrid": {
     "emptyValue": "Not set",

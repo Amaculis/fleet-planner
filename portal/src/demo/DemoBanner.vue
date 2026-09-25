@@ -1,13 +1,16 @@
 <script setup>
 import { computed } from "vue";
+import { useI18n } from "vue-i18n";
 import { LxContentSwitcher, LxButton } from "@dativa-lv/lx-ui";
 import { demoRole } from "@/demo/mockApi";
 
-const roleItems = [
-  { id: "admin", name: "Admin" },
-  { id: "dispatcher", name: "Dispatcher" },
-  { id: "driver", name: "Driver" },
-];
+const i18n = useI18n();
+
+const roleItems = computed(() => [
+  { id: "admin", name: i18n.t("roles.admin") },
+  { id: "dispatcher", name: i18n.t("roles.dispatcher") },
+  { id: "driver", name: i18n.t("roles.driver") },
+]);
 
 const role = computed({
   get: () => demoRole.value,
@@ -32,13 +35,13 @@ function reset() {
 <template>
   <div class="demo-banner">
     <span class="demo-banner-label">
-      Demo — fake data, nothing is saved.
-      <a href="https://github.com/Amaculis/fleet-planner" target="_blank" rel="noopener">Source</a>
+      {{ i18n.t("demo.banner") }}
+      <a href="https://github.com/Amaculis/fleet-planner" target="_blank" rel="noopener">{{ i18n.t("demo.source") }}</a>
     </span>
     <div class="demo-banner-controls">
-      <span class="demo-banner-role-label">Viewing as:</span>
+      <span class="demo-banner-role-label">{{ i18n.t("demo.viewingAs") }}</span>
       <LxContentSwitcher v-model="role" :items="roleItems" />
-      <LxButton label="Reset demo data" kind="ghost" icon="reset" @click="reset" />
+      <LxButton :label="i18n.t('demo.resetData')" kind="ghost" icon="reset" @click="reset" />
     </div>
   </div>
 </template>

@@ -2,7 +2,7 @@
 import { ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
-import { LxDataGrid, LxButton } from "@dativa-lv/lx-ui";
+import { LxDataGrid, LxButton, LxValuePicker } from "@dativa-lv/lx-ui";
 import { getTrips } from "@/services/trips";
 import { parseServerTimestamp, formatDateTime } from "@/utils/dates";
 import useNotifyStore from "@/stores/notify";
@@ -17,6 +17,24 @@ const errors = useErrors();
 
 const trips = ref([]);
 const loading = ref(false);
+const statusFilter = ref("all");
+const paymentStatusFilter = ref("all");
+
+const statusFilterItems = computed(() => [
+  { id: "all", name: i18n.t("common.all") },
+  { id: "planned", name: i18n.t("tripStatus.planned") },
+  { id: "in_progress", name: i18n.t("tripStatus.in_progress") },
+  { id: "completed", name: i18n.t("tripStatus.completed") },
+  { id: "cancelled", name: i18n.t("tripStatus.cancelled") },
+]);
+
+const paymentStatusFilterItems = computed(() => [
+  { id: "all", name: i18n.t("common.all") },
+  { id: "unpaid", name: i18n.t("paymentStatus.unpaid") },
+  { id: "reserved", name: i18n.t("paymentStatus.reserved") },
+  { id: "advance_paid", name: i18n.t("paymentStatus.advance_paid") },
+  { id: "paid", name: i18n.t("paymentStatus.paid") },
+]);
 
 const columnDefinitions = computed(() => [
   { id: "route", attributeName: "route", name: i18n.t("fields.origin"), kind: "primary" },
@@ -28,8 +46,8 @@ const columnDefinitions = computed(() => [
 
 const actionDefinitions = computed(() => [{ id: "open", name: i18n.t("actions.open"), icon: "open" }]);
 
-const rows = computed(() =>
-  trips.value.map((t) => ({
+const rows = computed(() => {
+  const mapped = trips.value.map((t) => ({
     ...t,
     route: `${t.origin} → ${t.destination}`,
     scheduledStartLabel: formatDateTime(parseServerTimestamp(t.scheduledStart), i18n.locale.value),
@@ -38,8 +56,12 @@ const rows = computed(() =>
     assignmentLabel: t.assignment
       ? `${t.assignment.busPlate} · ${t.assignment.driverName}`
       : i18n.t("trips.unassigned"),
-  }))
-);
+  }));
+  const byStatus = statusFilter.value === "all" ? mapped : mapped.filter((t) => t.status === statusFilter.value);
+  return paymentStatusFilter.value === "all"
+    ? byStatus
+    : byStatus.filter((t) => t.paymentStatus === paymentStatusFilter.value);
+});
 
 async function load() {
   loading.value = true;
@@ -76,7 +98,25 @@ onMounted(load);
     @action-click="onActionClick"
   >
     <template #toolbar>
+      <div class="list-filter">
+        <LxValuePicker v-model="statusFilter" :items="statusFilterItems" variant="dropdown" selection-kind="single" />
+      </div>
+      <div class="list-filter">
+        <LxValuePicker
+          v-model="paymentStatusFilter"
+          :items="paymentStatusFilterItems"
+          variant="dropdown"
+          selection-kind="single"
+        />
+      </div>
       <LxButton :label="i18n.t('pages.trips.new')" icon="add" @click="router.push({ name: 'tripNew' })" />
     </template>
   </LxDataGrid>
 </template>
+
+<style scoped>
+.list-filter {
+  width: 12rem;
+  flex-shrink: 0;
+}
+</style>

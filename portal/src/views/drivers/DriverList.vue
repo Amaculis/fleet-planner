@@ -2,7 +2,7 @@
 import { ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
-import { LxDataGrid, LxButton } from "@dativa-lv/lx-ui";
+import { LxDataGrid, LxButton, LxValuePicker } from "@dativa-lv/lx-ui";
 import { getDrivers, anonymizeDriver } from "@/services/fleet";
 import useNotifyStore from "@/stores/notify";
 import useDataGridTexts from "@/hooks/dataGridTexts";
@@ -19,6 +19,13 @@ const errors = useErrors();
 const drivers = ref([]);
 const loading = ref(false);
 const searchTerm = ref("");
+const activeFilter = ref("all");
+
+const activeFilterItems = computed(() => [
+  { id: "all", name: i18n.t("common.all") },
+  { id: "active", name: i18n.t("common.active") },
+  { id: "inactive", name: i18n.t("common.inactive") },
+]);
 
 const columnDefinitions = computed(() => [
   { id: "fullName", attributeName: "fullName", name: i18n.t("fields.fullName"), kind: "primary" },
@@ -36,9 +43,11 @@ const rows = computed(() => {
     ...d,
     activeLabel: d.anonymized ? "—" : d.isActive ? i18n.t("common.yes") : i18n.t("common.no"),
   }));
+  const byActive =
+    activeFilter.value === "all" ? mapped : mapped.filter((d) => d.isActive === (activeFilter.value === "active"));
   const q = searchTerm.value.trim().toLowerCase();
-  if (!q) return mapped;
-  return mapped.filter((d) => d.fullName.toLowerCase().includes(q) || d.phone?.toLowerCase().includes(q));
+  if (!q) return byActive;
+  return byActive.filter((d) => d.fullName.toLowerCase().includes(q) || d.phone?.toLowerCase().includes(q));
 });
 
 async function load() {
@@ -88,7 +97,17 @@ onMounted(load);
     @action-click="onActionClick"
   >
     <template #toolbar>
+      <div class="list-filter">
+        <LxValuePicker v-model="activeFilter" :items="activeFilterItems" variant="dropdown" selection-kind="single" />
+      </div>
       <LxButton :label="i18n.t('pages.drivers.new')" icon="add" @click="router.push({ name: 'driverNew' })" />
     </template>
   </LxDataGrid>
 </template>
+
+<style scoped>
+.list-filter {
+  width: 12rem;
+  flex-shrink: 0;
+}
+</style>

@@ -2,7 +2,7 @@
 import { ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
-import { LxDataGrid, LxButton } from "@dativa-lv/lx-ui";
+import { LxDataGrid, LxButton, LxValuePicker } from "@dativa-lv/lx-ui";
 import { getBuses, deleteBus } from "@/services/fleet";
 import useNotifyStore from "@/stores/notify";
 import useDataGridTexts from "@/hooks/dataGridTexts";
@@ -18,6 +18,14 @@ const errors = useErrors();
 
 const buses = ref([]);
 const loading = ref(false);
+const statusFilter = ref("all");
+
+const statusFilterItems = computed(() => [
+  { id: "all", name: i18n.t("common.all") },
+  { id: "active", name: i18n.t("busStatus.active") },
+  { id: "maintenance", name: i18n.t("busStatus.maintenance") },
+  { id: "retired", name: i18n.t("busStatus.retired") },
+]);
 
 const columnDefinitions = computed(() => [
   { id: "plate", attributeName: "plate", name: i18n.t("fields.plate"), kind: "primary" },
@@ -31,9 +39,11 @@ const actionDefinitions = computed(() => [
   { id: "delete", name: i18n.t("actions.delete"), icon: "delete", destructive: true },
 ]);
 
-const rows = computed(() =>
-  buses.value.map((b) => ({ ...b, statusLabel: i18n.t(`busStatus.${b.status}`) }))
-);
+const rows = computed(() => {
+  const mapped = buses.value.map((b) => ({ ...b, statusLabel: i18n.t(`busStatus.${b.status}`) }));
+  if (statusFilter.value === "all") return mapped;
+  return mapped.filter((b) => b.status === statusFilter.value);
+});
 
 async function load() {
   loading.value = true;
@@ -85,7 +95,22 @@ onMounted(load);
     @action-click="onActionClick"
   >
     <template #toolbar>
+      <div class="list-filter">
+        <LxValuePicker v-model="statusFilter" :items="statusFilterItems" variant="dropdown" selection-kind="single" />
+      </div>
       <LxButton :label="i18n.t('pages.buses.new')" icon="add" @click="router.push({ name: 'busNew' })" />
     </template>
   </LxDataGrid>
 </template>
+
+<style scoped>
+/* LxValuePicker has no intrinsic max-width of its own — inside a form's LxRow it's
+   constrained by the row's layout, but the data grid's toolbar slot has no such
+   constraint, so the picker (and, worse, its closed dropdown panel) stretched to fill
+   the entire toolbar width and pushed the "Add" button out of the visible layout
+   entirely. Confirmed via screenshot before this fix. */
+.list-filter {
+  width: 12rem;
+  flex-shrink: 0;
+}
+</style>

@@ -32,3 +32,16 @@ watch(
   <component :is="DemoBanner" v-if="DemoBanner" />
   <router-view />
 </template>
+
+<style>
+/* Not scoped: LxShell's user-menu avatar (initials, e.g. "AA") renders in a box that
+   is genuinely centered by the numbers (confirmed via getBoundingClientRect on both
+   the circle and the text span — same center point on both axes), but all-caps
+   initials have no descenders, so the glyphs themselves sit high within that
+   otherwise-centered box, reading as visually off-center. A small downward nudge
+   compensates for that optical effect; global because this is lx-ui's own component,
+   not something with a scoped class this app defines. */
+.lx-avatar-initials {
+  transform: translateY(2px);
+}
+</style>

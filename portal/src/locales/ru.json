@@ -10,6 +10,12 @@
     "lv": "Latvian (Latviešu)",
     "ru": "Russian (Русский)"
   },
+  "demo": {
+    "banner": "Демо-версия — данные вымышленные, ничего не сохраняется.",
+    "source": "Исходный код",
+    "viewingAs": "Просмотр как:",
+    "resetData": "Сбросить демо-данные"
+  },
   "pages": {
     "home": { "title": "Главная" },
     "dashboard": { "title": "Панель", "role": "Роль" },
@@ -175,7 +181,10 @@
   "common": {
     "yes": "Да",
     "no": "Нет",
-    "unset": "—"
+    "unset": "—",
+    "all": "Все",
+    "active": "Активен",
+    "inactive": "Неактивен"
   },
   "dataGrid": {
     "emptyValue": "Не указано",
