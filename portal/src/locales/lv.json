@@ -186,6 +186,24 @@
     "active": "Aktīvs",
     "inactive": "Neaktīvs"
   },
+  "filterPanel": {
+    "filters": "Filtri",
+    "search": "Lietot",
+    "searchTitle": "Lietot izvēlētos filtrus",
+    "clear": "Notīrīt",
+    "clearTitle": "Atiestatīt visus filtrus",
+    "fastFiltersLabel": "Ātrie filtri",
+    "filtersApplied": "filtri tiek piemēroti",
+    "saveFilter": "Saglabāt",
+    "editFilter": "Rediģēt",
+    "badgeTypes": {
+      "default": "informatīvs paziņojums",
+      "info": "informatīvs paziņojums",
+      "success": "sekmīgs paziņojums",
+      "warning": "brīdinājums",
+      "error": "svarīgs paziņojums"
+    }
+  },
   "dataGrid": {
     "emptyValue": "Nav norādīts",
     "valueYes": "Jā",

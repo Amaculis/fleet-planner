@@ -2,10 +2,11 @@
 import { ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
-import { LxDataGrid, LxButton, LxValuePicker } from "@dativa-lv/lx-ui";
+import { LxDataGrid, LxButton, LxFilters, LxRow, LxValuePicker } from "@dativa-lv/lx-ui";
 import { getBuses, deleteBus } from "@/services/fleet";
 import useNotifyStore from "@/stores/notify";
 import useDataGridTexts from "@/hooks/dataGridTexts";
+import useFilterTexts from "@/hooks/filterTexts";
 import useConfirmStore from "@/stores/confirm";
 import useErrors from "@/hooks/errors";
 
@@ -13,12 +14,26 @@ const i18n = useI18n();
 const router = useRouter();
 const notify = useNotifyStore();
 const dataGridTexts = useDataGridTexts();
+const filterTexts = useFilterTexts();
 const confirmStore = useConfirmStore();
 const errors = useErrors();
 
 const buses = ref([]);
 const loading = ref(false);
+// Staged: the pickers edit the draft, and LxFilters' Apply button commits it — that
+// button (and Clear) are the component's own, so live-filtering would leave them inert.
+const filtersExpanded = ref(false);
+const draftStatus = ref("all");
 const statusFilter = ref("all");
+const usesFilters = computed(() => statusFilter.value !== "all");
+
+function applyFilters() {
+  statusFilter.value = draftStatus.value;
+}
+function resetFilters() {
+  draftStatus.value = "all";
+  statusFilter.value = "all";
+}
 
 const statusFilterItems = computed(() => [
   { id: "all", name: i18n.t("common.all") },
@@ -84,6 +99,18 @@ onMounted(load);
 </script>
 
 <template>
+  <LxFilters
+    v-model:expanded="filtersExpanded"
+    :texts="filterTexts"
+    :uses-filters="usesFilters"
+    @filter="applyFilters"
+    @reset-filters="resetFilters"
+  >
+    <LxRow :label="i18n.t('fields.status')">
+      <LxValuePicker v-model="draftStatus" :items="statusFilterItems" variant="dropdown" selection-kind="single" />
+    </LxRow>
+  </LxFilters>
+
   <LxDataGrid
     show-toolbar
     :texts="dataGridTexts"
@@ -95,22 +122,7 @@ onMounted(load);
     @action-click="onActionClick"
   >
     <template #toolbar>
-      <div class="list-filter">
-        <LxValuePicker v-model="statusFilter" :items="statusFilterItems" variant="dropdown" selection-kind="single" />
-      </div>
       <LxButton :label="i18n.t('pages.buses.new')" icon="add" @click="router.push({ name: 'busNew' })" />
     </template>
   </LxDataGrid>
 </template>
-
-<style scoped>
-/* LxValuePicker has no intrinsic max-width of its own — inside a form's LxRow it's
-   constrained by the row's layout, but the data grid's toolbar slot has no such
-   constraint, so the picker (and, worse, its closed dropdown panel) stretched to fill
-   the entire toolbar width and pushed the "Add" button out of the visible layout
-   entirely. Confirmed via screenshot before this fix. */
-.list-filter {
-  width: 12rem;
-  flex-shrink: 0;
-}
-</style>

@@ -186,6 +186,24 @@
     "active": "Активен",
     "inactive": "Неактивен"
   },
+  "filterPanel": {
+    "filters": "Фильтры",
+    "search": "Применить",
+    "searchTitle": "Применить выбранные фильтры",
+    "clear": "Очистить",
+    "clearTitle": "Сбросить все фильтры",
+    "fastFiltersLabel": "Быстрые фильтры",
+    "filtersApplied": "фильтры применены",
+    "saveFilter": "Сохранить",
+    "editFilter": "Изменить",
+    "badgeTypes": {
+      "default": "информационное сообщение",
+      "info": "информационное сообщение",
+      "success": "сообщение об успехе",
+      "warning": "предупреждение",
+      "error": "важное сообщение"
+    }
+  },
   "dataGrid": {
     "emptyValue": "Не указано",
     "valueYes": "Да",

@@ -2,10 +2,11 @@
 import { ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
-import { LxDataGrid, LxButton, LxValuePicker } from "@dativa-lv/lx-ui";
+import { LxDataGrid, LxButton, LxFilters, LxRow, LxValuePicker } from "@dativa-lv/lx-ui";
 import { getDrivers, anonymizeDriver } from "@/services/fleet";
 import useNotifyStore from "@/stores/notify";
 import useDataGridTexts from "@/hooks/dataGridTexts";
+import useFilterTexts from "@/hooks/filterTexts";
 import useConfirmStore from "@/stores/confirm";
 import useErrors from "@/hooks/errors";
 
@@ -13,13 +14,27 @@ const i18n = useI18n();
 const router = useRouter();
 const notify = useNotifyStore();
 const dataGridTexts = useDataGridTexts();
+const filterTexts = useFilterTexts();
 const confirmStore = useConfirmStore();
 const errors = useErrors();
 
 const drivers = ref([]);
 const loading = ref(false);
 const searchTerm = ref("");
+// Staged: the pickers edit the drafts, and LxFilters' Apply button commits them — that
+// button (and Clear) are the component's own, so live-filtering would leave them inert.
+const filtersExpanded = ref(false);
+const draftActive = ref("all");
 const activeFilter = ref("all");
+const usesFilters = computed(() => activeFilter.value !== "all");
+
+function applyFilters() {
+  activeFilter.value = draftActive.value;
+}
+function resetFilters() {
+  draftActive.value = "all";
+  activeFilter.value = "all";
+}
 
 const activeFilterItems = computed(() => [
   { id: "all", name: i18n.t("common.all") },
@@ -84,6 +99,18 @@ onMounted(load);
 </script>
 
 <template>
+  <LxFilters
+    v-model:expanded="filtersExpanded"
+    :texts="filterTexts"
+    :uses-filters="usesFilters"
+    @filter="applyFilters"
+    @reset-filters="resetFilters"
+  >
+    <LxRow :label="i18n.t('fields.isActive')">
+      <LxValuePicker v-model="draftActive" :items="activeFilterItems" variant="dropdown" selection-kind="single" />
+    </LxRow>
+  </LxFilters>
+
   <LxDataGrid
     show-toolbar
     has-search
@@ -97,17 +124,7 @@ onMounted(load);
     @action-click="onActionClick"
   >
     <template #toolbar>
-      <div class="list-filter">
-        <LxValuePicker v-model="activeFilter" :items="activeFilterItems" variant="dropdown" selection-kind="single" />
-      </div>
       <LxButton :label="i18n.t('pages.drivers.new')" icon="add" @click="router.push({ name: 'driverNew' })" />
     </template>
   </LxDataGrid>
 </template>
-
-<style scoped>
-.list-filter {
-  width: 12rem;
-  flex-shrink: 0;
-}
-</style>

@@ -186,6 +186,24 @@
     "active": "Active",
     "inactive": "Inactive"
   },
+  "filterPanel": {
+    "filters": "Filters",
+    "search": "Apply",
+    "searchTitle": "Apply the selected filters",
+    "clear": "Clear",
+    "clearTitle": "Reset all filters",
+    "fastFiltersLabel": "Quick filters",
+    "filtersApplied": "filters applied",
+    "saveFilter": "Save",
+    "editFilter": "Edit",
+    "badgeTypes": {
+      "default": "informational notice",
+      "info": "informational notice",
+      "success": "success notice",
+      "warning": "warning",
+      "error": "important notice"
+    }
+  },
   "dataGrid": {
     "emptyValue": "Not set",
     "valueYes": "Yes",

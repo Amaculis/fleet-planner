@@ -2,23 +2,42 @@
 import { ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
-import { LxDataGrid, LxButton, LxValuePicker } from "@dativa-lv/lx-ui";
+import { LxDataGrid, LxButton, LxFilters, LxRow, LxValuePicker } from "@dativa-lv/lx-ui";
 import { getTrips } from "@/services/trips";
 import { parseServerTimestamp, formatDateTime } from "@/utils/dates";
 import useNotifyStore from "@/stores/notify";
 import useDataGridTexts from "@/hooks/dataGridTexts";
+import useFilterTexts from "@/hooks/filterTexts";
 import useErrors from "@/hooks/errors";
 
 const i18n = useI18n();
 const router = useRouter();
 const notify = useNotifyStore();
 const dataGridTexts = useDataGridTexts();
+const filterTexts = useFilterTexts();
 const errors = useErrors();
 
 const trips = ref([]);
 const loading = ref(false);
+// Staged: the pickers edit the drafts, and LxFilters' Apply button commits them — that
+// button (and Clear) are the component's own, so live-filtering would leave them inert.
+const filtersExpanded = ref(false);
+const draftStatus = ref("all");
+const draftPaymentStatus = ref("all");
 const statusFilter = ref("all");
 const paymentStatusFilter = ref("all");
+const usesFilters = computed(() => statusFilter.value !== "all" || paymentStatusFilter.value !== "all");
+
+function applyFilters() {
+  statusFilter.value = draftStatus.value;
+  paymentStatusFilter.value = draftPaymentStatus.value;
+}
+function resetFilters() {
+  draftStatus.value = "all";
+  draftPaymentStatus.value = "all";
+  statusFilter.value = "all";
+  paymentStatusFilter.value = "all";
+}
 
 const statusFilterItems = computed(() => [
   { id: "all", name: i18n.t("common.all") },
@@ -86,6 +105,27 @@ onMounted(load);
 </script>
 
 <template>
+  <LxFilters
+    v-model:expanded="filtersExpanded"
+    :texts="filterTexts"
+    :uses-filters="usesFilters"
+    :column-count="2"
+    @filter="applyFilters"
+    @reset-filters="resetFilters"
+  >
+    <LxRow :label="i18n.t('fields.status')">
+      <LxValuePicker v-model="draftStatus" :items="statusFilterItems" variant="dropdown" selection-kind="single" />
+    </LxRow>
+    <LxRow :label="i18n.t('fields.paymentStatus')">
+      <LxValuePicker
+        v-model="draftPaymentStatus"
+        :items="paymentStatusFilterItems"
+        variant="dropdown"
+        selection-kind="single"
+      />
+    </LxRow>
+  </LxFilters>
+
   <LxDataGrid
     show-toolbar
     :texts="dataGridTexts"
@@ -98,25 +138,7 @@ onMounted(load);
     @action-click="onActionClick"
   >
     <template #toolbar>
-      <div class="list-filter">
-        <LxValuePicker v-model="statusFilter" :items="statusFilterItems" variant="dropdown" selection-kind="single" />
-      </div>
-      <div class="list-filter">
-        <LxValuePicker
-          v-model="paymentStatusFilter"
-          :items="paymentStatusFilterItems"
-          variant="dropdown"
-          selection-kind="single"
-        />
-      </div>
       <LxButton :label="i18n.t('pages.trips.new')" icon="add" @click="router.push({ name: 'tripNew' })" />
     </template>
   </LxDataGrid>
 </template>
-
-<style scoped>
-.list-filter {
-  width: 12rem;
-  flex-shrink: 0;
-}
-</style>
