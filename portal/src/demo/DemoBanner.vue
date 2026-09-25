@@ -34,10 +34,10 @@ function reset() {
 
 <template>
   <div class="demo-banner">
-    <span class="demo-banner-label">
+    <!--<span class="demo-banner-label">
       {{ i18n.t("demo.banner") }}
-      <a href="https://github.com/Amaculis/fleet-planner" target="_blank" rel="noopener">{{ i18n.t("demo.source") }}</a>
-    </span>
+    <a href="https://github.com/Amaculis/fleet-planner" target="_blank" rel="noopener">{{ i18n.t("demo.source") }}</a>
+    </span> -->
     <div class="demo-banner-controls">
       <span class="demo-banner-role-label">{{ i18n.t("demo.viewingAs") }}</span>
       <LxContentSwitcher v-model="role" :items="roleItems" />
