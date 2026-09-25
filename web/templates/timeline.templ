@@ -17,6 +17,22 @@ templ TimelinePage(v View, t Timeline) {
 			<form method="get" action="/timeline" class="flex items-end gap-2">
 				@Field(v, "date", "timeline.date") {
 					<input id="date" name="date" type="date" value={ v.FormDate(&t.Day) } class={ inputClass }/>
+					<!--
+						The calendar island (web/vue/CalendarIsland.vue) replaces the input above
+						once it mounts: main.js hides the input and un-hides this div. Until then
+						— including if the script fails to load at all — the plain date input
+						above is what the dispatcher uses; hidden starts true for exactly that
+						reason. See docs/lx-ui-integration.md for the full design.
+					-->
+					<div
+						hidden
+						data-lx-field
+						data-kind="calendar"
+						data-input-id="date"
+						data-value={ t.Day.Format("2006-01-02") }
+						data-locale={ v.BCP47() }
+						data-labelledby="date-label"
+					></div>
 				}
 				<button type="submit" class={ linkButton }>{ v.T("common.apply") }</button>
 			</form>

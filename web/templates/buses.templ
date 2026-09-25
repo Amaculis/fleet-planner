@@ -59,9 +59,11 @@ templ BusFormPage(v View, bus domain.Bus, isNew bool) {
 			@CSRFField(v)
 			@Field(v, "plate", "field.plate") {
 				<input id="plate" name="plate" required maxlength="16" value={ bus.Plate } class={ inputClass }/>
+				@LxTextField(v, "plate", true, true)
 			}
 			@Field(v, "model", "field.model") {
 				<input id="model" name="model" required maxlength="120" value={ bus.Model } class={ inputClass }/>
+				@LxTextField(v, "model", true, false)
 			}
 			@Field(v, "seats", "field.seats") {
 				<input id="seats" name="seats" type="number" min="1" max="120" required
@@ -77,6 +79,7 @@ templ BusFormPage(v View, bus domain.Bus, isNew bool) {
 						}
 					}
 				</select>
+				@LxSelectField(v, "status", busStatusItems(v), false)
 			}
 			@Field(v, "insurance_expiry", "field.insurance_expiry") {
 				<input id="insurance_expiry" name="insurance_expiry" type="date"
@@ -87,11 +90,23 @@ templ BusFormPage(v View, bus domain.Bus, isNew bool) {
 					value={ v.FormDate(bus.InspectionExpiry) } class={ inputClass }/>
 			}
 			<div class="flex gap-3">
-				<button type="submit" class={ primaryButton }>{ v.T("common.save") }</button>
+				<button id="save-button" type="submit" class={ primaryButton }>{ v.T("common.save") }</button>
+				@LxActionButton(v, "save-button", "common.save")
 				<a href="/buses" class={ linkButton }>{ v.T("common.cancel") }</a>
 			</div>
 		</form>
 	}
+}
+
+// busStatusItems mirrors the <option> list above exactly, so the lx-ui dropdown and
+// the plain <select> it enhances can never show different choices.
+func busStatusItems(v View) []LxItem {
+	statuses := []domain.BusStatus{domain.BusActive, domain.BusMaintenance, domain.BusRetired}
+	items := make([]LxItem, len(statuses))
+	for i, s := range statuses {
+		items[i] = LxItem{ID: string(s), Name: v.BusStatus(s)}
+	}
+	return items
 }
 
 func busFormAction(bus domain.Bus, isNew bool) string {

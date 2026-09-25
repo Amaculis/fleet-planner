@@ -2,12 +2,29 @@
 .env
 .env.*
 !.env.example
+# Not a secret — just VITE_DEMO=true, loaded by `vite build --mode demo`
+# (npm run build:demo). See portal/src/demo/.
+!portal/.env.demo
 
 # build output
 /bin/
 /tmp/
 web/static/css/app.css
+web/static/js/calendar-island.js
+web/static/css/calendar-island.css
+web/static/js/calendar-assets/
 node_modules/
+portal/dist/
+portal/dist-demo/
+portal/public/themes/
+portal/public/lx-fonts/
+portal/playwright-report/
+portal/test-results/
+portal/blob-report/
+portal/e2e/.auth/
+
+# Claude Code runtime state (not a project asset — .claude/skills/ is, stays tracked)
+.claude/scheduled_tasks.lock
 
 # editor / OS
 .vscode/

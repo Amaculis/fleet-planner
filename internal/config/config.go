@@ -44,6 +44,16 @@ type Config struct {
 	// (time/tzdata in main), so the distroless image needs no tzdata package.
 	TimeZone string
 	Location *time.Location
+
+	// PortalDir holds the built lx-ui SPA (portal/dist, produced by `npm run build`
+	// in portal/). Unlike web/static, this is not go:embed'd into the binary: the
+	// build output is large (hundreds of content-hashed files, tens of MB — see
+	// docs/lx-ui-integration.md's "known accepted costs") and, unlike the tiny
+	// calendar island, not committed to the repo. It is copied into the runtime
+	// image by the Dockerfile instead and read from disk at request time. A missing
+	// directory is not a startup error: `go test`/`go run` outside Docker simply
+	// serve no SPA, which is fine for every non-portal test.
+	PortalDir string
 }
 
 // IsProduction reports whether cookies must carry the Secure attribute and error
@@ -58,6 +68,7 @@ func Load() (Config, error) {
 		Env:        envOr("APP_ENV", "development"),
 		ListenAddr: envOr("LISTEN_ADDR", ":8080"),
 		LogLevel:   envOr("LOG_LEVEL", "info"),
+		PortalDir:  envOr("PORTAL_DIR", "portal/dist"),
 	}
 
 	if cfg.Env != "production" && cfg.Env != "development" {
@@ -112,10 +123,17 @@ func Load() (Config, error) {
 	if cfg.LoginRateEvery, err = durationOr("LOGIN_RATE_EVERY", time.Minute); err != nil {
 		errs = append(errs, err)
 	}
-	if cfg.GlobalRateBurst, err = intOr("GLOBAL_RATE_BURST", 120); err != nil {
+	// 600 burst / 10-per-second sustained: the lx-ui SPA (portal/) loads on the order
+	// of a hundred small per-component chunks on a cold page load (no browser cache
+	// yet) — lx-ui's own aggressive code-splitting, see docs/lx-ui-integration.md's
+	// "known accepted costs". The old server-rendered app's single-HTML-plus-a-few-
+	// assets pattern never came close to the previous 120/500ms default; the SPA does
+	// on its very first paint. This still refuses a real flood, just not a legitimate
+	// page load.
+	if cfg.GlobalRateBurst, err = intOr("GLOBAL_RATE_BURST", 600); err != nil {
 		errs = append(errs, err)
 	}
-	if cfg.GlobalRateEvery, err = durationOr("GLOBAL_RATE_EVERY", 500*time.Millisecond); err != nil {
+	if cfg.GlobalRateEvery, err = durationOr("GLOBAL_RATE_EVERY", 100*time.Millisecond); err != nil {
 		errs = append(errs, err)
 	}
 

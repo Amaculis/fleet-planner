@@ -10,8 +10,8 @@ import (
 )
 
 func (s *Server) handleLoginForm(w http.ResponseWriter, r *http.Request) {
-	if _, ok := IdentityFrom(r.Context()); ok {
-		http.Redirect(w, r, "/", http.StatusSeeOther)
+	if identity, ok := IdentityFrom(r.Context()); ok {
+		http.Redirect(w, r, landingPath(identity), http.StatusSeeOther)
 		return
 	}
 	// Only a fixed set of notices can be shown; the query value is never echoed.
@@ -78,20 +78,6 @@ func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/login?notice=logged_out", http.StatusSeeOther)
 }
 
-func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
-	identity := MustIdentity(r.Context())
-	page := templates.HomePage(
-		PrinterFrom(r.Context()),
-		cspNonceFrom(r.Context()),
-		CSRFTokenFrom(r.Context()),
-		identity,
-	)
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := page.Render(r.Context(), w); err != nil {
-		s.log.Error("rendering home", "request_id", RequestIDFrom(r.Context()), "error", err)
-	}
-}
-
 func (s *Server) renderLogin(w http.ResponseWriter, r *http.Request, status int, errorKey, noticeKey string) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(status)
@@ -105,6 +91,12 @@ func (s *Server) renderLogin(w http.ResponseWriter, r *http.Request, status int,
 	if err := page.Render(r.Context(), w); err != nil {
 		s.log.Error("rendering login", "request_id", RequestIDFrom(r.Context()), "error", err)
 	}
+}
+
+// handleHome sends a signed-in user to the page built for their role. "/" itself has no
+// content of its own — it exists only as a stable post-login redirect target.
+func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
+	http.Redirect(w, r, landingPath(MustIdentity(r.Context())), http.StatusSeeOther)
 }
 
 // landingPath sends each role to the view built for it. Convenience only — the

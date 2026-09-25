@@ -67,9 +67,11 @@ templ TripFormPage(v View, trip domain.Trip, isNew bool) {
 			@CSRFField(v)
 			@Field(v, "origin", "field.origin") {
 				<input id="origin" name="origin" required maxlength="200" value={ trip.Origin } class={ inputClass }/>
+				@LxTextField(v, "origin", true, false)
 			}
 			@Field(v, "destination", "field.destination") {
 				<input id="destination" name="destination" required maxlength="200" value={ trip.Destination } class={ inputClass }/>
+				@LxTextField(v, "destination", true, false)
 			}
 			@Field(v, "scheduled_start", "field.scheduled_start") {
 				<input id="scheduled_start" name="scheduled_start" type="datetime-local" required
@@ -83,7 +85,8 @@ templ TripFormPage(v View, trip domain.Trip, isNew bool) {
 				<textarea id="notes" name="notes" rows="3" maxlength="2000" class={ inputClass }>{ optional(trip.Notes) }</textarea>
 			}
 			<div class="flex gap-3">
-				<button type="submit" class={ primaryButton }>{ v.T("common.save") }</button>
+				<button id="save-button" type="submit" class={ primaryButton }>{ v.T("common.save") }</button>
+				@LxActionButton(v, "save-button", "common.save")
 				<a href="/trips" class={ linkButton }>{ v.T("common.cancel") }</a>
 			</div>
 		</form>

@@ -24,6 +24,7 @@ type View struct {
 	CSRF     string
 	Identity domain.Identity
 	Loc      *time.Location // display zone; storage is always UTC
+	Path     string         // r.URL.Path, for highlighting the active nav link only
 
 	// Message is an already-translated notice or error for this page.
 	Message   string
@@ -91,6 +92,55 @@ func (v View) Str(s *string) string {
 func (v View) TripStatus(s domain.TripStatus) string { return v.T("trip_status." + string(s)) }
 func (v View) BusStatus(s domain.BusStatus) string   { return v.T("bus_status." + string(s)) }
 func (v View) Role(r domain.Role) string             { return v.T("role." + string(r)) }
+
+// BCP47 maps the app's own locale codes to full tags for the calendar island (see
+// web/vue/main.js), which reads this through lx-ui's createLx() global config rather
+// than as a component prop — see the comment in web/vue/CalendarIsland.vue.
+func (v View) BCP47() string {
+	switch v.P.Locale() {
+	case "lv":
+		return "lv-LV"
+	case "ru":
+		return "ru-RU"
+	default:
+		return "en-US"
+	}
+}
+
+// TripStatusBadgeClass and BusStatusBadgeClass colour a status pill consistently
+// everywhere it appears (tables, the trip page, the timeline legend).
+func (v View) TripStatusBadgeClass(s domain.TripStatus) string {
+	switch s {
+	case domain.TripInProgress:
+		return badgeEmerald
+	case domain.TripCompleted:
+		return badgeSlate
+	case domain.TripCancelled:
+		return badgeRed
+	default:
+		return badgeSky
+	}
+}
+
+func (v View) BusStatusBadgeClass(s domain.BusStatus) string {
+	switch s {
+	case domain.BusMaintenance:
+		return badgeAmber
+	case domain.BusRetired:
+		return badgeSlate
+	default:
+		return badgeEmerald
+	}
+}
+
+const (
+	badgeBase    = "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset"
+	badgeSky     = badgeBase + " bg-sky-50 text-sky-700 ring-sky-600/20"
+	badgeEmerald = badgeBase + " bg-emerald-50 text-emerald-700 ring-emerald-600/20"
+	badgeSlate   = badgeBase + " bg-slate-100 text-slate-600 ring-slate-500/10"
+	badgeRed     = badgeBase + " bg-red-50 text-red-700 ring-red-600/10"
+	badgeAmber   = badgeBase + " bg-amber-50 text-amber-700 ring-amber-600/20"
+)
 
 func (v View) PayType(p *domain.PayType) string {
 	if p == nil {

@@ -50,7 +50,13 @@ templ UserFormPage(v View, form UserForm) {
 			@CSRFField(v)
 			@Field(v, "email", "field.email") {
 				<input id="email" name="email" type="email" required maxlength="254" autocomplete="off" class={ inputClass }/>
+				@LxTextField(v, "email", true, false)
 			}
+			<!-- Password fields are not enhanced: password masking, paste handling and
+			     password-manager autofill (autocomplete="new-password") are exactly the
+			     behaviour this app cannot afford to get subtly wrong, and none of that
+			     was verified against lx-ui's actual behaviour the way every other field
+			     here was — so this one stays a plain, well-understood <input>. -->
 			@Field(v, "password", "field.password") {
 				<input id="password" name="password" type="password" required minlength="12" maxlength="1024"
 					autocomplete="new-password" class={ inputClass }/>
@@ -62,6 +68,7 @@ templ UserFormPage(v View, form UserForm) {
 						<option value={ string(role) }>{ v.Role(role) }</option>
 					}
 				</select>
+				@LxSelectField(v, "role", roleItems(v), false)
 			}
 			@Field(v, "driver_id", "field.driver") {
 				<select id="driver_id" name="driver_id" class={ inputClass }>
@@ -70,14 +77,36 @@ templ UserFormPage(v View, form UserForm) {
 						<option value={ strconv.FormatInt(d.ID, 10) }>{ d.FullName }</option>
 					}
 				</select>
+				@LxSelectField(v, "driver_id", driverItems(form.Drivers), true)
 			}
 			<p class="text-xs text-slate-500">{ v.T("users.driver_hint") }</p>
 			<div class="flex gap-3">
-				<button type="submit" class={ primaryButton }>{ v.T("common.save") }</button>
+				<button id="save-button" type="submit" class={ primaryButton }>{ v.T("common.save") }</button>
+				@LxActionButton(v, "save-button", "common.save")
 				<a href="/users" class={ linkButton }>{ v.T("common.cancel") }</a>
 			</div>
 		</form>
 	}
+}
+
+// roleItems / driverItems mirror the <option> lists above exactly, so the lx-ui
+// dropdowns and the plain <select> elements they enhance can never show different
+// choices.
+func roleItems(v View) []LxItem {
+	roles := []domain.Role{domain.RoleDispatcher, domain.RoleAdmin, domain.RoleDriver}
+	items := make([]LxItem, len(roles))
+	for i, r := range roles {
+		items[i] = LxItem{ID: string(r), Name: v.Role(r)}
+	}
+	return items
+}
+
+func driverItems(drivers []domain.Driver) []LxItem {
+	items := make([]LxItem, len(drivers))
+	for i, d := range drivers {
+		items[i] = LxItem{ID: strconv.FormatInt(d.ID, 10), Name: d.FullName}
+	}
+	return items
 }
 
 templ UserPasswordPage(v View, user domain.User) {
@@ -90,6 +119,9 @@ templ UserPasswordPage(v View, user domain.User) {
 					autocomplete="new-password" class={ inputClass }/>
 			}
 			<p class="text-xs text-slate-500">{ v.T("users.password_reset_hint") }</p>
+			<!-- No LxActionButton here, matching the password field itself: this stays a
+			     plain, well-understood submit button, same reasoning as field.password
+			     above. -->
 			<div class="flex gap-3">
 				<button type="submit" class={ primaryButton }>{ v.T("common.save") }</button>
 				<a href="/users" class={ linkButton }>{ v.T("common.cancel") }</a>

@@ -91,14 +91,19 @@ case "$(grep -i 'set-cookie:.*fleet_session' /tmp/hdr3 | tr -d '\r')" in
 esac
 
 echo "== authenticated access =="
-code=$(curl -s -b /tmp/jar -o /tmp/home.html -w '%{http_code}' "$BASE/")
-check "GET / with a session" 200 "$code"
-grep -q "$EMAIL" /tmp/home.html && ok "home page shows the signed-in user" || bad "unexpected home page content"
+# "/" has no content of its own — it exists only as a stable post-login redirect
+# target (see handleHome) — so authenticated checks target /timeline, what an
+# admin/dispatcher actually lands on.
+code=$(curl -s -o /dev/null -w '%{http_code}' "$BASE/")
+check "GET / with no session redirects to login" 303 "$code"
+code=$(curl -s -b /tmp/jar -o /tmp/home.html -w '%{http_code}' "$BASE/timeline")
+check "GET /timeline with a session" 200 "$code"
+grep -q 'action="/logout"' /tmp/home.html && ok "the timeline page is a real authenticated page" || bad "unexpected timeline page content"
 code=$(curl -s -b /tmp/jar -o /dev/null -w '%{http_code}' "$BASE/login")
 check "GET /login while signed in redirects" 303 "$code"
 
 echo "== i18n =="
-curl -s -b /tmp/jar -H 'Accept-Language: lv-LV,lv;q=0.9' -o /tmp/lv.html "$BASE/"
+curl -s -b /tmp/jar -H 'Accept-Language: lv-LV,lv;q=0.9' -o /tmp/lv.html "$BASE/timeline"
 grep -q "Autobusu parks" /tmp/lv.html && ok "Latvian rendered from Accept-Language" || bad "no Latvian copy"
 curl -s -H 'Accept-Language: ru-RU,ru;q=0.9' -o /tmp/ru.html "$BASE/login"
 grep -q "Вход" /tmp/ru.html && ok "Russian rendered from Accept-Language" || bad "no Russian copy"

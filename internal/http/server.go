@@ -60,8 +60,11 @@ func NewServer(cfg config.Config, log *slog.Logger, svc Services, bundle *i18n.B
 		i18n:        bundle,
 		db:          db,
 		// Strict on credentials, loose globally. Both per client IP.
-		loginLimiter:  NewLimiter(orDuration(cfg.LoginRateEvery, time.Minute), orInt(cfg.LoginRateBurst, 5)),
-		globalLimiter: NewLimiter(orDuration(cfg.GlobalRateEvery, 500*time.Millisecond), orInt(cfg.GlobalRateBurst, 120)),
+		loginLimiter: NewLimiter(orDuration(cfg.LoginRateEvery, time.Minute), orInt(cfg.LoginRateBurst, 5)),
+		// Same defaults as config.Load() — see the comment there on why 120/500ms
+		// (sized for the old server-rendered app) is too tight for the SPA's chunk
+		// waterfall on a cold load.
+		globalLimiter: NewLimiter(orDuration(cfg.GlobalRateEvery, 100*time.Millisecond), orInt(cfg.GlobalRateBurst, 600)),
 	}
 }
 
@@ -100,7 +103,6 @@ func (s *Server) Routes() http.Handler {
 	r.Use(s.RequestID)
 	r.Use(s.Recover)
 	r.Use(s.SecurityHeaders)
-	r.Use(s.rateLimit(s.globalLimiter))
 
 	// Liveness/readiness for the container healthcheck. No session, no PII, no details.
 	r.Get("/healthz", s.handleHealth)
@@ -108,11 +110,41 @@ func (s *Server) Routes() http.Handler {
 	// Static assets: embedded in the binary, long-lived cache, no cookies needed.
 	r.Handle("/static/*", s.staticHandler())
 
+	// lx-ui's pre-compiled dist bundle computes its own asset URLs — chunk imports and
+	// its @font-face url()s alike — as new URL(path, window.location.origin) /
+	// root-relative paths, resolving to the site root (/js/..., /css/..., /lx-fonts/...)
+	// regardless of where the files were actually deployed (/static/...). That logic
+	// is compiled into the dependency, not something this app's own Vite config
+	// controls. main.js also sets createLx's publicUrl option, which may be the
+	// "intended" fix — unverified without a real browser — so both are in place:
+	// whichever one lx-ui's runtime actually honours, the files exist where it looks.
+	// Named prefixes only (never the whole /static/ tree) so this can't shadow a real
+	// app route later.
+	r.Handle("/js/*", s.rootStaticHandler())
+	r.Handle("/css/*", s.rootStaticHandler())
+	r.Handle("/lx-fonts/*", s.rootStaticHandler())
+
+	// The lx-ui SPA (portal/). Served straight from disk, not go:embed'd — see
+	// config.PortalDir. No session/CSRF middleware here: the SPA authenticates
+	// itself entirely through /api/auth/* once loaded (see api_auth.go), the same
+	// way any other static asset needs no session to be fetched.
+	r.Handle("/app/*", s.portalHandler())
+
 	// The service worker must be served from the root to control the whole origin;
 	// /static/sw.js would only ever control /static/.
 	r.Get("/sw.js", s.handleServiceWorker)
 
 	r.Group(func(r chi.Router) {
+		// Static asset serving (above) is deliberately outside this limiter — found
+		// via the e2e suite's own first parallel run: a handful of concurrent page
+		// loads (lx-ui's cold-load chunk waterfall, see docs/lx-ui-integration.md)
+		// blew straight through even the 600-burst raised earlier this session,
+		// because that earlier fix only sized for one page load, not several at
+		// once. Flood protection belongs on dynamic, session-bearing, stateful
+		// endpoints — the ones below — not on serving a cacheable static file,
+		// which costs the server nothing extra to hand out in volume and which
+		// nothing here treats as sensitive.
+		r.Use(s.rateLimit(s.globalLimiter))
 		r.Use(s.LoadSession)
 		r.Use(s.CSRF)
 
@@ -122,6 +154,16 @@ func (s *Server) Routes() http.Handler {
 		r.Get("/offline", s.handleOffline)
 		r.Get("/login", s.handleLoginForm)
 		r.With(s.rateLimit(s.loginLimiter)).Post("/login", s.handleLoginSubmit)
+
+		// JSON API for the lx-ui SPA (portal/). Same LoadSession + CSRF pipeline as every
+		// other route here -- no separate auth mechanism, just a different response
+		// format. /api/auth/me is how the SPA bootstraps on every fresh load: it works
+		// whether or not a session cookie is present.
+		r.Route("/api/auth", func(r chi.Router) {
+			r.Get("/me", s.handleAPIMe)
+			r.With(s.rateLimit(s.loginLimiter)).Post("/login", s.handleAPILogin)
+			r.With(s.RequireAuth).Post("/logout", s.handleAPILogout)
+		})
 
 		// Authenticated.
 		r.Group(func(r chi.Router) {
@@ -149,6 +191,18 @@ func (s *Server) Routes() http.Handler {
 
 				r.Get("/buses", s.handleBusList)
 				r.Get("/drivers", s.handleDriverList)
+
+				// JSON mirror of the group above, for the SPA (portal/).
+				r.Get("/api/trips", s.handleAPITripList)
+				r.Post("/api/trips", s.handleAPITripCreate)
+				r.Get("/api/trips/{id}", s.handleAPITripGet)
+				r.Put("/api/trips/{id}", s.handleAPITripUpdate)
+				r.Delete("/api/trips/{id}", s.handleAPITripDelete)
+				r.Post("/api/trips/{id}/status", s.handleAPITripStatus)
+				r.Post("/api/trips/{id}/assign", s.handleAPITripAssign)
+				r.Post("/api/trips/{id}/unassign", s.handleAPITripUnassign)
+				r.Get("/api/buses", s.handleAPIBusList)
+				r.Get("/api/drivers", s.handleAPIDriverList)
 			})
 
 			// Fleet and user management: admins only.
@@ -174,6 +228,23 @@ func (s *Server) Routes() http.Handler {
 				r.Post("/users/{id}/deactivate", s.handleUserDeactivate)
 				r.Get("/users/{id}/password", s.handleUserPasswordForm)
 				r.Post("/users/{id}/password", s.handleUserPasswordSet)
+
+				// JSON mirror of the group above, for the SPA (portal/).
+				r.Get("/api/buses/{id}", s.handleAPIBusGet)
+				r.Post("/api/buses", s.handleAPIBusCreate)
+				r.Put("/api/buses/{id}", s.handleAPIBusUpdate)
+				r.Delete("/api/buses/{id}", s.handleAPIBusDelete)
+
+				r.Get("/api/drivers/{id}", s.handleAPIDriverGet)
+				r.Post("/api/drivers", s.handleAPIDriverCreate)
+				r.Put("/api/drivers/{id}", s.handleAPIDriverUpdate)
+				r.Post("/api/drivers/{id}/anonymize", s.handleAPIDriverAnonymize)
+
+				r.Get("/api/users", s.handleAPIUserList)
+				r.Post("/api/users", s.handleAPIUserCreate)
+				r.Post("/api/users/{id}/activate", s.handleAPIUserActivate)
+				r.Post("/api/users/{id}/deactivate", s.handleAPIUserDeactivate)
+				r.Post("/api/users/{id}/password", s.handleAPIUserSetPassword)
 			})
 
 			// The driver's own trips. No route here takes a driver id: ownership comes
@@ -184,6 +255,11 @@ func (s *Server) Routes() http.Handler {
 				r.Get("/my/trips", s.handleMyTrips)
 				r.Post("/my/trips/{id}/start", s.handleMyTripStart)
 				r.Post("/my/trips/{id}/finish", s.handleMyTripFinish)
+
+				// JSON mirror of the group above, for the SPA (portal/).
+				r.Get("/api/my/trips", s.handleAPIMyTrips)
+				r.Post("/api/my/trips/{id}/start", s.handleAPIMyTripStart)
+				r.Post("/api/my/trips/{id}/finish", s.handleAPIMyTripFinish)
 			})
 		})
 	})
@@ -203,6 +279,16 @@ func (s *Server) staticHandler() http.Handler {
 		w.Header().Set("Cache-Control", "public, max-age=3600")
 		fs.ServeHTTP(w, r)
 	}))
+}
+
+// rootStaticHandler serves the same embedded tree with no prefix stripped — see the
+// comment above its /js/ and /css/ mount points in Routes().
+func (s *Server) rootStaticHandler() http.Handler {
+	fs := http.FileServer(http.FS(web.StaticFS()))
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "public, max-age=3600")
+		fs.ServeHTTP(w, r)
+	})
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {

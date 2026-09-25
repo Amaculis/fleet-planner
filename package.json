@@ -1,15 +1,20 @@
 {
   "name": "bus-fleet-assets",
   "private": true,
-  "description": "Front-end assets: Tailwind build and vendored htmx. No runtime npm dependency.",
+  "description": "Front-end assets: Tailwind build, vendored htmx, and the lx-ui calendar island. No runtime npm dependency beyond what is bundled into web/static.",
   "scripts": {
-    "build:css": "tailwindcss -i web/src/app.css -o web/static/css/app.css --minify"
+    "build:css": "tailwindcss -i web/src/app.css -o web/static/css/app.css --minify",
+    "build:calendar": "vite build --config vite.calendar.config.mjs"
   },
   "devDependencies": {
     "@tailwindcss/cli": "4.3.3",
-    "tailwindcss": "4.3.3"
+    "@vitejs/plugin-vue": "6.0.9",
+    "tailwindcss": "4.3.3",
+    "vite": "8.3.0"
   },
   "dependencies": {
-    "htmx.org": "2.0.10"
+    "@dativa-lv/lx-ui": "2.3.3",
+    "htmx.org": "2.0.10",
+    "vue": "3.5.43"
   }
 }

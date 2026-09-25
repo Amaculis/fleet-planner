@@ -19,6 +19,8 @@ func (s *Server) view(r *http.Request) templates.View {
 		CSRF:     CSRFTokenFrom(r.Context()),
 		Identity: identity,
 		Loc:      s.cfg.Location,
+		// Used only to highlight the active nav link; never trusted for anything else.
+		Path: r.URL.Path,
 	}
 }
 

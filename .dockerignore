@@ -8,3 +8,6 @@ node_modules
 *.md
 web/static/css/app.css
 web/static/js/htmx.min.js
+web/static/js/calendar-island.js
+web/static/css/calendar-island.css
+web/static/js/calendar-assets/

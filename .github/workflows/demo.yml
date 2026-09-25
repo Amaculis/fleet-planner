@@ -1,0 +1,53 @@
+name: Deploy demo to GitHub Pages
+
+# Builds portal/ in demo mode (fake in-memory data, no login, nothing saved — see
+# portal/src/demo/) and publishes it to GitHub Pages. Never touches the real app:
+# the real build (embedded into the Go server, deployed separately per
+# CLAUDE.md's own hosting story) has nothing to do with this workflow.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "portal/**"
+      - ".github/workflows/demo.yml"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: portal/package-lock.json
+      - name: Install dependencies
+        working-directory: portal
+        run: npm ci
+      - name: Build demo bundle
+        working-directory: portal
+        run: npm run build:demo
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: portal/dist-demo
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
