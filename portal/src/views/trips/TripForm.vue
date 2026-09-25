@@ -15,6 +15,8 @@ import { getTrip, createTrip, updateTrip } from "@/services/trips";
 import DateTimeField from "@/components/DateTimeField.vue";
 import useErrors from "@/hooks/errors";
 import useFormTexts from "@/hooks/formTexts";
+import useFormActions from "@/hooks/formActions";
+import useFormValidation from "@/hooks/formValidation";
 
 const i18n = useI18n();
 const route = useRoute();
@@ -42,17 +44,12 @@ const notes = ref("");
 const loadingTrip = ref(false);
 const saving = ref(false);
 const errorMessage = ref("");
-// Field errors only appear once Save has been pressed (nobody wants a red "required"
-// on a form they haven't touched), and then track the fields live so they clear as
-// soon as the value is fixed.
-const submitted = ref(false);
 
 const paymentStatusItems = computed(() =>
   ["unpaid", "reserved", "advance_paid", "paid"].map((id) => ({ id, name: i18n.t(`paymentStatus.${id}`) }))
 );
 
-const fieldErrors = computed(() => {
-  if (!submitted.value) return {};
+const { invalidProps, validate } = useFormValidation(() => {
   const e = {};
   const required = i18n.t("validation.required");
   const tooLong = (max) => i18n.t("validation.tooLong", { max });
@@ -74,27 +71,6 @@ const fieldErrors = computed(() => {
   return e;
 });
 
-// invalid + invalidationMessage travel together on every lx-ui input.
-const invalidProps = (field) => ({
-  invalid: Boolean(fieldErrors.value[field]),
-  invalidationMessage: fieldErrors.value[field] ?? "",
-});
-
-const actionDefinitions = computed(() => [
-  {
-    id: "save",
-    name: i18n.t("actions.save"),
-    kind: "primary",
-    icon: "save",
-    loading: saving.value,
-    disabled: loadingTrip.value,
-  },
-  // "secondary", not "ghost": LxForm sorts its footer actions by kind (primary /
-  // secondary / tertiary / additional) and silently drops any other value — a ghost
-  // Cancel simply never rendered.
-  { id: "cancel", name: i18n.t("actions.cancel"), kind: "secondary" },
-]);
-
 async function load() {
   if (isNew.value) return;
   loadingTrip.value = true;
@@ -114,9 +90,8 @@ async function load() {
 }
 
 async function save() {
-  submitted.value = true;
   errorMessage.value = "";
-  if (Object.keys(fieldErrors.value).length) return;
+  if (!validate()) return;
 
   saving.value = true;
   const payload = {
@@ -142,15 +117,13 @@ async function save() {
   }
 }
 
-// Cancelling an edit goes back to the trip being edited, not out to the list.
-function cancel() {
-  router.push(isNew.value ? { name: "trips" } : { name: "tripDetail", params: { id: id.value } });
-}
-
-function onAction(actionId) {
-  if (actionId === "save") save();
-  else if (actionId === "cancel") cancel();
-}
+const { actionDefinitions, onAction } = useFormActions({
+  saving,
+  disabled: loadingTrip,
+  onSave: save,
+  // Cancelling an edit goes back to the trip being edited, not out to the list.
+  onCancel: () => router.push(isNew.value ? { name: "trips" } : { name: "tripDetail", params: { id: id.value } }),
+});
 
 onMounted(load);
 </script>

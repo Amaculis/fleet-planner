@@ -189,7 +189,13 @@
     "required": "Šis lauks ir obligāts.",
     "endBeforeStart": "Beigu laikam jābūt vēlākam par sākuma laiku.",
     "durationTooLong": "Reiss var ilgt ne vairāk kā {days} dienas.",
-    "tooLong": "Jābūt ne garākam par {max} rakstzīmēm."
+    "tooLong": "Jābūt ne garākam par {max} rakstzīmēm.",
+    "invalidEmail": "Ievadiet derīgu e-pasta adresi.",
+    "invalidPlate": "Izmantojiet 2–16 burtus, ciparus vai defises.",
+    "invalidPhone": "Ievadiet derīgu tālruņa numuru, piem., +371 20000000.",
+    "invalidRate": "Izmantojiet skaitli ar ne vairāk kā 2 zīmēm aiz komata, piem., 12.50.",
+    "passwordTooShort": "Jābūt vismaz {min} rakstzīmēm.",
+    "range": "Jābūt starp {min} un {max}."
   },
   "lxForm": {
     "otherActions": "Citas darbības",
@@ -214,6 +220,33 @@
     "all": "Visi",
     "active": "Aktīvs",
     "inactive": "Neaktīvs"
+  },
+  "busForm": {
+    "vehicle": "Transportlīdzeklis",
+    "vehicleDescription": "Identifikācija un ietilpība.",
+    "plateHint": "Tiek glabāta lielajiem burtiem bez atstarpēm, piem., AB-1234.",
+    "documents": "Dokumenti",
+    "documentsDescription": "Pārskats brīdina pirms to derīguma beigām."
+  },
+  "driverForm": {
+    "personal": "Personas dati",
+    "personalDescription": "Kas ir vadītājs un kā ar viņu sazināties.",
+    "phoneHint": "Cipari, atstarpes, iekavas un defises; var sākties ar +.",
+    "license": "Apliecība",
+    "licenseDescription": "Vadītāja apliecības dati.",
+    "pay": "Samaksa",
+    "payDescription": "Pagaidām netiek izmantota — saglabāta, lai vēlāk varētu pievienot algu aprēķinu.",
+    "rateHint": "Līdz 2 zīmēm aiz komata, piem., 12.50.",
+    "status": "Statuss",
+    "statusDescription": "Neaktīvos vadītājus nevar piešķirt jauniem reisiem."
+  },
+  "userForm": {
+    "account": "Konts",
+    "accountDescription": "Kā šī persona pierakstās.",
+    "passwordHint": "Vismaz 12 rakstzīmes.",
+    "access": "Piekļuve",
+    "accessDescription": "Ko šis konts drīkst darīt.",
+    "driverHint": "Vadītājs, kuram pieder šī pieteikšanās — viņš redzēs tikai savus reisus."
   },
   "filterPanel": {
     "filters": "Filtri",

@@ -189,7 +189,13 @@
     "required": "This field is required.",
     "endBeforeStart": "The end must be after the start.",
     "durationTooLong": "A trip can last at most {days} days.",
-    "tooLong": "Must be at most {max} characters."
+    "tooLong": "Must be at most {max} characters.",
+    "invalidEmail": "Enter a valid email address.",
+    "invalidPlate": "Use 2–16 letters, digits or hyphens.",
+    "invalidPhone": "Enter a valid phone number, e.g. +371 20000000.",
+    "invalidRate": "Use a number with up to 2 decimals, e.g. 12.50.",
+    "passwordTooShort": "Must be at least {min} characters.",
+    "range": "Must be between {min} and {max}."
   },
   "lxForm": {
     "otherActions": "Other actions",
@@ -214,6 +220,33 @@
     "all": "All",
     "active": "Active",
     "inactive": "Inactive"
+  },
+  "busForm": {
+    "vehicle": "Vehicle",
+    "vehicleDescription": "Identification and capacity.",
+    "plateHint": "Stored upper-case without spaces, e.g. AB-1234.",
+    "documents": "Documents",
+    "documentsDescription": "The dashboard warns before these expire."
+  },
+  "driverForm": {
+    "personal": "Personal details",
+    "personalDescription": "Who the driver is and how to reach them.",
+    "phoneHint": "Digits, spaces, brackets and hyphens; may start with +.",
+    "license": "License",
+    "licenseDescription": "Driving license details.",
+    "pay": "Pay",
+    "payDescription": "Not used yet — kept so payroll can be added later.",
+    "rateHint": "Up to 2 decimals, e.g. 12.50.",
+    "status": "Status",
+    "statusDescription": "Inactive drivers can't be assigned to new trips."
+  },
+  "userForm": {
+    "account": "Account",
+    "accountDescription": "How this person signs in.",
+    "passwordHint": "At least 12 characters.",
+    "access": "Access",
+    "accessDescription": "What this account is allowed to do.",
+    "driverHint": "The driver this login belongs to — they will only see their own trips."
   },
   "filterPanel": {
     "filters": "Filters",
