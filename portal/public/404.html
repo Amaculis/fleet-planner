@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Bus Fleet</title>
+    <script>
+      // Single-Page-Apps for GitHub Pages (github.com/rafgraph/spa-github-pages).
+      // GitHub Pages only serves files that literally exist, so any hard navigation
+      // to a client-side route (a browser refresh, or the demo role switcher's own
+      // window.location.reload() — see DemoBanner.vue) lands here instead of the
+      // app. This repackages the requested path into a query string and redirects to
+      // index.html, whose matching decode script turns it back into a pushState
+      // before vue-router reads the URL.
+      var segmentsToKeep = 1; // keep "/fleet-planner" (the repo name) in the path
+      var l = window.location;
+      l.replace(
+        l.protocol +
+          "//" +
+          l.hostname +
+          (l.port ? ":" + l.port : "") +
+          l.pathname.split("/").slice(0, 1 + segmentsToKeep).join("/") +
+          "/?p=" +
+          l.pathname.slice(1).split("/").slice(segmentsToKeep).join("/").replace(/&/g, "~and~") +
+          (l.search ? "&q=" + l.search.slice(1).replace(/&/g, "~and~") : "") +
+          l.hash
+      );
+    </script>
+  </head>
+  <body></body>
+</html>

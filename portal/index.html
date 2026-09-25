@@ -8,6 +8,25 @@
   <!-- Theme CSS is imported from main.js instead (see there) and bundled/linked by
        Vite automatically — a manual <link> here would just load the same styles
        twice. -->
+  <script>
+    // Companion to public/404.html's redirect (only ever fires on GitHub Pages,
+    // where that file is what a hard navigation to a client-side route actually
+    // hits) — decodes the encoded path back into a real one via pushState, before
+    // vue-router (loaded below) reads location.pathname. A no-op anywhere else,
+    // including the real app, since l.search[1] is only "p" after that redirect.
+    (function (l) {
+      if (l.search[1] === "p") {
+        var decoded = l.search
+          .slice(1)
+          .split("&")
+          .map(function (s) {
+            return s.replace(/~and~/g, "&");
+          })
+          .join("?");
+        window.history.replaceState(null, null, l.pathname.slice(0, -1) + decoded + l.hash);
+      }
+    })(window.location);
+  </script>
 </head>
 <body class="lx">
   <noscript><strong>This app requires JavaScript.</strong></noscript>
