@@ -173,7 +173,36 @@
     "markAs": "Отметить как",
     "durationDays": "{n} д",
     "durationHours": "{n} ч",
-    "durationMinutes": "{n} мин"
+    "durationMinutes": "{n} мин",
+    "form": {
+      "route": "Маршрут",
+      "routeDescription": "Откуда и куда едет рейс.",
+      "schedule": "Расписание",
+      "scheduleDescription": "Время отправления и прибытия.",
+      "endHint": "Должно быть позже начала, не длиннее 30 дней.",
+      "booking": "Бронирование",
+      "paymentHint": "Сколько клиент уже оплатил. Видно только планировщикам.",
+      "notesSection": "Дополнительная информация"
+    }
+  },
+  "validation": {
+    "required": "Это поле обязательно.",
+    "endBeforeStart": "Окончание должно быть позже начала.",
+    "durationTooLong": "Рейс может длиться не более {days} дней.",
+    "tooLong": "Не более {max} символов."
+  },
+  "lxForm": {
+    "otherActions": "Другие действия",
+    "required": "(обязательно)",
+    "optional": "(необязательно)",
+    "skipLinkLabel": "Пропустить форму",
+    "skipLinkTitle": "Пропустить форму",
+    "previous": "Назад",
+    "next": "Далее",
+    "overflowMenu": "Открыть дополнительные параметры",
+    "additionalActions": "Дополнительные действия",
+    "tableOfContents": "Оглавление",
+    "tabSelected": "Вкладка выбрана"
   },
   "myTrips": {
     "empty": "Вам пока не назначено ни одного рейса."

@@ -173,7 +173,36 @@
     "markAs": "Mark as",
     "durationDays": "{n}d",
     "durationHours": "{n}h",
-    "durationMinutes": "{n}m"
+    "durationMinutes": "{n}m",
+    "form": {
+      "route": "Route",
+      "routeDescription": "Where the trip starts and where it ends.",
+      "schedule": "Schedule",
+      "scheduleDescription": "Departure and arrival times.",
+      "endHint": "Must be after the start, and at most 30 days long.",
+      "booking": "Booking",
+      "paymentHint": "What the client has paid so far. Only planners can see this.",
+      "notesSection": "Additional information"
+    }
+  },
+  "validation": {
+    "required": "This field is required.",
+    "endBeforeStart": "The end must be after the start.",
+    "durationTooLong": "A trip can last at most {days} days.",
+    "tooLong": "Must be at most {max} characters."
+  },
+  "lxForm": {
+    "otherActions": "Other actions",
+    "required": "(required)",
+    "optional": "(optional)",
+    "skipLinkLabel": "Skip form",
+    "skipLinkTitle": "Skip form",
+    "previous": "Previous",
+    "next": "Next",
+    "overflowMenu": "Open more options",
+    "additionalActions": "Additional actions",
+    "tableOfContents": "Table of contents",
+    "tabSelected": "Tab selected"
   },
   "myTrips": {
     "empty": "No trips assigned to you yet."
