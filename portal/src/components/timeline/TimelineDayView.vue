@@ -51,6 +51,15 @@ const STATUS_CLASS = {
   completed: "tl-block-completed",
 };
 
+// A colored dot marking the client's payment status, independent of the block's own
+// status-colored background — planners scanning the board need both at a glance.
+const PAYMENT_CLASS = {
+  unpaid: "tl-payment-unpaid",
+  reserved: "tl-payment-reserved",
+  advance_paid: "tl-payment-advance-paid",
+  paid: "tl-payment-paid",
+};
+
 const rows = computed(() => {
   const byBus = new Map();
   for (const trip of props.trips) {
@@ -107,9 +116,10 @@ function openTrip(id) {
             class="tl-block"
             :class="STATUS_CLASS[b.trip.status]"
             :style="{ left: b.leftPct + '%', width: b.widthPct + '%' }"
-            :title="tripTooltip(b.trip)"
+            :title="`${tripTooltip(b.trip)}\n${i18n.t('fields.paymentStatus')}: ${i18n.t(`paymentStatus.${b.trip.paymentStatus}`)}`"
             @click="openTrip(b.trip.id)"
           >
+            <span class="tl-payment-dot" :class="PAYMENT_CLASS[b.trip.paymentStatus]" />
             <span class="tl-block-time">{{ timeLabel(b.trip) }}</span>
             <span class="tl-block-dest">{{ b.trip.destination }}</span>
           </button>
@@ -220,6 +230,25 @@ function openTrip(id) {
   transform: translateY(-1px) scaleY(1.05);
   box-shadow: 0 2px 5px var(--color-shadow, rgba(0, 0, 0, 0.25));
   z-index: 2;
+}
+.tl-payment-dot {
+  flex-shrink: 0;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.25);
+}
+.tl-payment-unpaid {
+  background: var(--color-placeholder);
+}
+.tl-payment-reserved {
+  background: var(--color-blue, #2f6fed);
+}
+.tl-payment-advance-paid {
+  background: var(--color-orange, #e08a1e);
+}
+.tl-payment-paid {
+  background: var(--color-green, #2e9e5b);
 }
 .tl-block-time {
   font-weight: 600;

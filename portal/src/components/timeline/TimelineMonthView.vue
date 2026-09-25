@@ -79,6 +79,15 @@ const weeks = computed(() => {
   return result;
 });
 
+// A colored dot marking the client's payment status — see TimelineDayView.vue's copy
+// of this comment for why it's separate from the chip's own assigned/unassigned color.
+const PAYMENT_CLASS = {
+  unpaid: "tl-payment-unpaid",
+  reserved: "tl-payment-reserved",
+  advance_paid: "tl-payment-advance-paid",
+  paid: "tl-payment-paid",
+};
+
 function openTrip(id) {
   router.push({ name: "tripDetail", params: { id } });
 }
@@ -107,10 +116,12 @@ function openTrip(id) {
               entry.trip.assignment ? 'tl-month-chip-assigned' : 'tl-month-chip-unassigned',
               { 'tl-month-chip-continuation': !entry.isStart },
             ]"
-            :title="`${entry.trip.origin} → ${entry.trip.destination}${entry.isStart ? '' : '\n' + i18n.t('timeline.continues')}`"
+            :title="`${entry.trip.origin} → ${entry.trip.destination}${entry.isStart ? '' : '\n' + i18n.t('timeline.continues')}\n${i18n.t('fields.paymentStatus')}: ${i18n.t(`paymentStatus.${entry.trip.paymentStatus}`)}`"
             @click.stop="openTrip(entry.trip.id)"
           >
-            <span v-if="!entry.isStart" class="tl-month-chip-cont-marker">↦</span>{{ entry.trip.destination }}
+            <span v-if="!entry.isStart" class="tl-month-chip-cont-marker">↦</span>
+            <span class="tl-payment-dot" :class="PAYMENT_CLASS[entry.trip.paymentStatus]" />
+            {{ entry.trip.destination }}
           </div>
           <div v-if="day.entries.length > MAX_CHIPS" class="tl-month-more">
             +{{ day.entries.length - MAX_CHIPS }} {{ i18n.t("timeline.more") }}
@@ -189,6 +200,27 @@ function openTrip(id) {
 }
 .tl-month-chip-cont-marker {
   margin-right: 0.15rem;
+}
+.tl-payment-dot {
+  display: inline-block;
+  vertical-align: middle;
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.25);
+  margin-right: 0.2rem;
+}
+.tl-payment-unpaid {
+  background: var(--color-placeholder);
+}
+.tl-payment-reserved {
+  background: var(--color-blue, #2f6fed);
+}
+.tl-payment-advance-paid {
+  background: var(--color-orange, #e08a1e);
+}
+.tl-payment-paid {
+  background: var(--color-green, #2e9e5b);
 }
 .tl-month-more {
   font-size: 0.65rem;

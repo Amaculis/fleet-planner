@@ -38,6 +38,15 @@ const STATUS_CLASS = {
   completed: "tl-chip-completed",
 };
 
+// A colored dot marking the client's payment status, independent of the chip's own
+// status-colored background — see TimelineDayView.vue's copy of this for why.
+const PAYMENT_CLASS = {
+  unpaid: "tl-payment-unpaid",
+  reserved: "tl-payment-reserved",
+  advance_paid: "tl-payment-advance-paid",
+  paid: "tl-payment-paid",
+};
+
 function timeLabel(trip) {
   const s = parseServerTimestamp(trip.scheduledStart);
   return `${String(s.getHours()).padStart(2, "0")}:${String(s.getMinutes()).padStart(2, "0")}`;
@@ -193,9 +202,10 @@ function openTrip(id) {
                 type="button"
                 class="tl-chip"
                 :class="STATUS_CLASS[trip.status]"
-                :title="`${trip.origin} → ${trip.destination}\n${trip.assignment.driverName}`"
+                :title="`${trip.origin} → ${trip.destination}\n${trip.assignment.driverName}\n${i18n.t('fields.paymentStatus')}: ${i18n.t(`paymentStatus.${trip.paymentStatus}`)}`"
                 @click="openTrip(trip.id)"
               >
+                <span class="tl-payment-dot" :class="PAYMENT_CLASS[trip.paymentStatus]" />
                 <span class="tl-chip-time">{{ timeLabel(trip) }}</span>
                 <span class="tl-chip-dest">{{ trip.destination }}</span>
               </button>
@@ -212,10 +222,11 @@ function openTrip(id) {
             class="tl-span-bar"
             :class="STATUS_CLASS[s.trip.status]"
             :style="spanBarStyle(s)"
-            :title="`${s.trip.origin} → ${s.trip.destination}\n${s.trip.assignment.driverName}`"
+            :title="`${s.trip.origin} → ${s.trip.destination}\n${s.trip.assignment.driverName}\n${i18n.t('fields.paymentStatus')}: ${i18n.t(`paymentStatus.${s.trip.paymentStatus}`)}`"
             @click="openTrip(s.trip.id)"
           >
             <span v-if="s.continuesBefore" class="tl-span-cont">↤</span>
+            <span class="tl-payment-dot" :class="PAYMENT_CLASS[s.trip.paymentStatus]" />
             <span class="tl-span-label">{{ s.trip.destination }}</span>
             <span v-if="s.continuesAfter" class="tl-span-cont">↦</span>
           </button>
@@ -385,6 +396,25 @@ function openTrip(id) {
 .tl-chip-dest {
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.tl-payment-dot {
+  flex-shrink: 0;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.25);
+}
+.tl-payment-unpaid {
+  background: var(--color-placeholder);
+}
+.tl-payment-reserved {
+  background: var(--color-blue, #2f6fed);
+}
+.tl-payment-advance-paid {
+  background: var(--color-orange, #e08a1e);
+}
+.tl-payment-paid {
+  background: var(--color-green, #2e9e5b);
 }
 .tl-week .tl-chip-planned,
 .tl-week .tl-span-bar.tl-chip-planned {
