@@ -47,3 +47,37 @@ test("timeline switches between day, week and month views without erroring", asy
 
   expect(errors, `console errors switching timeline views:\n${errors.join("\n")}`).toEqual([]);
 });
+
+test("the previous button's arrow sits to the left of its label", async ({ page }) => {
+  await page.goto("/app/timeline");
+  await page.waitForTimeout(500);
+  const arrowIsLeft = await page.evaluate(() => {
+    const wrap = document.querySelector(".timeline-prev .lx-button-content-wrapper");
+    return wrap.querySelector("svg").getBoundingClientRect().left < wrap.querySelector(".lx-button-content").getBoundingClientRect().left;
+  });
+  expect(arrowIsLeft).toBe(true);
+});
+
+// Jumping straight to a date, not only stepping with previous/next: the same picker
+// drives every view (a picked date selects the day, or the week/month containing it).
+test("the timeline date picker jumps directly to a day, week or month", async ({ page }) => {
+  const errors = trackConsoleErrors(page);
+  const pick = async (view, typed) => {
+    await page.goto(`/app/timeline?view=${view}`);
+    await page.waitForTimeout(500);
+    await page.locator(".timeline-date-field input").first().fill(typed);
+    await page.keyboard.press("Tab");
+    await page.waitForTimeout(700);
+  };
+
+  await pick("day", "15.10.2026.");
+  await expect(page.locator(".timeline-date-field input").first()).toHaveValue("15.10.2026.");
+
+  await pick("week", "15.10.2026."); // a Thursday: the Monday-first week is Oct 12-18
+  await expect(page.locator(".timeline-range-label")).toContainText("Oct 12, 2026 – Oct 18, 2026");
+
+  await pick("month", "15.11.2026.");
+  await expect(page.locator(".timeline-range-label")).toContainText("November 2026");
+
+  expect(errors, `console errors picking timeline dates:\n${errors.join("\n")}`).toEqual([]);
+});

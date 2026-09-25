@@ -116,11 +116,14 @@ onMounted(load);
   <LxSection :label="i18n.t('pages.timeline.title')">
     <div class="timeline-toolbar">
       <div class="timeline-nav">
-        <LxButton icon="previous-page" :label="previousLabel" kind="ghost" @click="step(-1)" />
+        <LxButton class="timeline-prev" icon="previous-page" :label="previousLabel" kind="ghost" @click="step(-1)" />
         <LxButton :label="i18n.t('timeline.today')" kind="tertiary" @click="goToday" />
         <LxButton icon="next-page" :label="nextLabel" kind="ghost" @click="step(1)" />
-        <DateField v-if="viewMode === 'day'" v-model="anchor" class="timeline-date-field" />
-        <span v-else class="timeline-range-label">{{ rangeLabel }}</span>
+        <!-- Direct jump, not just stepping: one date picker for every view — picking any
+             date selects the day, or the whole week / month containing it (rangeStart
+             snaps the anchor to that week's Monday / month's 1st). -->
+        <DateField v-model="anchor" class="timeline-date-field" />
+        <span v-if="viewMode !== 'day'" class="timeline-range-label">{{ rangeLabel }}</span>
       </div>
       <LxContentSwitcher v-model="viewMode" :items="viewItems" />
     </div>
@@ -157,6 +160,20 @@ onMounted(load);
 }
 .timeline-date-field {
   min-width: 10rem;
+}
+/* LxButton puts its icon after the label (grid areas "content icon" from the theme).
+   Overriding the theme's --button-ghost-grid-areas variable didn't take (a more
+   specific theme rule sets it on the button itself), so this sets the wrapper's grid
+   directly — with enough ancestor classes to beat the theme's
+   ".lx .lx-button.lx-button-ghost .lx-button-content-wrapper" — to put the "previous"
+   arrow on the left where it belongs. */
+.timeline-nav :deep(.timeline-prev .lx-button-content-wrapper) {
+  /* Anchored on .timeline-nav (an element this component owns), not on the LxButton
+     itself: scoped-style attributes don't reach LxButton's root, so a rule keyed to
+     the button silently never matched (computed style stayed "content icon" through
+     two earlier attempts). !important because this ties the theme's specificity. */
+  grid-template-areas: "icon content" !important;
+  grid-template-columns: auto 1fr !important;
 }
 .timeline-range-label {
   font-weight: 600;
