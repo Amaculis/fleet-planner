@@ -12,6 +12,7 @@ type busSnapshot struct {
 	Model            string  `json:"model"`
 	Seats            int16   `json:"seats"`
 	Status           string  `json:"status"`
+	Type             string  `json:"type"`
 	InsuranceExpiry  *string `json:"insurance_expiry,omitempty"`
 	InspectionExpiry *string `json:"inspection_expiry,omitempty"`
 }
@@ -22,6 +23,7 @@ func snapshotBus(b domain.Bus) busSnapshot {
 		Model:            b.Model,
 		Seats:            b.Seats,
 		Status:           string(b.Status),
+		Type:             string(b.Type),
 		InsuranceExpiry:  formatDatePtr(b.InsuranceExpiry),
 		InspectionExpiry: formatDatePtr(b.InspectionExpiry),
 	}
@@ -36,6 +38,7 @@ type driverSnapshot struct {
 	PayType       *string `json:"pay_type,omitempty"`    // payroll-seam
 	IsActive      bool    `json:"is_active"`
 	Anonymized    bool    `json:"anonymized"`
+	Notes         *string `json:"notes,omitempty"`
 }
 
 func snapshotDriver(d domain.Driver) driverSnapshot {
@@ -53,6 +56,7 @@ func snapshotDriver(d domain.Driver) driverSnapshot {
 		PayType:       payType,
 		IsActive:      d.IsActive,
 		Anonymized:    d.IsAnonymized(),
+		Notes:         d.Notes,
 	}
 }
 

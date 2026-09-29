@@ -16,6 +16,11 @@ test("bus: add, edit, delete", async ({ page }) => {
   await page.getByLabel(/model/i).fill("Test Model");
   await page.getByRole("button", { name: /save/i }).click();
   await expect(page).toHaveURL(/\/app\/buses$/, { timeout: 10000 });
+  // LxDataGrid virtualizes rows (hasVirtualization defaults to true) — with 20+ buses
+  // from earlier test runs, a freshly created row's DOM node genuinely doesn't exist
+  // yet outside the rendered window. Search narrows the grid down to the one match
+  // instead of scrolling to find it (same reasoning as the driver/user tests below).
+  await page.getByRole("textbox", { name: /search/i }).fill(plate);
   await expect(page.getByText(plate)).toBeVisible();
 
   // Edit: LxDataGrid renders per-row actions as direct icon buttons, not a menu.
@@ -25,6 +30,10 @@ test("bus: add, edit, delete", async ({ page }) => {
   await page.getByLabel(/model/i).fill("Edited Model");
   await page.getByRole("button", { name: /save/i }).click();
   await expect(page).toHaveURL(/\/app\/buses$/, { timeout: 10000 });
+
+  // The edit round trip remounts the list (searchTerm is component-local state), so
+  // the search box is empty again — same virtualization reasoning as above.
+  await page.getByRole("textbox", { name: /search/i }).fill(plate);
   await expect(page.getByText("Edited Model")).toBeVisible();
 
   // Delete: confirm dialog defaults to Yes/No (LxShell's own confirmModal*DefaultLabel

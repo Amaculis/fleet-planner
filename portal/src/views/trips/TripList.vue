@@ -61,6 +61,7 @@ const columnDefinitions = computed(() => [
   { id: "statusLabel", attributeName: "statusLabel", name: i18n.t("fields.status") },
   { id: "paymentStatusLabel", attributeName: "paymentStatusLabel", name: i18n.t("fields.paymentStatus") },
   { id: "assignmentLabel", attributeName: "assignmentLabel", name: i18n.t("trips.assignment") },
+  { id: "notesLabel", attributeName: "notesLabel", name: i18n.t("fields.notes") },
 ]);
 
 const actionDefinitions = computed(() => [{ id: "open", name: i18n.t("actions.open"), icon: "open" }]);
@@ -75,6 +76,7 @@ const rows = computed(() => {
     assignmentLabel: t.assignment
       ? `${t.assignment.busPlate} · ${t.assignment.driverName}`
       : i18n.t("trips.unassigned"),
+    notesLabel: t.notes || i18n.t("common.unset"),
   }));
   const byStatus = statusFilter.value === "all" ? mapped : mapped.filter((t) => t.status === statusFilter.value);
   return paymentStatusFilter.value === "all"

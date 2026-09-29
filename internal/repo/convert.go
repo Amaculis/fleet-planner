@@ -79,6 +79,7 @@ func busFromRow(row sqlcgen.Bus) domain.Bus {
 		Model:            row.Model,
 		Seats:            row.Seats,
 		Status:           domain.BusStatus(row.Status),
+		Type:             domain.BusType(row.Type),
 		InsuranceExpiry:  dateToTime(row.InsuranceExpiry),
 		InspectionExpiry: dateToTime(row.InspectionExpiry),
 		CreatedAt:        row.CreatedAt,
@@ -99,6 +100,7 @@ func driverFromRow(row sqlcgen.Driver) domain.Driver {
 		AnonymizedAt:  row.AnonymizedAt,
 		CreatedAt:     row.CreatedAt,
 		UpdatedAt:     row.UpdatedAt,
+		Notes:         row.Notes,
 	}
 }
 

@@ -34,11 +34,11 @@ export function buildFixtures() {
   const isoToday = toIso(new Date());
 
   const buses = [
-    { id: id(), plate: "RA-2201", model: "Mercedes-Benz Tourismo", seats: 55, status: "active", insuranceExpiry: addDays(isoToday, 120), inspectionExpiry: addDays(isoToday, 45) },
-    { id: id(), plate: "RA-2202", model: "Setra S517HD", seats: 50, status: "active", insuranceExpiry: addDays(isoToday, 200), inspectionExpiry: addDays(isoToday, 12) },
-    { id: id(), plate: "RA-2203", model: "Volvo 9700", seats: 52, status: "active", insuranceExpiry: addDays(isoToday, 300), inspectionExpiry: addDays(isoToday, 90) },
-    { id: id(), plate: "RA-2204", model: "MAN Lion's Coach", seats: 48, status: "active", insuranceExpiry: addDays(isoToday, 20), inspectionExpiry: addDays(isoToday, 200) },
-    { id: id(), plate: "RA-2205", model: "Scania Touring", seats: 45, status: "maintenance", insuranceExpiry: addDays(isoToday, 150), inspectionExpiry: addDays(isoToday, 150) },
+    { id: id(), plate: "RA-2201", model: "Mercedes-Benz Tourismo", seats: 55, status: "active", type: "tourist", insuranceExpiry: addDays(isoToday, 120), inspectionExpiry: addDays(isoToday, 45) },
+    { id: id(), plate: "RA-2202", model: "Setra S517HD", seats: 50, status: "active", type: "international", insuranceExpiry: addDays(isoToday, 200), inspectionExpiry: addDays(isoToday, 12) },
+    { id: id(), plate: "RA-2203", model: "Volvo 9700", seats: 52, status: "active", type: "suburban", insuranceExpiry: addDays(isoToday, 300), inspectionExpiry: addDays(isoToday, 90) },
+    { id: id(), plate: "RA-2204", model: "MAN Lion's Coach", seats: 48, status: "active", type: "tourist", insuranceExpiry: addDays(isoToday, 20), inspectionExpiry: addDays(isoToday, 200) },
+    { id: id(), plate: "RA-2205", model: "Scania Touring", seats: 45, status: "maintenance", type: "international", insuranceExpiry: addDays(isoToday, 150), inspectionExpiry: addDays(isoToday, 150) },
   ];
 
   const drivers = [

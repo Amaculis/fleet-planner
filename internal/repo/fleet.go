@@ -52,6 +52,7 @@ func (r *Repo) CreateBus(ctx context.Context, b domain.Bus) (domain.Bus, error) 
 		Status:           sqlcgen.BusStatus(b.Status),
 		InsuranceExpiry:  timeToDate(b.InsuranceExpiry),
 		InspectionExpiry: timeToDate(b.InspectionExpiry),
+		Type:             sqlcgen.BusType(b.Type),
 	})
 	if err != nil {
 		return domain.Bus{}, fmt.Errorf("creating bus: %w", translate(err))
@@ -68,6 +69,7 @@ func (r *Repo) UpdateBus(ctx context.Context, b domain.Bus) (domain.Bus, error) 
 		Status:           sqlcgen.BusStatus(b.Status),
 		InsuranceExpiry:  timeToDate(b.InsuranceExpiry),
 		InspectionExpiry: timeToDate(b.InspectionExpiry),
+		Type:             sqlcgen.BusType(b.Type),
 	})
 	if err != nil {
 		return domain.Bus{}, fmt.Errorf("updating bus: %w", translate(err))
@@ -134,6 +136,7 @@ func (r *Repo) CreateDriver(ctx context.Context, d domain.Driver) (domain.Driver
 		LicenseExpiry: timeToDate(d.LicenseExpiry),
 		HourlyRate:    rate,
 		PayType:       payTypeToDB(d.PayType),
+		Notes:         d.Notes,
 	})
 	if err != nil {
 		return domain.Driver{}, fmt.Errorf("creating driver: %w", translate(err))
@@ -157,6 +160,7 @@ func (r *Repo) UpdateDriver(ctx context.Context, d domain.Driver) (domain.Driver
 		HourlyRate:    rate,
 		PayType:       payTypeToDB(d.PayType),
 		IsActive:      d.IsActive,
+		Notes:         d.Notes,
 	})
 	if err != nil {
 		return domain.Driver{}, fmt.Errorf("updating driver: %w", translate(err))

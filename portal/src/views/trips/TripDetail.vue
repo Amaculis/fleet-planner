@@ -200,10 +200,10 @@ onMounted(load);
           </div>
         </template>
 
-        <template v-if="trip.notes">
-          <h3 class="trip-panel-subheading">{{ i18n.t("fields.notes") }}</h3>
-          <p class="trip-notes">{{ trip.notes }}</p>
-        </template>
+        <h3 class="trip-panel-subheading">{{ i18n.t("fields.notes") }}</h3>
+        <p class="trip-notes" :class="{ 'trip-notes-empty': !trip.notes }">
+          {{ trip.notes || i18n.t("trips.noNotes") }}
+        </p>
       </div>
 
       <div class="trip-panel">
@@ -370,6 +370,10 @@ onMounted(load);
 .trip-notes {
   margin: 0;
   white-space: pre-wrap;
+}
+.trip-notes-empty {
+  color: var(--color-placeholder);
+  font-style: italic;
 }
 .trip-assignment-card {
   display: flex;

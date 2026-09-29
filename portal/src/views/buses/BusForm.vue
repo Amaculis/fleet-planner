@@ -37,6 +37,7 @@ const plate = ref("");
 const model = ref("");
 const seats = ref(50);
 const status = ref("active");
+const type = ref("tourist");
 const insuranceExpiry = ref("");
 const inspectionExpiry = ref("");
 
@@ -46,6 +47,9 @@ const errorMessage = ref("");
 
 const statusItems = computed(() =>
   ["active", "maintenance", "retired"].map((id) => ({ id, name: i18n.t(`busStatus.${id}`) }))
+);
+const typeItems = computed(() =>
+  ["tourist", "international", "suburban"].map((id) => ({ id, name: i18n.t(`busType.${id}`) }))
 );
 
 const { invalidProps, validate } = useFormValidation(() => {
@@ -73,6 +77,7 @@ async function load() {
     model.value = bus.model;
     seats.value = bus.seats;
     status.value = bus.status;
+    type.value = bus.type;
     insuranceExpiry.value = bus.insuranceExpiry;
     inspectionExpiry.value = bus.inspectionExpiry;
   } catch (error) {
@@ -92,6 +97,7 @@ async function save() {
     model: model.value.trim(),
     seats: seats.value,
     status: status.value,
+    type: type.value,
     insuranceExpiry: insuranceExpiry.value,
     inspectionExpiry: inspectionExpiry.value,
   };
@@ -151,6 +157,9 @@ onMounted(load);
       </LxRow>
       <LxRow :label="i18n.t('fields.status')" required>
         <LxValuePicker v-model="status" :items="statusItems" variant="dropdown" selection-kind="single" />
+      </LxRow>
+      <LxRow :label="i18n.t('fields.type')" required>
+        <LxValuePicker v-model="type" :items="typeItems" variant="dropdown" selection-kind="single" />
       </LxRow>
     </LxSection>
 

@@ -23,12 +23,31 @@ func ParseBusStatus(s string) (BusStatus, bool) {
 	return "", false
 }
 
+// BusType mirrors the Postgres enum bus_type — the route category a bus is used for,
+// distinct from Status (whether it's currently usable at all).
+type BusType string
+
+const (
+	BusTourist       BusType = "tourist"
+	BusInternational BusType = "international"
+	BusSuburban      BusType = "suburban"
+)
+
+func ParseBusType(s string) (BusType, bool) {
+	switch BusType(s) {
+	case BusTourist, BusInternational, BusSuburban:
+		return BusType(s), true
+	}
+	return "", false
+}
+
 type Bus struct {
 	ID     int64
 	Plate  string // stored normalised: upper-case, no spaces (DB CHECK enforces it)
 	Model  string
 	Seats  int16
 	Status BusStatus
+	Type   BusType
 	// Document seams: stored, but nothing reminds on them yet.
 	InsuranceExpiry  *time.Time
 	InspectionExpiry *time.Time
@@ -74,6 +93,9 @@ type Driver struct {
 	AnonymizedAt *time.Time
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
+	// Free-text dispatcher note (e.g. preferences, restrictions). Cleared on
+	// anonymization along with the other identifying fields — see AnonymizeDriver.
+	Notes *string
 }
 
 func (d Driver) IsAnonymized() bool { return d.AnonymizedAt != nil }

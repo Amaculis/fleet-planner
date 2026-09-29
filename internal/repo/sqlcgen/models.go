@@ -56,6 +56,49 @@ func (ns NullBusStatus) Value() (driver.Value, error) {
 	return string(ns.BusStatus), nil
 }
 
+type BusType string
+
+const (
+	BusTypeTourist       BusType = "tourist"
+	BusTypeInternational BusType = "international"
+	BusTypeSuburban      BusType = "suburban"
+)
+
+func (e *BusType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = BusType(s)
+	case string:
+		*e = BusType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for BusType: %T", src)
+	}
+	return nil
+}
+
+type NullBusType struct {
+	BusType BusType
+	Valid   bool // Valid is true if BusType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullBusType) Scan(value interface{}) error {
+	if value == nil {
+		ns.BusType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.BusType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullBusType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.BusType), nil
+}
+
 type PayType string
 
 const (
@@ -265,6 +308,7 @@ type Bus struct {
 	InspectionExpiry pgtype.Date
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
+	Type             BusType
 }
 
 type Driver struct {
@@ -279,6 +323,7 @@ type Driver struct {
 	AnonymizedAt  *time.Time
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
+	Notes         *string
 }
 
 type Session struct {

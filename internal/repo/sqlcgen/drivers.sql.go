@@ -14,10 +14,10 @@ import (
 const anonymizeDriver = `-- name: AnonymizeDriver :one
 UPDATE drivers
 SET full_name = $2, phone = NULL, license_number = NULL, license_expiry = NULL,
-    is_active = false, anonymized_at = now()
+    is_active = false, anonymized_at = now(), notes = NULL
 WHERE id = $1 AND anonymized_at IS NULL
 RETURNING id, full_name, phone, license_number, license_expiry, hourly_rate, pay_type,
-          is_active, anonymized_at, created_at, updated_at
+          is_active, anonymized_at, created_at, updated_at, notes
 `
 
 type AnonymizeDriverParams struct {
@@ -27,6 +27,8 @@ type AnonymizeDriverParams struct {
 
 // GDPR erasure. The row survives so assignments, worked time and the audit trail keep
 // their referential integrity (payroll-seam); only the identifying fields are dropped.
+// notes is cleared too — a dispatcher's free-text note about a driver can itself be
+// personal data ("lives near the depot", "prefers not to drive nights due to...").
 // Idempotent: a second call matches no row and returns no result.
 func (q *Queries) AnonymizeDriver(ctx context.Context, arg AnonymizeDriverParams) (Driver, error) {
 	row := q.db.QueryRow(ctx, anonymizeDriver, arg.ID, arg.FullName)
@@ -43,15 +45,16 @@ func (q *Queries) AnonymizeDriver(ctx context.Context, arg AnonymizeDriverParams
 		&i.AnonymizedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Notes,
 	)
 	return i, err
 }
 
 const createDriver = `-- name: CreateDriver :one
-INSERT INTO drivers (full_name, phone, license_number, license_expiry, hourly_rate, pay_type)
-VALUES ($1, $2, $3, $4, $5, $6)
+INSERT INTO drivers (full_name, phone, license_number, license_expiry, hourly_rate, pay_type, notes)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
 RETURNING id, full_name, phone, license_number, license_expiry, hourly_rate, pay_type,
-          is_active, anonymized_at, created_at, updated_at
+          is_active, anonymized_at, created_at, updated_at, notes
 `
 
 type CreateDriverParams struct {
@@ -61,6 +64,7 @@ type CreateDriverParams struct {
 	LicenseExpiry pgtype.Date
 	HourlyRate    pgtype.Numeric
 	PayType       NullPayType
+	Notes         *string
 }
 
 // payroll-seam: hourly_rate and pay_type are accepted and stored but no code reads them
@@ -73,6 +77,7 @@ func (q *Queries) CreateDriver(ctx context.Context, arg CreateDriverParams) (Dri
 		arg.LicenseExpiry,
 		arg.HourlyRate,
 		arg.PayType,
+		arg.Notes,
 	)
 	var i Driver
 	err := row.Scan(
@@ -87,13 +92,14 @@ func (q *Queries) CreateDriver(ctx context.Context, arg CreateDriverParams) (Dri
 		&i.AnonymizedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Notes,
 	)
 	return i, err
 }
 
 const getDriver = `-- name: GetDriver :one
 SELECT id, full_name, phone, license_number, license_expiry, hourly_rate, pay_type,
-       is_active, anonymized_at, created_at, updated_at
+       is_active, anonymized_at, created_at, updated_at, notes
 FROM drivers
 WHERE id = $1
 `
@@ -113,6 +119,7 @@ func (q *Queries) GetDriver(ctx context.Context, id int64) (Driver, error) {
 		&i.AnonymizedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Notes,
 	)
 	return i, err
 }
@@ -131,7 +138,7 @@ func (q *Queries) GetDriverLoginUserID(ctx context.Context, driverID *int64) (in
 
 const listActiveDrivers = `-- name: ListActiveDrivers :many
 SELECT id, full_name, phone, license_number, license_expiry, hourly_rate, pay_type,
-       is_active, anonymized_at, created_at, updated_at
+       is_active, anonymized_at, created_at, updated_at, notes
 FROM drivers
 WHERE is_active
 ORDER BY full_name
@@ -159,6 +166,7 @@ func (q *Queries) ListActiveDrivers(ctx context.Context) ([]Driver, error) {
 			&i.AnonymizedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Notes,
 		); err != nil {
 			return nil, err
 		}
@@ -171,12 +179,17 @@ func (q *Queries) ListActiveDrivers(ctx context.Context) ([]Driver, error) {
 }
 
 const listDrivers = `-- name: ListDrivers :many
+
 SELECT id, full_name, phone, license_number, license_expiry, hourly_rate, pay_type,
-       is_active, anonymized_at, created_at, updated_at
+       is_active, anonymized_at, created_at, updated_at, notes
 FROM drivers
 ORDER BY full_name
 `
 
+// Column lists put notes last, matching its physical position from the ALTER TABLE
+// that added it (see 0008_driver_notes.up.sql) — the repo layer converts these row
+// types to sqlcgen.Driver via a plain Go type conversion, which needs identical field
+// order, not just identical field sets (see trips.sql's own copy of this note).
 func (q *Queries) ListDrivers(ctx context.Context) ([]Driver, error) {
 	rows, err := q.db.Query(ctx, listDrivers)
 	if err != nil {
@@ -198,6 +211,7 @@ func (q *Queries) ListDrivers(ctx context.Context) ([]Driver, error) {
 			&i.AnonymizedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Notes,
 		); err != nil {
 			return nil, err
 		}
@@ -212,10 +226,10 @@ func (q *Queries) ListDrivers(ctx context.Context) ([]Driver, error) {
 const updateDriver = `-- name: UpdateDriver :one
 UPDATE drivers
 SET full_name = $2, phone = $3, license_number = $4, license_expiry = $5,
-    hourly_rate = $6, pay_type = $7, is_active = $8
+    hourly_rate = $6, pay_type = $7, is_active = $8, notes = $9
 WHERE id = $1 AND anonymized_at IS NULL
 RETURNING id, full_name, phone, license_number, license_expiry, hourly_rate, pay_type,
-          is_active, anonymized_at, created_at, updated_at
+          is_active, anonymized_at, created_at, updated_at, notes
 `
 
 type UpdateDriverParams struct {
@@ -227,6 +241,7 @@ type UpdateDriverParams struct {
 	HourlyRate    pgtype.Numeric
 	PayType       NullPayType
 	IsActive      bool
+	Notes         *string
 }
 
 func (q *Queries) UpdateDriver(ctx context.Context, arg UpdateDriverParams) (Driver, error) {
@@ -239,6 +254,7 @@ func (q *Queries) UpdateDriver(ctx context.Context, arg UpdateDriverParams) (Dri
 		arg.HourlyRate,
 		arg.PayType,
 		arg.IsActive,
+		arg.Notes,
 	)
 	var i Driver
 	err := row.Scan(
@@ -253,6 +269,7 @@ func (q *Queries) UpdateDriver(ctx context.Context, arg UpdateDriverParams) (Dri
 		&i.AnonymizedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Notes,
 	)
 	return i, err
 }

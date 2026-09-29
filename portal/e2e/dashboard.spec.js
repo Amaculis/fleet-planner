@@ -12,12 +12,15 @@ test("dashboard shows planner tiles and info panels with no console errors", asy
   // full text content, not accessible name, is what actually matches "10 / Active
   // buses" as one tile (confirmed via ariaSnapshot; getByRole(... name: "Active
   // buses") would not match this way LxTile renders).
-  for (const label of ["Active buses", "Active drivers", "Trips today", "Trips this week", "In progress now", "Unassigned trips"]) {
+  for (const label of ["Active buses", "Active drivers", "In progress now", "Unassigned trips"]) {
     await expect(page.getByRole("link").filter({ hasText: label })).toBeVisible();
   }
 
   await expect(page.getByRole("heading", { name: "Documents expiring soon" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Upcoming trips" })).toBeVisible();
+  // The "Trips today"/"Trips this week" tiles were removed in favor of this button —
+  // a planner can always jump straight to the timeline from the dashboard.
+  await expect(page.getByRole("button", { name: "Timeline" })).toBeVisible();
 
   expect(errors, `console errors on dashboard:\n${errors.join("\n")}`).toEqual([]);
 });
@@ -27,6 +30,13 @@ test("clicking a planner tile navigates to its target page", async ({ page }) =>
   await page.waitForTimeout(500);
   await page.getByRole("link").filter({ hasText: "Active buses" }).click();
   await expect(page).toHaveURL(/\/app\/buses$/);
+});
+
+test("the Timeline button navigates to the timeline", async ({ page }) => {
+  await page.goto("/app/");
+  await page.waitForTimeout(500);
+  await page.getByRole("button", { name: "Timeline" }).click();
+  await expect(page).toHaveURL(/\/app\/timeline/);
 });
 
 // The dashboard's own dependency-free assign/status logic (isUpcoming, the tile

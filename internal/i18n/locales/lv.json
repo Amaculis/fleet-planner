@@ -83,6 +83,7 @@
   "field.scheduled_start": "Izbraukšana",
   "field.seats": "Sēdvietas",
   "field.status": "Statuss",
+  "field.type": "Tips",
   "login.email": "E-pasts",
   "login.error.expired": "Jūsu sesija ir beigusies. Lūdzu, piesakieties vēlreiz.",
   "login.error.invalid": "Nepareizs e-pasts vai parole.",

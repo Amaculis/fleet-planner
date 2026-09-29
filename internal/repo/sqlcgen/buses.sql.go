@@ -12,9 +12,9 @@ import (
 )
 
 const createBus = `-- name: CreateBus :one
-INSERT INTO buses (plate, model, seats, status, insurance_expiry, inspection_expiry)
-VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, plate, model, seats, status, insurance_expiry, inspection_expiry, created_at, updated_at
+INSERT INTO buses (plate, model, seats, status, insurance_expiry, inspection_expiry, type)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+RETURNING id, plate, model, seats, status, insurance_expiry, inspection_expiry, created_at, updated_at, type
 `
 
 type CreateBusParams struct {
@@ -24,6 +24,7 @@ type CreateBusParams struct {
 	Status           BusStatus
 	InsuranceExpiry  pgtype.Date
 	InspectionExpiry pgtype.Date
+	Type             BusType
 }
 
 func (q *Queries) CreateBus(ctx context.Context, arg CreateBusParams) (Bus, error) {
@@ -34,6 +35,7 @@ func (q *Queries) CreateBus(ctx context.Context, arg CreateBusParams) (Bus, erro
 		arg.Status,
 		arg.InsuranceExpiry,
 		arg.InspectionExpiry,
+		arg.Type,
 	)
 	var i Bus
 	err := row.Scan(
@@ -46,6 +48,7 @@ func (q *Queries) CreateBus(ctx context.Context, arg CreateBusParams) (Bus, erro
 		&i.InspectionExpiry,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Type,
 	)
 	return i, err
 }
@@ -65,7 +68,7 @@ func (q *Queries) DeleteBus(ctx context.Context, id int64) (int64, error) {
 }
 
 const getBus = `-- name: GetBus :one
-SELECT id, plate, model, seats, status, insurance_expiry, inspection_expiry, created_at, updated_at
+SELECT id, plate, model, seats, status, insurance_expiry, inspection_expiry, created_at, updated_at, type
 FROM buses
 WHERE id = $1
 `
@@ -83,12 +86,13 @@ func (q *Queries) GetBus(ctx context.Context, id int64) (Bus, error) {
 		&i.InspectionExpiry,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Type,
 	)
 	return i, err
 }
 
 const listActiveBuses = `-- name: ListActiveBuses :many
-SELECT id, plate, model, seats, status, insurance_expiry, inspection_expiry, created_at, updated_at
+SELECT id, plate, model, seats, status, insurance_expiry, inspection_expiry, created_at, updated_at, type
 FROM buses
 WHERE status = 'active'
 ORDER BY plate
@@ -114,6 +118,7 @@ func (q *Queries) ListActiveBuses(ctx context.Context) ([]Bus, error) {
 			&i.InspectionExpiry,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Type,
 		); err != nil {
 			return nil, err
 		}
@@ -126,11 +131,16 @@ func (q *Queries) ListActiveBuses(ctx context.Context) ([]Bus, error) {
 }
 
 const listBuses = `-- name: ListBuses :many
-SELECT id, plate, model, seats, status, insurance_expiry, inspection_expiry, created_at, updated_at
+
+SELECT id, plate, model, seats, status, insurance_expiry, inspection_expiry, created_at, updated_at, type
 FROM buses
 ORDER BY plate
 `
 
+// Column lists put type last, matching its physical position from the ALTER TABLE
+// that added it (see 0007_bus_type.up.sql) — the repo layer converts these row types
+// to sqlcgen.Bus via a plain Go type conversion, which needs identical field order,
+// not just identical field sets (see trips.sql's own copy of this note).
 func (q *Queries) ListBuses(ctx context.Context) ([]Bus, error) {
 	rows, err := q.db.Query(ctx, listBuses)
 	if err != nil {
@@ -150,6 +160,7 @@ func (q *Queries) ListBuses(ctx context.Context) ([]Bus, error) {
 			&i.InspectionExpiry,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Type,
 		); err != nil {
 			return nil, err
 		}
@@ -163,9 +174,9 @@ func (q *Queries) ListBuses(ctx context.Context) ([]Bus, error) {
 
 const updateBus = `-- name: UpdateBus :one
 UPDATE buses
-SET plate = $2, model = $3, seats = $4, status = $5, insurance_expiry = $6, inspection_expiry = $7
+SET plate = $2, model = $3, seats = $4, status = $5, insurance_expiry = $6, inspection_expiry = $7, type = $8
 WHERE id = $1
-RETURNING id, plate, model, seats, status, insurance_expiry, inspection_expiry, created_at, updated_at
+RETURNING id, plate, model, seats, status, insurance_expiry, inspection_expiry, created_at, updated_at, type
 `
 
 type UpdateBusParams struct {
@@ -176,6 +187,7 @@ type UpdateBusParams struct {
 	Status           BusStatus
 	InsuranceExpiry  pgtype.Date
 	InspectionExpiry pgtype.Date
+	Type             BusType
 }
 
 func (q *Queries) UpdateBus(ctx context.Context, arg UpdateBusParams) (Bus, error) {
@@ -187,6 +199,7 @@ func (q *Queries) UpdateBus(ctx context.Context, arg UpdateBusParams) (Bus, erro
 		arg.Status,
 		arg.InsuranceExpiry,
 		arg.InspectionExpiry,
+		arg.Type,
 	)
 	var i Bus
 	err := row.Scan(
@@ -199,6 +212,7 @@ func (q *Queries) UpdateBus(ctx context.Context, arg UpdateBusParams) (Bus, erro
 		&i.InspectionExpiry,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Type,
 	)
 	return i, err
 }

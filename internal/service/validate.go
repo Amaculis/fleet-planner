@@ -91,6 +91,9 @@ func validateBus(b domain.Bus) (domain.Bus, error) {
 	if _, ok := domain.ParseBusStatus(string(b.Status)); !ok {
 		return b, unknownValue("field.status")
 	}
+	if _, ok := domain.ParseBusType(string(b.Type)); !ok {
+		return b, unknownValue("field.type")
+	}
 	return b, nil
 }
 
@@ -118,6 +121,9 @@ func validateDriver(d domain.Driver) (domain.Driver, error) {
 		if _, ok := domain.ParsePayType(string(*d.PayType)); !ok {
 			return d, unknownValue("field.pay_type")
 		}
+	}
+	if d.Notes = trimOptional(d.Notes); d.Notes != nil && utf8.RuneCountInString(*d.Notes) > 2000 {
+		return d, tooLong("field.notes", 2000)
 	}
 	return d, nil
 }

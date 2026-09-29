@@ -52,9 +52,15 @@ test("bus list filters: collapsed by default, Apply narrows the grid, Clear rest
   await expect(page.getByRole("button", { name: /filters applied/i })).toBeVisible();
 
   await page.getByRole("button", { name: /^clear$/i }).click();
+  await expect(page.getByRole("button", { name: /filters applied/i })).toHaveCount(0);
+  // Not asserted by looking at the unfiltered grid directly: with 20+ buses
+  // accumulated from other e2e runs, LxDataGrid's virtualization can put these two
+  // rows outside the rendered window once nothing narrows the list (see crud.spec.js's
+  // own comment on this). Searching by their shared suffix keeps the grid down to
+  // just these two, the same way search.spec.js verifies a multi-match query.
+  await page.getByRole("textbox", { name: /search/i }).fill(String(suffix));
   await expect(page.getByText(maintenancePlate)).toBeVisible();
   await expect(page.getByText(activePlate)).toBeVisible();
-  await expect(page.getByRole("button", { name: /filters applied/i })).toHaveCount(0);
 
   expect(errors, `console errors using the bus filters:\n${errors.join("\n")}`).toEqual([]);
 });
@@ -62,7 +68,7 @@ test("bus list filters: collapsed by default, Apply narrows the grid, Clear rest
 test("every list has a labelled, collapsed filter panel", async ({ page }) => {
   const errors = trackConsoleErrors(page);
   const expected = {
-    buses: ["Status"],
+    buses: ["Status", "Type"],
     drivers: ["Active"],
     users: ["Role", "Active"],
     trips: ["Status", "Payment status"],

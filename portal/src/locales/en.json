@@ -67,8 +67,6 @@
     "greeting": "Welcome back, {email}",
     "activeBuses": "Active buses",
     "activeDrivers": "Active drivers",
-    "tripsToday": "Trips today",
-    "tripsThisWeek": "Trips this week",
     "inProgressNow": "In progress now",
     "unassignedTrips": "Unassigned trips",
     "needsAttention": "Needs attention",
@@ -93,6 +91,7 @@
     "model": "Model",
     "seats": "Seats",
     "status": "Status",
+    "type": "Type",
     "insuranceExpiry": "Insurance expiry",
     "inspectionExpiry": "Inspection expiry",
     "fullName": "Full name",
@@ -119,6 +118,11 @@
     "active": "In service",
     "maintenance": "In maintenance",
     "retired": "Retired"
+  },
+  "busType": {
+    "tourist": "Tourist",
+    "international": "International",
+    "suburban": "Suburban"
   },
   "paymentStatus": {
     "unpaid": "Unpaid",
@@ -170,6 +174,7 @@
     "assignment": "Bus & driver",
     "unassigned": "Unassigned",
     "unassignedHint": "No bus or driver assigned yet.",
+    "noNotes": "No notes.",
     "markAs": "Mark as",
     "durationDays": "{n}d",
     "durationHours": "{n}h",
@@ -238,7 +243,9 @@
     "payDescription": "Not used yet — kept so payroll can be added later.",
     "rateHint": "Up to 2 decimals, e.g. 12.50.",
     "status": "Status",
-    "statusDescription": "Inactive drivers can't be assigned to new trips."
+    "statusDescription": "Inactive drivers can't be assigned to new trips.",
+    "notesSection": "Additional information",
+    "notesHint": "Internal notes, e.g. preferences or restrictions. Not shown to the driver."
   },
   "userForm": {
     "account": "Account",

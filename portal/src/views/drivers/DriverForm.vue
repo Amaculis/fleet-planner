@@ -7,6 +7,7 @@ import {
   LxSection,
   LxRow,
   LxTextInput,
+  LxTextArea,
   LxValuePicker,
   LxToggle,
   LxInfoBox,
@@ -32,6 +33,7 @@ const PHONE_PATTERN = /^\+?[0-9 ()-]{5,32}$/;
 const RATE_PATTERN = /^[0-9]{1,8}(\.[0-9]{1,2})?$/;
 const MAX_NAME = 200;
 const MAX_LICENSE = 64;
+const MAX_NOTES = 2000;
 
 const fullName = ref("");
 const phone = ref("");
@@ -40,6 +42,7 @@ const licenseExpiry = ref("");
 const hourlyRate = ref("");
 const payType = ref(null);
 const isActive = ref(true);
+const notes = ref("");
 
 const loadingDriver = ref(false);
 const saving = ref(false);
@@ -61,6 +64,7 @@ const { invalidProps, validate } = useFormValidation(() => {
   if (String(hourlyRate.value).trim() && !RATE_PATTERN.test(String(hourlyRate.value).trim())) {
     e.hourlyRate = i18n.t("validation.invalidRate");
   }
+  if (notes.value.length > MAX_NOTES) e.notes = i18n.t("validation.tooLong", { max: MAX_NOTES });
   return e;
 });
 
@@ -76,6 +80,7 @@ async function load() {
     hourlyRate.value = driver.hourlyRate ?? "";
     payType.value = driver.payType ?? null;
     isActive.value = driver.isActive;
+    notes.value = driver.notes ?? "";
   } catch (error) {
     errorMessage.value = i18n.t(errors.get(error).message);
   } finally {
@@ -96,6 +101,7 @@ async function save() {
     hourlyRate: hourlyRate.value || null,
     payType: payType.value,
     isActive: isActive.value,
+    notes: notes.value || null,
   };
   try {
     if (isNew.value) {
@@ -163,6 +169,12 @@ onMounted(load);
     <LxSection v-if="!isNew" :label="i18n.t('driverForm.status')" :description="i18n.t('driverForm.statusDescription')">
       <LxRow :label="i18n.t('fields.isActive')">
         <LxToggle v-model="isActive" />
+      </LxRow>
+    </LxSection>
+
+    <LxSection :label="i18n.t('driverForm.notesSection')" :description="i18n.t('driverForm.notesHint')">
+      <LxRow :label="i18n.t('fields.notes')" :column-span="2">
+        <LxTextArea v-model="notes" :rows="4" :maxlength="MAX_NOTES" v-bind="invalidProps('notes')" />
       </LxRow>
     </LxSection>
   </LxForm>

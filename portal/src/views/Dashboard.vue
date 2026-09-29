@@ -1,7 +1,8 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { useI18n } from "vue-i18n";
-import { LxTile, LxLoader, LxIcon, LxBadge } from "@dativa-lv/lx-ui";
+import { useRouter } from "vue-router";
+import { LxTile, LxLoader, LxIcon, LxBadge, LxButton } from "@dativa-lv/lx-ui";
 import { getBuses, getDrivers } from "@/services/fleet";
 import { getTrips } from "@/services/trips";
 import { getMyTrips } from "@/services/myTrips";
@@ -11,6 +12,7 @@ import useErrors from "@/hooks/errors";
 import { toIso, addDays, startOfWeek, parseServerTimestamp } from "@/utils/dates";
 
 const i18n = useI18n();
+const router = useRouter();
 const auth = useAuthStore();
 const notify = useNotifyStore();
 const errors = useErrors();
@@ -60,15 +62,6 @@ function dayOf(iso) {
 // --- Planner tiles -----------------------------------------------------------------
 const activeBuses = computed(() => buses.value.filter((b) => b.status === "active").length);
 const activeDrivers = computed(() => drivers.value.filter((d) => d.isActive && !d.anonymized).length);
-const tripsToday = computed(
-  () => trips.value.filter((t) => t.status !== "cancelled" && dayOf(t.scheduledStart) === today).length
-);
-const tripsThisWeek = computed(
-  () =>
-    trips.value.filter(
-      (t) => t.status !== "cancelled" && dayOf(t.scheduledStart) >= weekStart && dayOf(t.scheduledStart) < weekEnd
-    ).length
-);
 const inProgressNow = computed(() => trips.value.filter((t) => t.status === "in_progress").length);
 const unassignedCount = computed(
   () => trips.value.filter((t) => !t.assignment && t.status !== "cancelled").length
@@ -88,20 +81,6 @@ const plannerTiles = computed(() => [
     description: i18n.t("dashboard.activeDrivers"),
     icon: "user-profile",
     to: { name: "drivers" },
-  },
-  {
-    id: "tripsToday",
-    label: String(tripsToday.value),
-    description: i18n.t("dashboard.tripsToday"),
-    icon: "calendar",
-    to: { name: "timeline" },
-  },
-  {
-    id: "tripsThisWeek",
-    label: String(tripsThisWeek.value),
-    description: i18n.t("dashboard.tripsThisWeek"),
-    icon: "calendar-check",
-    to: { name: "timeline" },
   },
   {
     id: "inProgress",
@@ -209,7 +188,16 @@ const driverTiles = computed(() => [
 
 <template>
   <div class="dashboard">
-    <h2 class="dashboard-greeting">{{ i18n.t("dashboard.greeting", { email: auth.session?.email }) }}</h2>
+    <div class="dashboard-header">
+      <h2 class="dashboard-greeting">{{ i18n.t("dashboard.greeting", { email: auth.session?.email }) }}</h2>
+      <LxButton
+        v-if="isPlanner"
+        :label="i18n.t('pages.timeline.title')"
+        icon="calendar"
+        kind="secondary"
+        @click="router.push({ name: 'timeline' })"
+      />
+    </div>
 
     <LxLoader v-if="loading" :loading="true" />
     <template v-else>
@@ -303,6 +291,13 @@ const driverTiles = computed(() => [
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+}
+.dashboard-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
 }
 .dashboard-greeting {
   margin: 0;

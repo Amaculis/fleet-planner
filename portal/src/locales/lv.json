@@ -67,8 +67,6 @@
     "greeting": "Laipni lūdzam, {email}",
     "activeBuses": "Aktīvie autobusi",
     "activeDrivers": "Aktīvie vadītāji",
-    "tripsToday": "Reisi šodien",
-    "tripsThisWeek": "Reisi šonedēļ",
     "inProgressNow": "Šobrīd notiek",
     "unassignedTrips": "Nepiešķirti reisi",
     "needsAttention": "Pievērst uzmanību",
@@ -93,6 +91,7 @@
     "model": "Modelis",
     "seats": "Sēdvietas",
     "status": "Statuss",
+    "type": "Tips",
     "insuranceExpiry": "OCTA derīgums",
     "inspectionExpiry": "Tehniskās apskates derīgums",
     "fullName": "Vārds",
@@ -119,6 +118,11 @@
     "active": "Ekspluatācijā",
     "maintenance": "Remontā",
     "retired": "Norakstīts"
+  },
+  "busType": {
+    "tourist": "Tūrisma",
+    "international": "Starptautiskais",
+    "suburban": "Piepilsētas"
   },
   "paymentStatus": {
     "unpaid": "Nav apmaksāts",
@@ -170,6 +174,7 @@
     "assignment": "Autobuss un vadītājs",
     "unassigned": "Nav norīkots",
     "unassignedHint": "Vēl nav piešķirts autobuss vai vadītājs.",
+    "noNotes": "Nav piezīmju.",
     "markAs": "Atzīmēt kā",
     "durationDays": "{n} d.",
     "durationHours": "{n} st.",
@@ -238,7 +243,9 @@
     "payDescription": "Pagaidām netiek izmantota — saglabāta, lai vēlāk varētu pievienot algu aprēķinu.",
     "rateHint": "Līdz 2 zīmēm aiz komata, piem., 12.50.",
     "status": "Statuss",
-    "statusDescription": "Neaktīvos vadītājus nevar piešķirt jauniem reisiem."
+    "statusDescription": "Neaktīvos vadītājus nevar piešķirt jauniem reisiem.",
+    "notesSection": "Papildu informācija",
+    "notesHint": "Iekšējas piezīmes, piem., vēlmes vai ierobežojumi. Vadītājam netiek rādītas."
   },
   "userForm": {
     "account": "Konts",

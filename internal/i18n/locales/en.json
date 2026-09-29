@@ -83,6 +83,7 @@
   "field.scheduled_start": "Departure",
   "field.seats": "Seats",
   "field.status": "Status",
+  "field.type": "Type",
   "login.email": "Email",
   "login.error.expired": "Your session has expired. Please sign in again.",
   "login.error.invalid": "Incorrect email or password.",

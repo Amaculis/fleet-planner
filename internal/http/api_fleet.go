@@ -16,6 +16,7 @@ type apiBus struct {
 	Model            string `json:"model"`
 	Seats            int16  `json:"seats"`
 	Status           string `json:"status"`
+	Type             string `json:"type"`
 	InsuranceExpiry  string `json:"insuranceExpiry"`
 	InspectionExpiry string `json:"inspectionExpiry"`
 }
@@ -27,6 +28,7 @@ func apiBusFrom(b domain.Bus) apiBus {
 		Model:            b.Model,
 		Seats:            b.Seats,
 		Status:           string(b.Status),
+		Type:             string(b.Type),
 		InsuranceExpiry:  formatDate(b.InsuranceExpiry),
 		InspectionExpiry: formatDate(b.InspectionExpiry),
 	}
@@ -37,12 +39,24 @@ type apiBusRequest struct {
 	Model            string `json:"model"`
 	Seats            int16  `json:"seats"`
 	Status           string `json:"status"`
+	Type             string `json:"type"`
 	InsuranceExpiry  string `json:"insuranceExpiry"`
 	InspectionExpiry string `json:"inspectionExpiry"`
 }
 
 func (req apiBusRequest) toDomain(id int64) (domain.Bus, error) {
-	bus := domain.Bus{ID: id, Plate: req.Plate, Model: req.Model, Seats: req.Seats, Status: domain.BusStatus(req.Status)}
+	// Defaults to "tourist" when omitted — validateBus still rejects anything else that
+	// isn't one of the three known values, this just keeps an absent field (existing
+	// callers that predate this field, e.g. some e2e fixtures) from being treated as an
+	// invalid one. Mirrors tripFromJSON's identical default for paymentStatus.
+	busType := domain.BusType(req.Type)
+	if busType == "" {
+		busType = domain.BusTourist
+	}
+	bus := domain.Bus{
+		ID: id, Plate: req.Plate, Model: req.Model, Seats: req.Seats,
+		Status: domain.BusStatus(req.Status), Type: busType,
+	}
 	var err error
 	if bus.InsuranceExpiry, err = jsonDate(req.InsuranceExpiry, "field.insurance_expiry"); err != nil {
 		return bus, err
@@ -159,6 +173,7 @@ type apiDriver struct {
 	PayType       *string `json:"payType,omitempty"`
 	IsActive      bool    `json:"isActive"`
 	Anonymized    bool    `json:"anonymized"`
+	Notes         *string `json:"notes,omitempty"`
 }
 
 func apiDriverFrom(d domain.Driver) apiDriver {
@@ -171,6 +186,7 @@ func apiDriverFrom(d domain.Driver) apiDriver {
 		HourlyRate:    d.HourlyRate,
 		IsActive:      d.IsActive,
 		Anonymized:    d.IsAnonymized(),
+		Notes:         d.Notes,
 	}
 	if d.PayType != nil {
 		pt := string(*d.PayType)
@@ -187,6 +203,7 @@ type apiDriverRequest struct {
 	HourlyRate    *string `json:"hourlyRate"`
 	PayType       *string `json:"payType"`
 	IsActive      bool    `json:"isActive"`
+	Notes         *string `json:"notes"`
 }
 
 func (req apiDriverRequest) toDomain(id int64, isNew bool) (domain.Driver, error) {
@@ -197,6 +214,7 @@ func (req apiDriverRequest) toDomain(id int64, isNew bool) (domain.Driver, error
 		LicenseNumber: req.LicenseNumber,
 		HourlyRate:    req.HourlyRate,
 		IsActive:      true,
+		Notes:         req.Notes,
 	}
 	if !isNew {
 		driver.IsActive = req.IsActive

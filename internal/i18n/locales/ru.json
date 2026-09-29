@@ -83,6 +83,7 @@
   "field.scheduled_start": "Отправление",
   "field.seats": "Мест",
   "field.status": "Статус",
+  "field.type": "Тип",
   "login.email": "Эл. почта",
   "login.error.expired": "Сессия истекла. Войдите снова.",
   "login.error.invalid": "Неверная почта или пароль.",
