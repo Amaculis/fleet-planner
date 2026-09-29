@@ -65,6 +65,7 @@
   },
   "dashboard": {
     "greeting": "Добро пожаловать, {email}",
+    "viewSchedule": "Посмотреть расписание",
     "activeBuses": "Активные автобусы",
     "activeDrivers": "Активные водители",
     "inProgressNow": "Сейчас в пути",

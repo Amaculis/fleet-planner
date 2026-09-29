@@ -1,8 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { useI18n } from "vue-i18n";
-import { useRouter } from "vue-router";
-import { LxTile, LxLoader, LxIcon, LxBadge, LxButton } from "@dativa-lv/lx-ui";
+import { LxTile, LxLoader, LxIcon, LxBadge } from "@dativa-lv/lx-ui";
 import { getBuses, getDrivers } from "@/services/fleet";
 import { getTrips } from "@/services/trips";
 import { getMyTrips } from "@/services/myTrips";
@@ -12,7 +11,6 @@ import useErrors from "@/hooks/errors";
 import { toIso, addDays, startOfWeek, parseServerTimestamp } from "@/utils/dates";
 
 const i18n = useI18n();
-const router = useRouter();
 const auth = useAuthStore();
 const notify = useNotifyStore();
 const errors = useErrors();
@@ -68,6 +66,13 @@ const unassignedCount = computed(
 );
 
 const plannerTiles = computed(() => [
+  {
+    id: "timeline",
+    label: i18n.t("pages.timeline.title"),
+    description: i18n.t("dashboard.viewSchedule"),
+    icon: "calendar",
+    to: { name: "timeline" },
+  },
   {
     id: "buses",
     label: String(activeBuses.value),
@@ -188,16 +193,7 @@ const driverTiles = computed(() => [
 
 <template>
   <div class="dashboard">
-    <div class="dashboard-header">
-      <h2 class="dashboard-greeting">{{ i18n.t("dashboard.greeting", { email: auth.session?.email }) }}</h2>
-      <LxButton
-        v-if="isPlanner"
-        :label="i18n.t('pages.timeline.title')"
-        icon="calendar"
-        kind="secondary"
-        @click="router.push({ name: 'timeline' })"
-      />
-    </div>
+    <h2 class="dashboard-greeting">{{ i18n.t("dashboard.greeting", { email: auth.session?.email }) }}</h2>
 
     <LxLoader v-if="loading" :loading="true" />
     <template v-else>
@@ -291,13 +287,6 @@ const driverTiles = computed(() => [
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-}
-.dashboard-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 0.75rem;
 }
 .dashboard-greeting {
   margin: 0;

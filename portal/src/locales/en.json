@@ -65,6 +65,7 @@
   },
   "dashboard": {
     "greeting": "Welcome back, {email}",
+    "viewSchedule": "View the schedule",
     "activeBuses": "Active buses",
     "activeDrivers": "Active drivers",
     "inProgressNow": "In progress now",

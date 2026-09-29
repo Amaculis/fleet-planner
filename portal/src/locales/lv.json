@@ -65,6 +65,7 @@
   },
   "dashboard": {
     "greeting": "Laipni lūdzam, {email}",
+    "viewSchedule": "Skatīt grafiku",
     "activeBuses": "Aktīvie autobusi",
     "activeDrivers": "Aktīvie vadītāji",
     "inProgressNow": "Šobrīd notiek",

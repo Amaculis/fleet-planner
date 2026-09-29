@@ -18,9 +18,9 @@ test("dashboard shows planner tiles and info panels with no console errors", asy
 
   await expect(page.getByRole("heading", { name: "Documents expiring soon" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Upcoming trips" })).toBeVisible();
-  // The "Trips today"/"Trips this week" tiles were removed in favor of this button —
-  // a planner can always jump straight to the timeline from the dashboard.
-  await expect(page.getByRole("button", { name: "Timeline" })).toBeVisible();
+  // The "Trips today"/"Trips this week" tiles were replaced with this one — a planner
+  // can always jump straight to the timeline from the dashboard.
+  await expect(page.getByRole("link").filter({ hasText: "View the schedule" })).toBeVisible();
 
   expect(errors, `console errors on dashboard:\n${errors.join("\n")}`).toEqual([]);
 });
@@ -32,10 +32,10 @@ test("clicking a planner tile navigates to its target page", async ({ page }) =>
   await expect(page).toHaveURL(/\/app\/buses$/);
 });
 
-test("the Timeline button navigates to the timeline", async ({ page }) => {
+test("the Timeline tile navigates to the timeline", async ({ page }) => {
   await page.goto("/app/");
   await page.waitForTimeout(500);
-  await page.getByRole("button", { name: "Timeline" }).click();
+  await page.getByRole("link").filter({ hasText: "View the schedule" }).click();
   await expect(page).toHaveURL(/\/app\/timeline/);
 });
 
