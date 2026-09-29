@@ -90,6 +90,12 @@ const routes = [
         component: () => import("@/views/users/UserList.vue"),
       },
       {
+        path: "statistics",
+        name: "statistics",
+        meta: { title: "pages.statistics.title" },
+        component: () => import("@/views/Statistics.vue"),
+      },
+      {
         path: "users/new",
         name: "userNew",
         meta: { title: "pages.users.new" },

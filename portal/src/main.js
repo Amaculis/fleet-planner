@@ -53,6 +53,7 @@ import "@dativa-lv/lx-ui/dist/styles/lx-popovers.css"; // LxValuePicker's dropdo
 // via dativa-lv-lx-ui.esm.js: LxValuePicker = import("./DropDownMenu-*.js").then(e =>
 // e.ValuePicker_exports)) and its popover panel (.lx-dropdown-panel etc.) is defined here, not
 // in lx-value-pickers.css — without it the panel renders unstyled/unsized ("big logo" bug).
+import "@dativa-lv/lx-ui/dist/styles/lx-data-visualizer.css"; // LxDataVisualizer (Statistics)
 
 import App from "@/App.vue";
 import router from "@/router";

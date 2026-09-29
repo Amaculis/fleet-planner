@@ -49,6 +49,10 @@ const nav = computed(() => {
   }
   if (isAdmin.value) {
     items.push({ id: "users", label: i18n.t("nav.users"), icon: "settings", to: { name: "users" } });
+    // No chart/bar-graph icon exists in this icon set (checked node_modules/@dativa-lv/
+    // lx-ui/dist/Icon-CWjo-uMS.js's dynamic-import list directly) — "reports" is the
+    // closest semantic match.
+    items.push({ id: "statistics", label: i18n.t("nav.statistics"), icon: "reports", to: { name: "statistics" } });
   }
   items.push({ id: "accessibility", label: i18n.t("shellTexts.accessibility"), icon: "accessibility", to: { name: "accessibility" } });
   return items;

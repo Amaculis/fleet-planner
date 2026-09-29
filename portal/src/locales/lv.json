@@ -29,6 +29,7 @@
     "drivers": { "title": "Vadītāji", "new": "Pievienot vadītāju", "edit": "Labot vadītāju" },
     "trips": { "title": "Reisi", "new": "Pievienot reisu", "edit": "Labot reisu", "detail": "Reiss" },
     "users": { "title": "Lietotāji", "new": "Pievienot lietotāju" },
+    "statistics": { "title": "Statistika" },
     "timeline": { "title": "Laika grafiks" },
     "myTrips": { "title": "Mani reisi" }
   },
@@ -49,6 +50,7 @@
     "drivers": "Vadītāji",
     "trips": "Reisi",
     "users": "Lietotāji",
+    "statistics": "Statistika",
     "myTrips": "Mani reisi",
     "logout": "Iziet"
   },
@@ -255,6 +257,32 @@
     "access": "Piekļuve",
     "accessDescription": "Ko šis konts drīkst darīt.",
     "driverHint": "Vadītājs, kuram pieder šī pieteikšanās — viņš redzēs tikai savus reisus."
+  },
+  "dataVisualizer": {
+    "graph": "Grafiks",
+    "table": "Tabula",
+    "from": "no",
+    "to": "līdz",
+    "target": "Mērķis",
+    "nameColumn": "Nosaukums",
+    "groupColumn": "Grupa",
+    "valueColumn": "Vērtība",
+    "iconColumn": "Ikona"
+  },
+  "statistics": {
+    "title": "Statistika",
+    "tripVolume": "Reisu skaits",
+    "tripVolumeDescription": "Izvēlētajā periodā plānotie reisi (atceltie reisi neskaitot).",
+    "period7": "Pēdējās 7 dienas",
+    "period30": "Pēdējās 30 dienas",
+    "period90": "Pēdējās 90 dienas",
+    "busiestBuses": "Noslogotākie autobusi",
+    "busiestBusesDescription": "Autobusi ar visvairāk piešķirtajiem reisiem izvēlētajā periodā.",
+    "busiestDrivers": "Noslogotākie vadītāji",
+    "busiestDriversDescription": "Vadītāji ar visvairāk piešķirtajiem reisiem izvēlētajā periodā.",
+    "fleetByStatus": "Autoparks pēc statusa",
+    "fleetByStatusDescription": "Pašreizējais autoparks, neatkarīgi no izvēlētā perioda.",
+    "noData": "Šajā periodā nav reisu."
   },
   "filterPanel": {
     "filters": "Filtri",

@@ -29,6 +29,7 @@
     "drivers": { "title": "Drivers", "new": "Add driver", "edit": "Edit driver" },
     "trips": { "title": "Trips", "new": "Add trip", "edit": "Edit trip", "detail": "Trip" },
     "users": { "title": "Users", "new": "Add user" },
+    "statistics": { "title": "Statistics" },
     "timeline": { "title": "Timeline" },
     "myTrips": { "title": "My trips" }
   },
@@ -49,6 +50,7 @@
     "drivers": "Drivers",
     "trips": "Trips",
     "users": "Users",
+    "statistics": "Statistics",
     "myTrips": "My trips",
     "logout": "Log out"
   },
@@ -255,6 +257,32 @@
     "access": "Access",
     "accessDescription": "What this account is allowed to do.",
     "driverHint": "The driver this login belongs to — they will only see their own trips."
+  },
+  "dataVisualizer": {
+    "graph": "Graph",
+    "table": "Table",
+    "from": "from",
+    "to": "to",
+    "target": "Target",
+    "nameColumn": "Name",
+    "groupColumn": "Group",
+    "valueColumn": "Value",
+    "iconColumn": "Icon"
+  },
+  "statistics": {
+    "title": "Statistics",
+    "tripVolume": "Trip volume",
+    "tripVolumeDescription": "Trips scheduled to start in the selected period (cancelled trips excluded).",
+    "period7": "Last 7 days",
+    "period30": "Last 30 days",
+    "period90": "Last 90 days",
+    "busiestBuses": "Busiest buses",
+    "busiestBusesDescription": "Buses with the most assigned trips in the selected period.",
+    "busiestDrivers": "Busiest drivers",
+    "busiestDriversDescription": "Drivers with the most assigned trips in the selected period.",
+    "fleetByStatus": "Fleet by status",
+    "fleetByStatusDescription": "The current fleet, regardless of the selected period.",
+    "noData": "No trips in this period."
   },
   "filterPanel": {
     "filters": "Filters",
