@@ -23,8 +23,9 @@ portal/test-results/
 portal/blob-report/
 portal/e2e/.auth/
 
-# Claude Code runtime state (not a project asset — .claude/skills/ is, stays tracked)
+# Claude Code runtime state and local skills — kept on disk, not tracked in git.
 .claude/scheduled_tasks.lock
+.claude/skills/
 
 # editor / OS
 .vscode/
