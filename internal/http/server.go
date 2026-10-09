@@ -29,6 +29,7 @@ type Server struct {
 	auth        *service.AuthService
 	fleet       *service.FleetService
 	trips       *service.TripService
+	tripSeries  *service.TripSeriesService
 	assignments *service.AssignmentService
 	users       *service.UserService
 	i18n        *i18n.Bundle
@@ -44,6 +45,7 @@ type Services struct {
 	Auth        *service.AuthService
 	Fleet       *service.FleetService
 	Trips       *service.TripService
+	TripSeries  *service.TripSeriesService
 	Assignments *service.AssignmentService
 	Users       *service.UserService
 }
@@ -55,6 +57,7 @@ func NewServer(cfg config.Config, log *slog.Logger, svc Services, bundle *i18n.B
 		auth:        svc.Auth,
 		fleet:       svc.Fleet,
 		trips:       svc.Trips,
+		tripSeries:  svc.TripSeries,
 		assignments: svc.Assignments,
 		users:       svc.Users,
 		i18n:        bundle,
@@ -195,6 +198,7 @@ func (s *Server) Routes() http.Handler {
 				// JSON mirror of the group above, for the SPA (portal/).
 				r.Get("/api/trips", s.handleAPITripList)
 				r.Post("/api/trips", s.handleAPITripCreate)
+				r.Post("/api/trip-series", s.handleAPITripSeriesCreate)
 				r.Get("/api/trips/{id}", s.handleAPITripGet)
 				r.Put("/api/trips/{id}", s.handleAPITripUpdate)
 				r.Delete("/api/trips/{id}", s.handleAPITripDelete)

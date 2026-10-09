@@ -34,6 +34,7 @@ type env struct {
 	sessions    *auth.Manager
 	fleet       *service.FleetService
 	trips       *service.TripService
+	tripSeries  *service.TripSeriesService
 	assignments *service.AssignmentService
 	users       *service.UserService
 	server      *apphttp.Server
@@ -104,6 +105,7 @@ func newEnv(t *testing.T) *env {
 		sessions:    sessions,
 		fleet:       service.NewFleetService(r, sessions, log),
 		trips:       service.NewTripService(r, log),
+		tripSeries:  service.NewTripSeriesService(r, log),
 		assignments: service.NewAssignmentService(r, log),
 		users:       service.NewUserService(r, sessions, log, testHashParams()),
 		cfg:         cfg,
@@ -112,6 +114,7 @@ func newEnv(t *testing.T) *env {
 		Auth:        service.NewAuthService(r, sessions, auditor, log, testHashParams(), dummyHash),
 		Fleet:       e.fleet,
 		Trips:       e.trips,
+		TripSeries:  e.tripSeries,
 		Assignments: e.assignments,
 		Users:       e.users,
 	}, bundle, r)

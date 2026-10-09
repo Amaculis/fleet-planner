@@ -165,6 +165,77 @@ func validateTrip(t domain.Trip) (domain.Trip, error) {
 	return t, nil
 }
 
+// MaxSeriesHorizon mirrors trip_series_horizon's DB CHECK constraint: a series can
+// never generate occurrences more than a year past its first one, so a mistyped "ends
+// on" can't silently queue up a decade of trips.
+const MaxSeriesHorizon = 366 * 24 * time.Hour
+
+func validateTripSeries(ts domain.TripSeries) (domain.TripSeries, error) {
+	origin, err := validateText("field.origin", ts.Origin, 1, 200)
+	if err != nil {
+		return ts, err
+	}
+	ts.Origin = origin
+
+	destination, err := validateText("field.destination", ts.Destination, 1, 200)
+	if err != nil {
+		return ts, err
+	}
+	ts.Destination = destination
+
+	if len(ts.DaysOfWeek) == 0 {
+		return ts, required("field.days_of_week")
+	}
+	seen := make(map[int32]bool, len(ts.DaysOfWeek))
+	for _, d := range ts.DaysOfWeek {
+		if d < 1 || d > 7 {
+			return ts, unknownValue("field.days_of_week")
+		}
+		seen[d] = true
+	}
+	// De-duplicate defensively — a repeated weekday in the request would otherwise
+	// double-generate that day's occurrences.
+	deduped := make([]int32, 0, len(seen))
+	for d := int32(1); d <= 7; d++ {
+		if seen[d] {
+			deduped = append(deduped, d)
+		}
+	}
+	ts.DaysOfWeek = deduped
+
+	if ts.FirstStart.IsZero() || ts.FirstEnd.IsZero() {
+		return ts, required("field.schedule")
+	}
+	if !ts.FirstEnd.After(ts.FirstStart) {
+		return ts, FieldMessage(domain.ErrValidation, msgBadPeriod, "field.schedule")
+	}
+	if ts.FirstEnd.Sub(ts.FirstStart) > MaxTripDuration {
+		return ts, FieldMessage(domain.ErrValidation, msgTooLongTr, "field.schedule", 30)
+	}
+	if ts.EndsOn.IsZero() {
+		return ts, required("field.ends_on")
+	}
+	if !ts.EndsOn.After(ts.FirstStart) {
+		return ts, FieldMessage(domain.ErrValidation, msgBadPeriod, "field.ends_on")
+	}
+	if ts.EndsOn.Sub(ts.FirstStart) > MaxSeriesHorizon {
+		return ts, FieldMessage(domain.ErrValidation, msgTooLongTr, "field.ends_on", 365)
+	}
+	if ts.Notes != nil {
+		if utf8.RuneCountInString(*ts.Notes) > 2000 {
+			return ts, tooLong("field.notes", 2000)
+		}
+		ts.Notes = trimOptional(ts.Notes)
+	}
+	if _, ok := domain.ParsePaymentStatus(string(ts.PaymentStatus)); !ok {
+		return ts, unknownValue("field.payment_status")
+	}
+	ts.FirstStart = ts.FirstStart.UTC()
+	ts.FirstEnd = ts.FirstEnd.UTC()
+	ts.EndsOn = ts.EndsOn.UTC()
+	return ts, nil
+}
+
 // trimOptional trims an optional string and turns an empty result into nil, so "unset"
 // and "blank" are the same thing in the database.
 func trimOptional(s *string) *string {

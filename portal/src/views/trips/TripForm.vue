@@ -10,9 +10,13 @@ import {
   LxTextArea,
   LxInfoBox,
   LxValuePicker,
+  LxToggle,
 } from "@dativa-lv/lx-ui";
-import { getTrip, createTrip, updateTrip } from "@/services/trips";
+import { getTrip, createTrip, createTripSeries, updateTrip } from "@/services/trips";
 import DateTimeField from "@/components/DateTimeField.vue";
+import DateField from "@/components/DateField.vue";
+import useNotifyStore from "@/stores/notify";
+import useConfirmStore from "@/stores/confirm";
 import useErrors from "@/hooks/errors";
 import useFormTexts from "@/hooks/formTexts";
 import useFormActions from "@/hooks/formActions";
@@ -21,6 +25,8 @@ import useFormValidation from "@/hooks/formValidation";
 const i18n = useI18n();
 const route = useRoute();
 const router = useRouter();
+const notify = useNotifyStore();
+const confirmStore = useConfirmStore();
 const errors = useErrors();
 const formTexts = useFormTexts();
 
@@ -40,6 +46,14 @@ const scheduledStart = ref("");
 const scheduledEnd = ref("");
 const paymentStatus = ref("unpaid");
 const notes = ref("");
+const seriesId = ref(null);
+
+// Repeat is only offered when creating: editing a recurrence pattern itself is out of
+// scope — an existing series trip can only be edited/cancelled per-occurrence or
+// "this and future" (see the confirm dialog in save()/below).
+const repeat = ref(false);
+const daysOfWeek = ref([]);
+const endsOn = ref("");
 
 const loadingTrip = ref(false);
 const saving = ref(false);
@@ -47,6 +61,9 @@ const errorMessage = ref("");
 
 const paymentStatusItems = computed(() =>
   ["unpaid", "reserved", "advance_paid", "paid"].map((id) => ({ id, name: i18n.t(`paymentStatus.${id}`) }))
+);
+const dayItems = computed(() =>
+  [1, 2, 3, 4, 5, 6, 7].map((id) => ({ id, name: i18n.t(`weekday.${id}`) }))
 );
 
 const { invalidProps, validate } = useFormValidation(() => {
@@ -68,6 +85,15 @@ const { invalidProps, validate } = useFormValidation(() => {
     else if (span > MAX_DAYS * 24 * 60 * 60 * 1000) e.scheduledEnd = i18n.t("validation.durationTooLong", { days: MAX_DAYS });
   }
   if (notes.value.length > MAX_NOTES) e.notes = tooLong(MAX_NOTES);
+
+  if (isNew.value && repeat.value) {
+    if (!daysOfWeek.value.length) e.daysOfWeek = required;
+    if (!endsOn.value) {
+      e.endsOn = required;
+    } else if (scheduledStart.value && endsOn.value < scheduledStart.value.slice(0, 10)) {
+      e.endsOn = i18n.t("validation.endBeforeStart");
+    }
+  }
   return e;
 });
 
@@ -82,6 +108,7 @@ async function load() {
     scheduledEnd.value = trip.scheduledEnd;
     paymentStatus.value = trip.paymentStatus;
     notes.value = trip.notes ?? "";
+    seriesId.value = trip.seriesId ?? null;
   } catch (error) {
     errorMessage.value = i18n.t(errors.get(error).message);
   } finally {
@@ -89,10 +116,8 @@ async function load() {
   }
 }
 
-async function save() {
+async function submit(scope) {
   errorMessage.value = "";
-  if (!validate()) return;
-
   saving.value = true;
   const payload = {
     origin: origin.value.trim(),
@@ -103,18 +128,50 @@ async function save() {
     notes: notes.value || null,
   };
   try {
-    let trip;
-    if (isNew.value) {
-      trip = (await createTrip(payload)).data;
-    } else {
-      trip = (await updateTrip(id.value, payload)).data;
+    if (isNew.value && repeat.value) {
+      const created = (
+        await createTripSeries({
+          origin: payload.origin,
+          destination: payload.destination,
+          paymentStatus: payload.paymentStatus,
+          notes: payload.notes,
+          firstStart: payload.scheduledStart,
+          firstEnd: payload.scheduledEnd,
+          daysOfWeek: daysOfWeek.value.map(Number),
+          endsOn: endsOn.value,
+        })
+      ).data;
+      notify.pushSuccess(i18n.t("trips.form.seriesCreated", { count: created.length }));
+      router.push({ name: "trips" });
+      return;
     }
+    const trip = (await (isNew.value ? createTrip(payload) : updateTrip(id.value, payload, scope))).data;
     router.push({ name: "tripDetail", params: { id: trip.id } });
   } catch (error) {
     errorMessage.value = i18n.t(errors.get(error).message);
   } finally {
     saving.value = false;
   }
+}
+
+async function save() {
+  if (!validate()) return;
+
+  // Editing a trip that belongs to a series: ask whether the change applies to just
+  // this occurrence or to it and every later still-planned one (see
+  // TripSeriesService.UpdateFuture) before submitting anything.
+  if (!isNew.value && seriesId.value) {
+    confirmStore.pushObject({
+      title: i18n.t("trips.form.seriesEditTitle"),
+      message: i18n.t("trips.form.seriesEditMessage"),
+      primaryLabel: i18n.t("trips.form.applyFuture"),
+      secondaryLabel: i18n.t("trips.form.applyThisOnly"),
+      primaryCallback: () => submit("future"),
+      secondaryCallback: () => submit(),
+    });
+    return;
+  }
+  await submit();
 }
 
 const { actionDefinitions, onAction } = useFormActions({
@@ -149,13 +206,34 @@ onMounted(load);
       </LxRow>
     </LxSection>
 
-    <LxSection :label="i18n.t('trips.form.schedule')" :description="i18n.t('trips.form.scheduleDescription')">
+    <LxSection
+      :label="i18n.t('trips.form.schedule')"
+      :description="isNew && repeat ? i18n.t('trips.form.firstOccurrenceHint') : i18n.t('trips.form.scheduleDescription')"
+    >
+      <LxRow v-if="isNew" :label="i18n.t('trips.form.repeat')" :description="i18n.t('trips.form.repeatHint')">
+        <LxToggle v-model="repeat" />
+      </LxRow>
+      <LxInfoBox v-if="!isNew && seriesId" variant="info" :label="i18n.t('trips.partOfSeries')" />
       <LxRow :label="i18n.t('fields.scheduledStart')" required>
         <DateTimeField v-model="scheduledStart" v-bind="invalidProps('scheduledStart')" />
       </LxRow>
       <LxRow :label="i18n.t('fields.scheduledEnd')" :description="i18n.t('trips.form.endHint')" required>
         <DateTimeField v-model="scheduledEnd" v-bind="invalidProps('scheduledEnd')" />
       </LxRow>
+      <template v-if="isNew && repeat">
+        <LxRow :label="i18n.t('trips.form.daysOfWeek')" required>
+          <LxValuePicker
+            v-model="daysOfWeek"
+            :items="dayItems"
+            selection-kind="multiple"
+            always-as-array
+            v-bind="invalidProps('daysOfWeek')"
+          />
+        </LxRow>
+        <LxRow :label="i18n.t('trips.form.endsOn')" required>
+          <DateField v-model="endsOn" v-bind="invalidProps('endsOn')" />
+        </LxRow>
+      </template>
     </LxSection>
 
     <LxSection :label="i18n.t('trips.form.booking')">

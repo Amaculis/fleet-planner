@@ -118,6 +118,23 @@ func tripFromRow(row sqlcgen.Trip) domain.Trip {
 		Notes:          row.Notes,
 		CreatedAt:      row.CreatedAt,
 		UpdatedAt:      row.UpdatedAt,
+		SeriesID:       row.SeriesID,
+	}
+}
+
+func tripSeriesFromRow(row sqlcgen.TripSeries) domain.TripSeries {
+	return domain.TripSeries{
+		ID:            row.ID,
+		Origin:        row.Origin,
+		Destination:   row.Destination,
+		DaysOfWeek:    row.DaysOfWeek,
+		FirstStart:    row.FirstStart,
+		FirstEnd:      row.FirstEnd,
+		EndsOn:        row.EndsOn,
+		PaymentStatus: domain.PaymentStatus(row.PaymentStatus),
+		Notes:         row.Notes,
+		CreatedAt:     row.CreatedAt,
+		UpdatedAt:     row.UpdatedAt,
 	}
 }
 

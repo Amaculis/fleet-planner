@@ -11,10 +11,10 @@ import (
 )
 
 const createTrip = `-- name: CreateTrip :one
-INSERT INTO trips (origin, destination, scheduled_start, scheduled_end, payment_status, notes)
-VALUES ($1, $2, $3, $4, $5, $6)
+INSERT INTO trips (origin, destination, scheduled_start, scheduled_end, payment_status, notes, series_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
 RETURNING id, origin, destination, scheduled_start, scheduled_end, actual_start, actual_end,
-          status, notes, created_at, updated_at, payment_status
+          status, notes, created_at, updated_at, payment_status, series_id
 `
 
 type CreateTripParams struct {
@@ -24,6 +24,7 @@ type CreateTripParams struct {
 	ScheduledEnd   time.Time
 	PaymentStatus  PaymentStatus
 	Notes          *string
+	SeriesID       *int64
 }
 
 func (q *Queries) CreateTrip(ctx context.Context, arg CreateTripParams) (Trip, error) {
@@ -34,6 +35,7 @@ func (q *Queries) CreateTrip(ctx context.Context, arg CreateTripParams) (Trip, e
 		arg.ScheduledEnd,
 		arg.PaymentStatus,
 		arg.Notes,
+		arg.SeriesID,
 	)
 	var i Trip
 	err := row.Scan(
@@ -49,6 +51,7 @@ func (q *Queries) CreateTrip(ctx context.Context, arg CreateTripParams) (Trip, e
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.PaymentStatus,
+		&i.SeriesID,
 	)
 	return i, err
 }
@@ -120,7 +123,7 @@ func (q *Queries) FinishTripAsDriver(ctx context.Context, arg FinishTripAsDriver
 
 const getTrip = `-- name: GetTrip :one
 SELECT id, origin, destination, scheduled_start, scheduled_end, actual_start, actual_end,
-       status, notes, created_at, updated_at, payment_status
+       status, notes, created_at, updated_at, payment_status, series_id
 FROM trips
 WHERE id = $1
 `
@@ -141,6 +144,7 @@ func (q *Queries) GetTrip(ctx context.Context, id int64) (Trip, error) {
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.PaymentStatus,
+		&i.SeriesID,
 	)
 	return i, err
 }
@@ -190,6 +194,58 @@ func (q *Queries) GetTripForDriver(ctx context.Context, arg GetTripForDriverPara
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const listFutureSeriesTrips = `-- name: ListFutureSeriesTrips :many
+SELECT id, origin, destination, scheduled_start, scheduled_end, actual_start, actual_end,
+       status, notes, created_at, updated_at, payment_status, series_id
+FROM trips
+WHERE series_id = $1
+  AND scheduled_start >= $2
+  AND status = 'planned'
+ORDER BY scheduled_start, id
+`
+
+type ListFutureSeriesTripsParams struct {
+	SeriesID  *int64
+	FromStart time.Time
+}
+
+// The set "this and all future trips" edits/cancels apply to: a series' still-planned
+// occurrences from a given one onward (inclusive). Ordered so the first row is always
+// the trip scope=future was applied from — its own scheduled_start is the lower bound.
+func (q *Queries) ListFutureSeriesTrips(ctx context.Context, arg ListFutureSeriesTripsParams) ([]Trip, error) {
+	rows, err := q.db.Query(ctx, listFutureSeriesTrips, arg.SeriesID, arg.FromStart)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Trip{}
+	for rows.Next() {
+		var i Trip
+		if err := rows.Scan(
+			&i.ID,
+			&i.Origin,
+			&i.Destination,
+			&i.ScheduledStart,
+			&i.ScheduledEnd,
+			&i.ActualStart,
+			&i.ActualEnd,
+			&i.Status,
+			&i.Notes,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.PaymentStatus,
+			&i.SeriesID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listTripsForDriver = `-- name: ListTripsForDriver :many
@@ -263,7 +319,7 @@ func (q *Queries) ListTripsForDriver(ctx context.Context, arg ListTripsForDriver
 const listTripsInRange = `-- name: ListTripsInRange :many
 
 SELECT id, origin, destination, scheduled_start, scheduled_end, actual_start, actual_end,
-       status, notes, created_at, updated_at, payment_status
+       status, notes, created_at, updated_at, payment_status, series_id
 FROM trips
 WHERE tstzrange(scheduled_start, scheduled_end, '[)') && tstzrange($1, $2, '[)')
 ORDER BY scheduled_start, id
@@ -274,10 +330,11 @@ type ListTripsInRangeParams struct {
 	RangeEnd   interface{}
 }
 
-// Column lists below put payment_status last, matching its physical position from the
-// ALTER TABLE that added it (see 0006_trip_payment_status.up.sql) — the repo layer
-// converts these row types to sqlcgen.Trip via a plain Go type conversion, which needs
-// identical field order, not just identical field sets.
+// Column lists below put payment_status, then series_id, last, matching their physical
+// position from the ALTER TABLEs that added them (see 0006_trip_payment_status.up.sql,
+// 0009_trip_series.up.sql) — the repo layer converts these row types to sqlcgen.Trip via
+// a plain Go type conversion, which needs identical field order, not just identical
+// field sets.
 // Planning list and (step 4) the timeline: trips whose window touches [$1, $2).
 func (q *Queries) ListTripsInRange(ctx context.Context, arg ListTripsInRangeParams) ([]Trip, error) {
 	rows, err := q.db.Query(ctx, listTripsInRange, arg.RangeStart, arg.RangeEnd)
@@ -301,6 +358,7 @@ func (q *Queries) ListTripsInRange(ctx context.Context, arg ListTripsInRangePara
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.PaymentStatus,
+			&i.SeriesID,
 		); err != nil {
 			return nil, err
 		}
@@ -317,7 +375,7 @@ UPDATE trips
 SET status = $2
 WHERE id = $1
 RETURNING id, origin, destination, scheduled_start, scheduled_end, actual_start, actual_end,
-          status, notes, created_at, updated_at, payment_status
+          status, notes, created_at, updated_at, payment_status, series_id
 `
 
 type SetTripStatusParams struct {
@@ -341,6 +399,7 @@ func (q *Queries) SetTripStatus(ctx context.Context, arg SetTripStatusParams) (T
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.PaymentStatus,
+		&i.SeriesID,
 	)
 	return i, err
 }
@@ -405,7 +464,7 @@ SET origin = $2, destination = $3, scheduled_start = $4, scheduled_end = $5,
     payment_status = $6, notes = $7
 WHERE id = $1
 RETURNING id, origin, destination, scheduled_start, scheduled_end, actual_start, actual_end,
-          status, notes, created_at, updated_at, payment_status
+          status, notes, created_at, updated_at, payment_status, series_id
 `
 
 type UpdateTripParams struct {
@@ -419,7 +478,8 @@ type UpdateTripParams struct {
 }
 
 // Rescheduling an assigned trip cascades the new window onto its assignment, where the
-// EXCLUDE constraints re-check it — so moving a trip into a clash fails here.
+// EXCLUDE constraints re-check it — so moving a trip into a clash fails here. series_id
+// is not in the SET list: a single-trip edit never changes series membership.
 func (q *Queries) UpdateTrip(ctx context.Context, arg UpdateTripParams) (Trip, error) {
 	row := q.db.QueryRow(ctx, updateTrip,
 		arg.ID,
@@ -444,6 +504,7 @@ func (q *Queries) UpdateTrip(ctx context.Context, arg UpdateTripParams) (Trip, e
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.PaymentStatus,
+		&i.SeriesID,
 	)
 	return i, err
 }

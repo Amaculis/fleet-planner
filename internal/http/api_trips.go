@@ -27,6 +27,7 @@ type apiTrip struct {
 	PaymentStatus  string         `json:"paymentStatus"`
 	Notes          *string        `json:"notes,omitempty"`
 	Assignment     *apiAssignment `json:"assignment,omitempty"`
+	SeriesID       *int64         `json:"seriesId,omitempty"`
 }
 
 // apiTripFrom is used only by the planner-facing endpoints (list/detail/create/update —
@@ -42,6 +43,7 @@ func (s *Server) apiTripFrom(t domain.Trip) apiTrip {
 		Status:         string(t.Status),
 		PaymentStatus:  string(t.PaymentStatus),
 		Notes:          t.Notes,
+		SeriesID:       t.SeriesID,
 	}
 	if t.ActualStart != nil {
 		out.ActualStart = formatTimestamp(*t.ActualStart, s.cfg.Location)
@@ -202,14 +204,31 @@ func (s *Server) handleAPITripUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	input, err := s.tripFromJSON(req, id)
-	if err == nil {
-		input, err = s.trips.Update(r.Context(), MustIdentity(r.Context()), input, s.meta(r))
-	}
 	if err != nil {
 		s.writeAPIError(w, r, err)
 		return
 	}
-	s.writeJSON(w, r, http.StatusOK, s.apiTripFrom(input))
+
+	identity := MustIdentity(r.Context())
+	var result domain.Trip
+	// scope=future applies the edit to this trip and every later still-planned trip in
+	// its series (see TripSeriesService.UpdateFuture) — the default, no query param,
+	// touches only this one trip, same as before series existed.
+	if r.URL.Query().Get("scope") == "future" {
+		trips, err := s.tripSeries.UpdateFuture(r.Context(), identity, input, s.cfg.Location, s.meta(r))
+		if err != nil {
+			s.writeAPIError(w, r, err)
+			return
+		}
+		result = trips[0]
+	} else {
+		result, err = s.trips.Update(r.Context(), identity, input, s.meta(r))
+		if err != nil {
+			s.writeAPIError(w, r, err)
+			return
+		}
+	}
+	s.writeJSON(w, r, http.StatusOK, s.apiTripFrom(result))
 }
 
 func (s *Server) handleAPITripDelete(w http.ResponseWriter, r *http.Request) {
@@ -240,10 +259,26 @@ func (s *Server) handleAPITripStatus(w http.ResponseWriter, r *http.Request) {
 		s.writeAPIError(w, r, domain.ErrValidation)
 		return
 	}
-	trip, err := s.trips.SetStatus(r.Context(), MustIdentity(r.Context()), id, domain.TripStatus(req.Status), s.meta(r))
-	if err != nil {
-		s.writeAPIError(w, r, err)
-		return
+
+	identity := MustIdentity(r.Context())
+	var trip domain.Trip
+	// scope=future only means something for cancelling (the one bulk operation that
+	// makes sense for a status change) — any other target status ignores it and applies
+	// to just this trip, same as before series existed.
+	if r.URL.Query().Get("scope") == "future" && req.Status == string(domain.TripCancelled) {
+		trips, err := s.tripSeries.CancelFuture(r.Context(), identity, id, s.meta(r))
+		if err != nil {
+			s.writeAPIError(w, r, err)
+			return
+		}
+		trip = trips[0]
+	} else {
+		var err error
+		trip, err = s.trips.SetStatus(r.Context(), identity, id, domain.TripStatus(req.Status), s.meta(r))
+		if err != nil {
+			s.writeAPIError(w, r, err)
+			return
+		}
 	}
 	s.writeJSON(w, r, http.StatusOK, s.apiTripFrom(trip))
 }

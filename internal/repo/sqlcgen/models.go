@@ -348,6 +348,21 @@ type Trip struct {
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 	PaymentStatus  PaymentStatus
+	SeriesID       *int64
+}
+
+type TripSeries struct {
+	ID            int64
+	Origin        string
+	Destination   string
+	DaysOfWeek    []int32
+	FirstStart    time.Time
+	FirstEnd      time.Time
+	EndsOn        time.Time
+	PaymentStatus PaymentStatus
+	Notes         *string
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 }
 
 type User struct {

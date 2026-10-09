@@ -144,6 +144,15 @@
     "completed": "Pabeigts",
     "cancelled": "Atcelts"
   },
+  "weekday": {
+    "1": "Pirmdiena",
+    "2": "Otrdiena",
+    "3": "Trešdiena",
+    "4": "Ceturtdiena",
+    "5": "Piektdiena",
+    "6": "Sestdiena",
+    "7": "Svētdiena"
+  },
   "roles": {
     "admin": "Administrators",
     "dispatcher": "Dispečers",
@@ -179,6 +188,7 @@
     "unassignedHint": "Vēl nav piešķirts autobuss vai vadītājs.",
     "noNotes": "Nav piezīmju.",
     "markAs": "Atzīmēt kā",
+    "partOfSeries": "Daļa no atkārtota reisu cikla",
     "durationDays": "{n} d.",
     "durationHours": "{n} st.",
     "durationMinutes": "{n} min.",
@@ -190,7 +200,19 @@
       "endHint": "Jābūt vēlāk par sākumu, ne ilgāk par 30 dienām.",
       "booking": "Rezervācija",
       "paymentHint": "Cik klients līdz šim ir samaksājis. Redzams tikai plānotājiem.",
-      "notesSection": "Papildu informācija"
+      "notesSection": "Papildu informācija",
+      "repeat": "Atkārtot šo reisu",
+      "repeatHint": "Izveidot reisu ciklu pēc iknedēļas modeļa.",
+      "firstOccurrenceHint": "Pirmā reisa datums un laiks. Nākamie atkārtojas tajās pašās dienās, tajā pašā laikā.",
+      "daysOfWeek": "Nedēļas dienas",
+      "endsOn": "Atkārtot līdz",
+      "seriesCreated": "Izveidoti {count} reisi.",
+      "seriesEditTitle": "Attiecināt izmaiņas uz…",
+      "seriesEditMessage": "Šis reiss ir daļa no atkārtota reisu cikla. Attiecināt labojumu tikai uz šo reisu, vai arī uz šo un visiem vēlākajiem cikla reisiem?",
+      "seriesCancelTitle": "Atcelt šo reisu un vēlākos?",
+      "seriesCancelMessage": "Šis reiss ir daļa no atkārtota reisu cikla. Atcelt tikai šo reisu, vai arī šo un visus vēlākos plānotos cikla reisus?",
+      "applyThisOnly": "Tikai šo reisu",
+      "applyFuture": "Šo un vēlākos reisus"
     }
   },
   "validation": {

@@ -26,6 +26,15 @@ function overlaps(aStart, aEnd, bStart, bEnd) {
   return aStart < bEnd && bStart < aEnd;
 }
 
+// "YYYY-MM-DDTHH:MM" local wall-clock, matching what the real API's scheduledStart/
+// scheduledEnd look like (see internal/http/api.go's formatTimestamp) — trip-series
+// occurrence generation below builds plain Date objects and needs to hand them back in
+// this same string shape.
+function toLocalString(d) {
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 // Mirrors internal/http/forms.go's rangeParams: when the caller omits from/to
 // (TripList.vue's bare getTrips(), with no args, is exactly this case) the real
 // server defaults to "today through the next 7 days," not an empty/unbounded
@@ -165,12 +174,67 @@ export function installDemoApi() {
     state.trips.push(trip);
     return [201, trip];
   });
+  // Mirrors TripSeriesService.Create's occurrence generation: every calendar day from
+  // firstStart up to (not including) endsOn whose weekday is in daysOfWeek, reusing
+  // firstStart's time-of-day and the firstEnd-firstStart duration.
+  mock.onPost("/trip-series").reply((config) => {
+    const { origin, destination, daysOfWeek, firstStart, firstEnd, endsOn, paymentStatus, notes } = JSON.parse(config.data);
+    const start = new Date(firstStart);
+    const duration = new Date(firstEnd) - start;
+    const endsOnDate = new Date(`${endsOn}T00:00`);
+    endsOnDate.setDate(endsOnDate.getDate() + 1); // the API's own exclusive-cutoff convention
+    const seriesId = state.trips.reduce((max, t) => Math.max(max, t.seriesId || 0), 0) + 1;
+
+    const created = [];
+    for (
+      let day = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+      day < endsOnDate;
+      day.setDate(day.getDate() + 1)
+    ) {
+      const iso = day.getDay() === 0 ? 7 : day.getDay();
+      if (!daysOfWeek.includes(iso)) continue;
+      const occStart = new Date(day.getFullYear(), day.getMonth(), day.getDate(), start.getHours(), start.getMinutes());
+      if (occStart < start) continue;
+      const occEnd = new Date(occStart.getTime() + duration);
+      const trip = {
+        id: nextId(state.trips), status: "planned", assignment: null, seriesId,
+        origin, destination, paymentStatus: paymentStatus || "unpaid", notes: notes || null,
+        scheduledStart: toLocalString(occStart), scheduledEnd: toLocalString(occEnd),
+      };
+      state.trips.push(trip);
+      created.push(trip);
+    }
+    return [201, created];
+  });
   mock.onPut(/\/trips\/\d+$/).reply((config) => {
     const id = matchId(config.url);
-    const idx = state.trips.findIndex((t) => t.id === id);
-    if (idx === -1) return [404, { error: "not found" }];
-    state.trips[idx] = { ...state.trips[idx], ...JSON.parse(config.data), id };
-    return [200, state.trips[idx]];
+    const from = state.trips.find((t) => t.id === id);
+    if (!from) return [404, { error: "not found" }];
+    const body = JSON.parse(config.data);
+
+    // scope=future mirrors TripSeriesService.UpdateFuture: re-anchor every later
+    // still-planned trip in the same series at its own date but the edited
+    // time-of-day/duration, origin/destination/payment/notes applied to all of them.
+    if (config.params?.scope === "future" && from.seriesId) {
+      const newStart = new Date(body.scheduledStart);
+      const newEnd = new Date(body.scheduledEnd);
+      const duration = newEnd - newStart;
+      for (const t of state.trips) {
+        if (t.seriesId !== from.seriesId || t.status !== "planned" || new Date(t.scheduledStart) < new Date(from.scheduledStart)) continue;
+        if (t.id === from.id) {
+          Object.assign(t, body, { id: t.id });
+          continue;
+        }
+        const day = new Date(t.scheduledStart);
+        const start = new Date(day.getFullYear(), day.getMonth(), day.getDate(), newStart.getHours(), newStart.getMinutes());
+        const end = new Date(start.getTime() + duration);
+        Object.assign(t, body, { id: t.id, scheduledStart: toLocalString(start), scheduledEnd: toLocalString(end) });
+      }
+      return [200, from];
+    }
+
+    Object.assign(from, body, { id });
+    return [200, from];
   });
   mock.onDelete(/\/trips\/\d+$/).reply((config) => {
     const id = matchId(config.url);
@@ -181,7 +245,20 @@ export function installDemoApi() {
     const id = matchId(config.url);
     const trip = state.trips.find((t) => t.id === id);
     if (!trip) return [404, { error: "not found" }];
-    trip.status = JSON.parse(config.data).status;
+    const { status } = JSON.parse(config.data);
+
+    // scope=future mirrors TripSeriesService.CancelFuture: only meaningful for
+    // cancelling, same as the real API.
+    if (config.params?.scope === "future" && status === "cancelled" && trip.seriesId) {
+      for (const t of state.trips) {
+        if (t.seriesId === trip.seriesId && t.status === "planned" && new Date(t.scheduledStart) >= new Date(trip.scheduledStart)) {
+          t.status = "cancelled";
+        }
+      }
+      return [200, trip];
+    }
+
+    trip.status = status;
     return [200, trip];
   });
   mock.onPost(/\/trips\/\d+\/assign$/).reply((config) => {

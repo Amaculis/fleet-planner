@@ -9,14 +9,20 @@ export function getTrip(id) {
 export function createTrip(data) {
   return api().post("/trips", data);
 }
-export function updateTrip(id, data) {
-  return api().put(`/trips/${id}`, data);
+export function createTripSeries(data) {
+  return api().post("/trip-series", data);
+}
+// scope: "future" applies the edit/cancel to this trip and every later still-planned
+// trip in its series (see internal/service/trip_series.go's UpdateFuture/CancelFuture);
+// omitted (the default), it touches only this one trip.
+export function updateTrip(id, data, scope) {
+  return api().put(`/trips/${id}`, data, scope ? { params: { scope } } : undefined);
 }
 export function deleteTrip(id) {
   return api().delete(`/trips/${id}`);
 }
-export function setTripStatus(id, status) {
-  return api().post(`/trips/${id}/status`, { status });
+export function setTripStatus(id, status, scope) {
+  return api().post(`/trips/${id}/status`, { status }, scope ? { params: { scope } } : undefined);
 }
 export function assignTrip(id, busId, driverId) {
   // LxValuePicker's v-model emits item ids as strings regardless of the ids' own type

@@ -40,6 +40,7 @@ func (r *Repo) CreateTrip(ctx context.Context, t domain.Trip) (domain.Trip, erro
 		ScheduledEnd:   t.ScheduledEnd,
 		PaymentStatus:  sqlcgen.PaymentStatus(t.PaymentStatus),
 		Notes:          t.Notes,
+		SeriesID:       t.SeriesID,
 	})
 	if err != nil {
 		return domain.Trip{}, fmt.Errorf("creating trip: %w", translate(err))
@@ -76,6 +77,25 @@ func (r *Repo) SetTripStatus(ctx context.Context, id int64, status domain.TripSt
 		return domain.Trip{}, fmt.Errorf("setting trip status: %w", translate(err))
 	}
 	return tripFromRow(sqlcgen.Trip(row)), nil
+}
+
+// ListFutureSeriesTrips returns a series' still-planned occurrences from a given one
+// onward (inclusive) — the set "this and all future trips" edits/cancels apply to. The
+// first row is always the occurrence named by from, since its scheduled_start is the
+// query's own lower bound.
+func (r *Repo) ListFutureSeriesTrips(ctx context.Context, seriesID int64, from time.Time) ([]domain.Trip, error) {
+	rows, err := r.q.ListFutureSeriesTrips(ctx, sqlcgen.ListFutureSeriesTripsParams{
+		SeriesID:  &seriesID,
+		FromStart: from,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("listing future series trips: %w", translate(err))
+	}
+	trips := make([]domain.Trip, 0, len(rows))
+	for _, row := range rows {
+		trips = append(trips, tripFromRow(sqlcgen.Trip(row)))
+	}
+	return trips, nil
 }
 
 func (r *Repo) DeleteTrip(ctx context.Context, id int64) error {

@@ -144,6 +144,15 @@
     "completed": "Completed",
     "cancelled": "Cancelled"
   },
+  "weekday": {
+    "1": "Monday",
+    "2": "Tuesday",
+    "3": "Wednesday",
+    "4": "Thursday",
+    "5": "Friday",
+    "6": "Saturday",
+    "7": "Sunday"
+  },
   "roles": {
     "admin": "Admin",
     "dispatcher": "Dispatcher",
@@ -179,6 +188,7 @@
     "unassignedHint": "No bus or driver assigned yet.",
     "noNotes": "No notes.",
     "markAs": "Mark as",
+    "partOfSeries": "Part of a repeating series",
     "durationDays": "{n}d",
     "durationHours": "{n}h",
     "durationMinutes": "{n}m",
@@ -190,7 +200,19 @@
       "endHint": "Must be after the start, and at most 30 days long.",
       "booking": "Booking",
       "paymentHint": "What the client has paid so far. Only planners can see this.",
-      "notesSection": "Additional information"
+      "notesSection": "Additional information",
+      "repeat": "Repeat this trip",
+      "repeatHint": "Create a series of trips on a weekly pattern.",
+      "firstOccurrenceHint": "The first trip's date and time. Later ones repeat on the same days, at the same time.",
+      "daysOfWeek": "Days of week",
+      "endsOn": "Repeat until",
+      "seriesCreated": "{count} trips created.",
+      "seriesEditTitle": "Apply this change to…",
+      "seriesEditMessage": "This trip is part of a repeating series. Apply the edit to just this trip, or to this and every later trip in the series?",
+      "seriesCancelTitle": "Cancel this trip and later ones?",
+      "seriesCancelMessage": "This trip is part of a repeating series. Cancel just this trip, or this and every later planned trip in the series?",
+      "applyThisOnly": "This trip only",
+      "applyFuture": "This and future trips"
     }
   },
   "validation": {

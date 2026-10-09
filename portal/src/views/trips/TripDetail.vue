@@ -68,15 +68,33 @@ async function load() {
   }
 }
 
-async function changeStatus(status) {
+async function changeStatus(status, scope) {
   busy.value = true;
   try {
-    trip.value = (await setTripStatus(id.value, status)).data;
+    trip.value = (await setTripStatus(id.value, status, scope)).data;
   } catch (error) {
     notify.pushError(i18n.t(errors.get(error).message));
   } finally {
     busy.value = false;
   }
+}
+
+// Cancelling a trip that belongs to a series: ask whether it's just this occurrence or
+// it and every later still-planned one (see TripSeriesService.CancelFuture). Every
+// other transition applies to this trip only, same as before series existed.
+function markAs(status) {
+  if (status === "cancelled" && trip.value?.seriesId) {
+    confirmStore.pushObject({
+      title: i18n.t("trips.form.seriesCancelTitle"),
+      message: i18n.t("trips.form.seriesCancelMessage"),
+      primaryLabel: i18n.t("trips.form.applyFuture"),
+      secondaryLabel: i18n.t("trips.form.applyThisOnly"),
+      primaryCallback: () => changeStatus(status, "future"),
+      secondaryCallback: () => changeStatus(status),
+    });
+    return;
+  }
+  changeStatus(status);
 }
 
 async function assign() {
@@ -162,6 +180,7 @@ onMounted(load);
         <div class="trip-header-meta">
           <span class="trip-status-badge" :class="STATUS_CLASS[trip.status]">{{ i18n.t(`tripStatus.${trip.status}`) }}</span>
           <span class="trip-payment-badge" :class="PAYMENT_STATUS_CLASS[trip.paymentStatus]">{{ i18n.t(`paymentStatus.${trip.paymentStatus}`) }}</span>
+          <span v-if="trip.seriesId" class="trip-series-badge">{{ i18n.t("trips.partOfSeries") }}</span>
           <span class="trip-duration">{{ durationLabel }}</span>
         </div>
       </div>
@@ -195,7 +214,7 @@ onMounted(load);
               :label="i18n.t(`tripStatus.${status}`)"
               kind="secondary"
               :loading="busy"
-              @click="changeStatus(status)"
+              @click="markAs(status)"
             />
           </div>
         </template>
@@ -316,6 +335,15 @@ onMounted(load);
 .trip-payment-paid {
   background: var(--color-finished-background, var(--color-green-background));
   color: var(--color-finished-foreground, var(--color-green-foreground));
+}
+.trip-series-badge {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 1rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border: 1px solid var(--color-region);
+  color: var(--color-placeholder);
 }
 .trip-panels {
   display: grid;

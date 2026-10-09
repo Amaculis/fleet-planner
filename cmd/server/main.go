@@ -86,6 +86,7 @@ func run() error {
 		Auth:        service.NewAuthService(repository, sessions, auditor, log, hashParams, dummyHash),
 		Fleet:       service.NewFleetService(repository, sessions, log),
 		Trips:       service.NewTripService(repository, log),
+		TripSeries:  service.NewTripSeriesService(repository, log),
 		Assignments: service.NewAssignmentService(repository, log),
 		Users:       service.NewUserService(repository, sessions, log, hashParams),
 	}
