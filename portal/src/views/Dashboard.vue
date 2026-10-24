@@ -328,8 +328,11 @@ const driverTiles = computed(() => [
   height: var(--icon-size-m, 1.5rem);
   flex-shrink: 0;
 }
+/* lx-buttons.css has a global `.lx a:hover` that paints links with the interactive
+   hover foreground (white) — keep the row's own text color on hover. */
 .dashboard-info-row:hover {
   background: var(--color-region);
+  color: inherit;
 }
 .dashboard-info-primary {
   font-size: 0.9rem;
@@ -362,6 +365,10 @@ const driverTiles = computed(() => [
   border-radius: 0.4rem;
   background: var(--color-region);
   max-width: 24rem;
+}
+.dashboard-next-trip-link:hover {
+  color: inherit;
+  background: var(--color-region);
 }
 .dashboard-next-trip-route {
   font-weight: 600;
