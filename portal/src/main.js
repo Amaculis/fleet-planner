@@ -90,7 +90,11 @@ const app = createApp(App);
   // and web/vue/main.js) — systemId/authXxx from the skill's example are dropped
   // because they were never verified and aren't needed without their auth module.
   app.use(createLx, {
-    locale: { tag: APP_CONFIG.defaultLocale, firstDayOfTheWeek: 1 },
+    // Key is `locale.locale`, not `locale.tag` — LxDateTimePicker reads
+    // `getGlobals().locale?.locale` (verified against the installed
+    // DateTimePicker chunk); `tag` was silently ignored and the picker fell back
+    // to its hardcoded "lv-LV" default regardless of APP_CONFIG.defaultLocale.
+    locale: { locale: APP_CONFIG.defaultLocale, firstDayOfTheWeek: 1 },
     preload: {
       components: [
         LxShell, LxButton, LxTextInput, LxErrorPage, LxAccessibilitySettings, LxLoaderView, LxInfoBox,

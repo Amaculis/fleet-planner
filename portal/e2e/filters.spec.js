@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { trackConsoleErrors } from "./support.js";
+import { trackConsoleErrors, gridSearch } from "./support.js";
 
 test.skip(!process.env.E2E_ADMIN_EMAIL, "E2E_ADMIN_EMAIL not set");
 
@@ -58,7 +58,7 @@ test("bus list filters: collapsed by default, Apply narrows the grid, Clear rest
   // rows outside the rendered window once nothing narrows the list (see crud.spec.js's
   // own comment on this). Searching by their shared suffix keeps the grid down to
   // just these two, the same way search.spec.js verifies a multi-match query.
-  await page.getByRole("textbox", { name: /search/i }).fill(String(suffix));
+  await gridSearch(page).fill(String(suffix));
   await expect(page.getByText(maintenancePlate)).toBeVisible();
   await expect(page.getByText(activePlate)).toBeVisible();
 

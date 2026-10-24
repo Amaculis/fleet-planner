@@ -141,6 +141,7 @@ async function logout() {
     @go-back="goBack"
     @log-out="logout"
   >
-    <router-view />
+    <!-- LxShell wraps its default slot in <transition>; a bare <router-view> warns. -->
+    <router-view v-slot="{ Component }"><component :is="Component" /></router-view>
   </LxShell>
 </template>

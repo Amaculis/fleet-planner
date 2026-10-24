@@ -25,3 +25,9 @@ export async function login(page, email, password) {
 
 export const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL;
 export const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD;
+
+// LxDataGrid's toolbar search. lx-ui 2.3.10 renders it as role="searchbox" (2.3.3 used
+// a plain textbox labelled "Search"), so every spec goes through this one locator.
+export function gridSearch(page) {
+  return page.getByRole("searchbox");
+}

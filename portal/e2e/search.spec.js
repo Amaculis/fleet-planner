@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { gridSearch } from "./support.js";
 
 // crud.spec.js uses the driver/user search boxes incidentally (to find a freshly
 // created row past LxDataGrid's virtualization window), but never checks that
@@ -33,7 +34,7 @@ test("driver list search filters by name, and a shared substring matches both", 
   );
 
   await page.goto("/app/drivers");
-  const search = page.getByRole("textbox", { name: /search/i });
+  const search = gridSearch(page);
 
   await search.fill(nameA);
   await expect(page.getByText(nameA)).toBeVisible();
@@ -66,7 +67,7 @@ test("user list search filters by email, and a shared substring matches both", a
   );
 
   await page.goto("/app/users");
-  const search = page.getByRole("textbox", { name: /search/i });
+  const search = gridSearch(page);
 
   await search.fill(emailA);
   await expect(page.getByText(emailA)).toBeVisible();

@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { gridSearch } from "./support.js";
 
 // Exercises every add/edit/delete action in the SPA. Each test picks a unique
 // identifier (Date.now()) so repeated runs never collide on a unique-field
@@ -20,7 +21,7 @@ test("bus: add, edit, delete", async ({ page }) => {
   // from earlier test runs, a freshly created row's DOM node genuinely doesn't exist
   // yet outside the rendered window. Search narrows the grid down to the one match
   // instead of scrolling to find it (same reasoning as the driver/user tests below).
-  await page.getByRole("textbox", { name: /search/i }).fill(plate);
+  await gridSearch(page).fill(plate);
   await expect(page.getByText(plate)).toBeVisible();
 
   // Edit: LxDataGrid renders per-row actions as direct icon buttons, not a menu.
@@ -33,7 +34,7 @@ test("bus: add, edit, delete", async ({ page }) => {
 
   // The edit round trip remounts the list (searchTerm is component-local state), so
   // the search box is empty again — same virtualization reasoning as above.
-  await page.getByRole("textbox", { name: /search/i }).fill(plate);
+  await gridSearch(page).fill(plate);
   await expect(page.getByText("Edited Model")).toBeVisible();
 
   // Delete: confirm dialog defaults to Yes/No (LxShell's own confirmModal*DefaultLabel
@@ -57,7 +58,7 @@ test("driver: add, edit, anonymize", async ({ page }) => {
   // drivers from earlier test runs, a freshly created row's DOM node genuinely
   // doesn't exist yet outside the rendered window, not just off-screen. Search
   // narrows the grid down to the one match instead of scrolling to find it.
-  await page.getByRole("textbox", { name: /search/i }).fill(name);
+  await gridSearch(page).fill(name);
   await expect(page.getByText(name)).toBeVisible();
 
   const row = page.getByRole("row", { name: new RegExp(name) });
@@ -69,7 +70,7 @@ test("driver: add, edit, anonymize", async ({ page }) => {
 
   // The edit round trip remounts the list (searchTerm is component-local state),
   // so the search box is empty again — same virtualization reasoning as above.
-  await page.getByRole("textbox", { name: /search/i }).fill(name);
+  await gridSearch(page).fill(name);
 
   // Anonymize (GDPR erasure) — the driver's name is replaced, so it must stop
   // appearing under its original name.
@@ -140,7 +141,7 @@ test("user: add, activate/deactivate", async ({ page }) => {
   await expect(page).toHaveURL(/\/app\/users$/, { timeout: 10000 });
   // Same reasoning as the driver test above: LxDataGrid virtualizes rows, so a
   // freshly created user's row may not exist in the DOM yet without searching.
-  await page.getByRole("textbox", { name: /search/i }).fill(email);
+  await gridSearch(page).fill(email);
   await expect(page.getByText(email)).toBeVisible();
 
   // Deactivate, then reactivate — the one row action users currently have.

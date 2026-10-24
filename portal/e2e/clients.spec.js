@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { trackConsoleErrors } from "./support.js";
+import { trackConsoleErrors, gridSearch } from "./support.js";
 
 test.skip(!process.env.E2E_ADMIN_EMAIL, "E2E_ADMIN_EMAIL not set");
 
@@ -58,7 +58,7 @@ test("a planner can create a client from the Clients page, with no console error
   expect(created.name).toBe(`E2E Client ${suffix}`);
 
   await expect(page).toHaveURL(/\/app\/clients$/);
-  await page.getByRole("textbox", { name: /search/i }).fill(`E2E Client ${suffix}`);
+  await gridSearch(page).fill(`E2E Client ${suffix}`);
   await expect(page.getByText(`E2E Client ${suffix}`).first()).toBeVisible();
 
   expect(errors, `console errors creating a client:\n${errors.join("\n")}`).toEqual([]);
@@ -178,7 +178,7 @@ test("only an admin sees the Erase data action in the client list", async ({ pag
   expect((await apiPost(page, "/users", { email, password, role: "dispatcher" })).status).toBe(201);
 
   await page.goto("/app/clients");
-  await page.getByRole("textbox", { name: /search/i }).fill(name);
+  await gridSearch(page).fill(name);
   await expect(page.getByText(name).first()).toBeVisible();
   await expect(page.getByRole("button", { name: "Erase data" }).first()).toBeVisible();
 
@@ -191,7 +191,7 @@ test("only an admin sees the Erase data action in the client list", async ({ pag
 
   await expect(page.getByRole("link", { name: /^clients$/i })).toBeVisible();
   await page.goto("/app/clients");
-  await page.getByRole("textbox", { name: /search/i }).fill(name);
+  await gridSearch(page).fill(name);
   await expect(page.getByText(name).first()).toBeVisible();
   await expect(page.getByRole("button", { name: "Erase data" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Edit" }).first()).toBeVisible();
