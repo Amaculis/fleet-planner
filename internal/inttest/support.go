@@ -8,10 +8,11 @@
 package inttest
 
 import (
+	"bytes"
 	"context"
-	"io"
 	"log/slog"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
@@ -40,6 +41,26 @@ type env struct {
 	users       *service.UserService
 	server      *apphttp.Server
 	cfg         config.Config
+	logs        *lockedBuffer
+}
+
+// lockedBuffer collects the app's log output so tests can check what was logged; the
+// test server writes to it from its own goroutines.
+type lockedBuffer struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+}
+
+func (b *lockedBuffer) Write(p []byte) (int, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.Write(p)
+}
+
+func (b *lockedBuffer) String() string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.String()
 }
 
 // hashParams keep the tests fast. Production uses auth.DefaultParams().
@@ -70,7 +91,8 @@ func newEnv(t *testing.T) *env {
 
 	truncate(t, pool)
 
-	log := slog.New(slog.NewTextHandler(io.Discard, nil))
+	logs := &lockedBuffer{}
+	log := slog.New(slog.NewTextHandler(logs, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	bundle, err := i18n.New()
 	if err != nil {
 		t.Fatalf("loading translations: %v", err)
@@ -111,6 +133,7 @@ func newEnv(t *testing.T) *env {
 		assignments: service.NewAssignmentService(r, log),
 		users:       service.NewUserService(r, sessions, log, testHashParams()),
 		cfg:         cfg,
+		logs:        logs,
 	}
 	e.server = apphttp.NewServer(cfg, log, apphttp.Services{
 		Auth:        service.NewAuthService(r, sessions, auditor, log, testHashParams(), dummyHash),
