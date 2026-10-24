@@ -57,10 +57,13 @@ test("driver role is rejected by planner and admin API endpoints", async ({ page
       buses: await get("/api/buses"),
       driversPlanning: await get("/api/drivers"),
       trips: await get("/api/trips"),
+      clients: await get("/api/clients"),
+      createClient: await post("/api/clients", { name: "Driver-made client" }),
       createTrip: await post("/api/trips", { origin: "x", destination: "y", scheduledStart: "2099-01-01T00:00", scheduledEnd: "2099-01-01T01:00" }),
       // Admin-only.
       users: await get("/api/users"),
       createBus: await post("/api/buses", { plate: "ZZ-0000", model: "x", seats: 10, status: "active" }),
+      anonymizeClient: await post("/api/clients/1/anonymize"),
       createUser: await post("/api/users", { email: "nope@example.com", password: "correct-horse-battery-staple", role: "dispatcher" }),
     };
   });
@@ -76,7 +79,7 @@ test("driver's nav has no links to planner/admin pages, and visiting one directl
 
   // MainLayout.vue gates its nav links by role (isPlanner/isAdmin) — a driver's menu
   // must not offer a way into pages whose data they can't load anyway.
-  for (const label of [/^buses$/i, /^drivers$/i, /^trips$/i, /^users$/i]) {
+  for (const label of [/^buses$/i, /^drivers$/i, /^trips$/i, /^clients$/i, /^users$/i]) {
     await expect(page.getByRole("link", { name: label })).toHaveCount(0);
   }
   await expect(page.getByRole("link", { name: /my trips/i })).toBeVisible();
