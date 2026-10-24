@@ -13,6 +13,7 @@ import {
   LxToggle,
 } from "@dativa-lv/lx-ui";
 import { getTrip, createTrip, createTripSeries, updateTrip } from "@/services/trips";
+import { getClients, getClient } from "@/services/clients";
 import DateTimeField from "@/components/DateTimeField.vue";
 import DateField from "@/components/DateField.vue";
 import useNotifyStore from "@/stores/notify";
@@ -39,6 +40,7 @@ const id = computed(() => route.params.id);
 const MAX_TEXT = 200;
 const MAX_NOTES = 2000;
 const MAX_DAYS = 30;
+const MAX_INVOICE = 50;
 
 const origin = ref("");
 const destination = ref("");
@@ -47,6 +49,9 @@ const scheduledEnd = ref("");
 const paymentStatus = ref("unpaid");
 const notes = ref("");
 const seriesId = ref(null);
+const clientId = ref(null);
+const invoiceNumber = ref("");
+const clients = ref([]);
 
 // Repeat is only offered when creating: editing a recurrence pattern itself is out of
 // scope — an existing series trip can only be edited/cancelled per-occurrence or
@@ -62,6 +67,7 @@ const errorMessage = ref("");
 const paymentStatusItems = computed(() =>
   ["unpaid", "reserved", "advance_paid", "paid"].map((id) => ({ id, name: i18n.t(`paymentStatus.${id}`) }))
 );
+const clientItems = computed(() => clients.value.map((c) => ({ id: c.id, name: c.name })));
 const dayItems = computed(() =>
   [1, 2, 3, 4, 5, 6, 7].map((id) => ({ id, name: i18n.t(`weekday.${id}`) }))
 );
@@ -85,6 +91,7 @@ const { invalidProps, validate } = useFormValidation(() => {
     else if (span > MAX_DAYS * 24 * 60 * 60 * 1000) e.scheduledEnd = i18n.t("validation.durationTooLong", { days: MAX_DAYS });
   }
   if (notes.value.length > MAX_NOTES) e.notes = tooLong(MAX_NOTES);
+  if (invoiceNumber.value.trim().length > MAX_INVOICE) e.invoiceNumber = tooLong(MAX_INVOICE);
 
   if (isNew.value && repeat.value) {
     if (!daysOfWeek.value.length) e.daysOfWeek = required;
@@ -97,10 +104,23 @@ const { invalidProps, validate } = useFormValidation(() => {
   return e;
 });
 
+// Only active clients can be newly chosen, but a trip keeps its client even after that
+// client is deactivated — so the trip's current one is added to the list if missing.
+async function loadClients(currentId) {
+  const list = (await getClients(true)).data;
+  if (currentId && !list.some((c) => c.id === currentId)) {
+    list.push((await getClient(currentId)).data);
+  }
+  clients.value = list;
+}
+
 async function load() {
-  if (isNew.value) return;
   loadingTrip.value = true;
   try {
+    if (isNew.value) {
+      await loadClients(null);
+      return;
+    }
     const trip = (await getTrip(id.value)).data;
     origin.value = trip.origin;
     destination.value = trip.destination;
@@ -109,6 +129,9 @@ async function load() {
     paymentStatus.value = trip.paymentStatus;
     notes.value = trip.notes ?? "";
     seriesId.value = trip.seriesId ?? null;
+    clientId.value = trip.clientId ?? null;
+    invoiceNumber.value = trip.invoiceNumber ?? "";
+    await loadClients(clientId.value);
   } catch (error) {
     errorMessage.value = i18n.t(errors.get(error).message);
   } finally {
@@ -126,6 +149,8 @@ async function submit(scope) {
     scheduledEnd: scheduledEnd.value,
     paymentStatus: paymentStatus.value,
     notes: notes.value || null,
+    clientId: clientId.value == null ? null : Number(clientId.value),
+    invoiceNumber: invoiceNumber.value.trim() || null,
   };
   try {
     if (isNew.value && repeat.value) {
@@ -135,6 +160,7 @@ async function submit(scope) {
           destination: payload.destination,
           paymentStatus: payload.paymentStatus,
           notes: payload.notes,
+          clientId: payload.clientId,
           firstStart: payload.scheduledStart,
           firstEnd: payload.scheduledEnd,
           daysOfWeek: daysOfWeek.value.map(Number),
@@ -239,6 +265,27 @@ onMounted(load);
     <LxSection :label="i18n.t('trips.form.booking')">
       <LxRow :label="i18n.t('fields.paymentStatus')" :description="i18n.t('trips.form.paymentHint')" required>
         <LxValuePicker v-model="paymentStatus" :items="paymentStatusItems" variant="dropdown" selection-kind="single" />
+      </LxRow>
+      <LxRow :label="i18n.t('fields.client')" :description="i18n.t('trips.form.clientHint')">
+        <LxValuePicker
+          v-model="clientId"
+          :items="clientItems"
+          variant="dropdown"
+          selection-kind="single"
+          nullable
+          data-testid="trip-client"
+        />
+      </LxRow>
+      <LxRow
+        :label="i18n.t('fields.invoiceNumber')"
+        :description="isNew && repeat ? i18n.t('trips.form.invoiceSeriesHint') : i18n.t('trips.form.invoiceHint')"
+      >
+        <LxTextInput
+          v-model="invoiceNumber"
+          :maxlength="MAX_INVOICE"
+          :disabled="isNew && repeat"
+          v-bind="invalidProps('invoiceNumber')"
+        />
       </LxRow>
     </LxSection>
 

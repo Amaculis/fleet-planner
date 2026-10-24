@@ -41,7 +41,8 @@ const nav = computed(() => {
       { id: "timeline", label: i18n.t("nav.timeline"), icon: "calendar", to: { name: "timeline" } },
       { id: "trips", label: i18n.t("nav.trips"), icon: "list-bulleted", to: { name: "trips" } },
       { id: "buses", label: i18n.t("nav.buses"), icon: "driving-license", to: { name: "buses" } },
-      { id: "drivers", label: i18n.t("nav.drivers"), icon: "user-profile", to: { name: "drivers" } }
+      { id: "drivers", label: i18n.t("nav.drivers"), icon: "user-profile", to: { name: "drivers" } },
+      { id: "clients", label: i18n.t("nav.clients"), icon: "contact-information", to: { name: "clients" } }
     );
   }
   if (isDriver.value) {
@@ -62,6 +63,7 @@ const nav = computed(() => {
 const NAV_ALIASES = {
   busNew: "buses", busEdit: "buses",
   driverNew: "drivers", driverEdit: "drivers",
+  clientNew: "clients", clientEdit: "clients",
   tripNew: "trips", tripEdit: "trips", tripDetail: "trips",
   userNew: "users",
 };

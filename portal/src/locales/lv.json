@@ -27,6 +27,7 @@
     "error": { "title": "Kļūda", "goBack": "Atpakaļ", "goHome": "Sākums" },
     "buses": { "title": "Autobusi", "new": "Pievienot autobusu", "edit": "Labot autobusu" },
     "drivers": { "title": "Vadītāji", "new": "Pievienot vadītāju", "edit": "Labot vadītāju" },
+    "clients": { "title": "Klienti", "new": "Pievienot klientu", "edit": "Labot klientu" },
     "trips": { "title": "Reisi", "new": "Pievienot reisu", "edit": "Labot reisu", "detail": "Reiss" },
     "users": { "title": "Lietotāji", "new": "Pievienot lietotāju" },
     "statistics": { "title": "Statistika" },
@@ -48,6 +49,7 @@
     "timeline": "Laika grafiks",
     "buses": "Autobusi",
     "drivers": "Vadītāji",
+    "clients": "Klienti",
     "trips": "Reisi",
     "users": "Lietotāji",
     "statistics": "Statistika",
@@ -115,7 +117,12 @@
     "driver": "Vadītājs",
     "bus": "Autobuss",
     "none": "Nav",
-    "paymentStatus": "Apmaksas statuss"
+    "paymentStatus": "Apmaksas statuss",
+    "clientName": "Klienta nosaukums",
+    "contactPerson": "Kontaktpersona",
+    "address": "Adrese",
+    "client": "Klients",
+    "invoiceNumber": "Rēķina numurs"
   },
   "busStatus": {
     "active": "Ekspluatācijā",
@@ -180,7 +187,8 @@
   },
   "confirm": {
     "delete": "Dzēst šo?",
-    "anonymize": "Šī darbība neatgriezeniski dzēš vadītāja personas datus. To nevar atsaukt."
+    "anonymize": "Šī darbība neatgriezeniski dzēš vadītāja personas datus. To nevar atsaukt.",
+    "anonymizeClient": "Šī darbība neatgriezeniski dzēš šī klienta personas datus. To nevar atsaukt."
   },
   "trips": {
     "assignment": "Autobuss un vadītājs",
@@ -189,6 +197,13 @@
     "noNotes": "Nav piezīmju.",
     "markAs": "Atzīmēt kā",
     "partOfSeries": "Daļa no atkārtota reisu cikla",
+    "clientSection": "Klients",
+    "noClient": "Nav klienta.",
+    "showClient": "Rādīt klienta informāciju",
+    "hideClient": "Paslēpt klienta informāciju",
+    "editClient": "Labot klientu",
+    "clientErased": "Klienta dati dzēsti",
+    "invoiceNumber": "Rēķina numurs",
     "durationDays": "{n} d.",
     "durationHours": "{n} st.",
     "durationMinutes": "{n} min.",
@@ -200,6 +215,9 @@
       "endHint": "Jābūt vēlāk par sākumu, ne ilgāk par 30 dienām.",
       "booking": "Rezervācija",
       "paymentHint": "Cik klients līdz šim ir samaksājis. Redzams tikai plānotājiem.",
+      "clientHint": "Neobligāti. Kam šis reiss paredzēts.",
+      "invoiceHint": "Neobligāti. Rēķina numurs, ievadīts ar roku. Redzams tikai plānotājiem.",
+      "invoiceSeriesHint": "Norāda katram reisam atsevišķi, tāpēc netiek piemērots atkārtotai sērijai.",
       "notesSection": "Papildu informācija",
       "repeat": "Atkārtot šo reisu",
       "repeatHint": "Izveidot reisu ciklu pēc iknedēļas modeļa.",
@@ -271,6 +289,15 @@
     "statusDescription": "Neaktīvos vadītājus nevar piešķirt jauniem reisiem.",
     "notesSection": "Papildu informācija",
     "notesHint": "Iekšējas piezīmes, piem., vēlmes vai ierobežojumi. Vadītājam netiek rādītas."
+  },
+  "clientForm": {
+    "details": "Klienta dati",
+    "detailsDescription": "Kas ir klients un kā ar viņu sazināties.",
+    "status": "Statuss",
+    "statusDescription": "Neaktīvus klientus nevar izvēlēties jauniem reisiem.",
+    "notesSection": "Papildu informācija",
+    "notesHint": "Iekšējās piezīmes par šo klientu.",
+    "erased": "Šī klienta personas dati ir dzēsti, un tos vairs nevar labot."
   },
   "userForm": {
     "account": "Konts",

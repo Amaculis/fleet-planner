@@ -93,6 +93,11 @@ export function buildFixtures() {
 
   // A couple of multi-day tours, same shape as the ones used to design the
   // timeline's spanning-bar rendering.
+  const clients = [
+    { id: 1, name: "Example Travel Ltd", contactPerson: "Anna Example", phone: "+371 20000001", email: "booking@example.test", address: "1 Example Street, Rīga", notes: "Prefers invoices by email.", isActive: true, anonymized: false },
+    { id: 2, name: "Sample School", contactPerson: "Jānis Sample", phone: "+371 20000002", email: null, address: null, notes: null, isActive: true, anonymized: false },
+  ];
+
   trips.push({
     id: id(),
     origin: "Rīga",
@@ -101,6 +106,8 @@ export function buildFixtures() {
     scheduledEnd: ts(addDays(isoToday, 5), "18:00"),
     status: "planned",
     paymentStatus: "advance_paid",
+    clientId: clients[0].id,
+    invoiceNumber: "INV-2026-0001",
     notes: "Cross-border charter",
     assignment: { busId: buses[0].id, busPlate: buses[0].plate, driverId: drivers[0].id, driverName: drivers[0].fullName },
   });
@@ -122,5 +129,5 @@ export function buildFixtures() {
     { id: id(), email: "driver@demo.example", role: "driver", driverId: drivers[0].id, driverName: drivers[0].fullName, isActive: true },
   ];
 
-  return { buses, drivers, trips, users, isoToday };
+  return { buses, drivers, trips, users, clients, isoToday };
 }

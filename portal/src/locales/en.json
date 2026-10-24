@@ -27,6 +27,7 @@
     "error": { "title": "Error", "goBack": "Go back", "goHome": "Home" },
     "buses": { "title": "Buses", "new": "Add bus", "edit": "Edit bus" },
     "drivers": { "title": "Drivers", "new": "Add driver", "edit": "Edit driver" },
+    "clients": { "title": "Clients", "new": "Add client", "edit": "Edit client" },
     "trips": { "title": "Trips", "new": "Add trip", "edit": "Edit trip", "detail": "Trip" },
     "users": { "title": "Users", "new": "Add user" },
     "statistics": { "title": "Statistics" },
@@ -48,6 +49,7 @@
     "timeline": "Timeline",
     "buses": "Buses",
     "drivers": "Drivers",
+    "clients": "Clients",
     "trips": "Trips",
     "users": "Users",
     "statistics": "Statistics",
@@ -115,7 +117,12 @@
     "driver": "Driver",
     "bus": "Bus",
     "none": "None",
-    "paymentStatus": "Payment status"
+    "paymentStatus": "Payment status",
+    "clientName": "Client name",
+    "contactPerson": "Contact person",
+    "address": "Address",
+    "client": "Client",
+    "invoiceNumber": "Bill number"
   },
   "busStatus": {
     "active": "In service",
@@ -180,7 +187,8 @@
   },
   "confirm": {
     "delete": "Delete this?",
-    "anonymize": "This permanently erases this driver's personal data. This cannot be undone."
+    "anonymize": "This permanently erases this driver's personal data. This cannot be undone.",
+    "anonymizeClient": "This permanently erases this client's personal data. This cannot be undone."
   },
   "trips": {
     "assignment": "Bus & driver",
@@ -189,6 +197,13 @@
     "noNotes": "No notes.",
     "markAs": "Mark as",
     "partOfSeries": "Part of a repeating series",
+    "clientSection": "Client",
+    "noClient": "No client.",
+    "showClient": "Show client info",
+    "hideClient": "Hide client info",
+    "editClient": "Edit client",
+    "clientErased": "Client data erased",
+    "invoiceNumber": "Bill number",
     "durationDays": "{n}d",
     "durationHours": "{n}h",
     "durationMinutes": "{n}m",
@@ -200,6 +215,9 @@
       "endHint": "Must be after the start, and at most 30 days long.",
       "booking": "Booking",
       "paymentHint": "What the client has paid so far. Only planners can see this.",
+      "clientHint": "Optional. Who this trip is for.",
+      "invoiceHint": "Optional. The bill number, typed by hand. Only planners can see this.",
+      "invoiceSeriesHint": "Set per trip, so it is not applied to a repeating series.",
       "notesSection": "Additional information",
       "repeat": "Repeat this trip",
       "repeatHint": "Create a series of trips on a weekly pattern.",
@@ -271,6 +289,15 @@
     "statusDescription": "Inactive drivers can't be assigned to new trips.",
     "notesSection": "Additional information",
     "notesHint": "Internal notes, e.g. preferences or restrictions. Not shown to the driver."
+  },
+  "clientForm": {
+    "details": "Client details",
+    "detailsDescription": "Who the client is and how to reach them.",
+    "status": "Status",
+    "statusDescription": "Inactive clients can't be chosen for new trips.",
+    "notesSection": "Additional information",
+    "notesHint": "Internal notes about this client.",
+    "erased": "This client's personal data has been erased and can no longer be edited."
   },
   "userForm": {
     "account": "Account",

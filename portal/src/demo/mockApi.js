@@ -158,6 +158,38 @@ export function installDemoApi() {
     return [200, driver];
   });
 
+  // --- Clients ---------------------------------------------------------------
+  mock.onGet(/^\/clients$/).reply((config) => {
+    const assignableOnly = config.params?.assignable === "1";
+    const clients = assignableOnly ? state.clients.filter((c) => c.isActive && !c.anonymized) : state.clients;
+    return [200, clients];
+  });
+  mock.onGet(/\/clients\/\d+$/).reply((config) => {
+    const client = state.clients.find((c) => c.id === matchId(config.url));
+    return client ? [200, client] : [404, { error: "not found" }];
+  });
+  mock.onPost("/clients").reply((config) => {
+    const client = { id: nextId(state.clients), anonymized: false, ...JSON.parse(config.data) };
+    state.clients.push(client);
+    return [201, client];
+  });
+  mock.onPut(/\/clients\/\d+$/).reply((config) => {
+    const id = matchId(config.url);
+    const idx = state.clients.findIndex((c) => c.id === id);
+    if (idx === -1) return [404, { error: "not found" }];
+    state.clients[idx] = { ...state.clients[idx], ...JSON.parse(config.data), id };
+    return [200, state.clients[idx]];
+  });
+  mock.onPost(/\/clients\/\d+\/anonymize$/).reply((config) => {
+    const client = state.clients.find((c) => c.id === matchId(config.url));
+    if (!client) return [404, { error: "not found" }];
+    Object.assign(client, {
+      name: `Erased client #${client.id}`, contactPerson: null, phone: null, email: null,
+      address: null, notes: null, isActive: false, anonymized: true,
+    });
+    return [200, client];
+  });
+
   // --- Trips -----------------------------------------------------------------
   mock.onGet(/^\/trips$/).reply((config) => {
     const { from, to } = defaultRange(config.params?.from, config.params?.to);
@@ -178,7 +210,7 @@ export function installDemoApi() {
   // firstStart up to (not including) endsOn whose weekday is in daysOfWeek, reusing
   // firstStart's time-of-day and the firstEnd-firstStart duration.
   mock.onPost("/trip-series").reply((config) => {
-    const { origin, destination, daysOfWeek, firstStart, firstEnd, endsOn, paymentStatus, notes } = JSON.parse(config.data);
+    const { origin, destination, daysOfWeek, firstStart, firstEnd, endsOn, paymentStatus, notes, clientId } = JSON.parse(config.data);
     const start = new Date(firstStart);
     const duration = new Date(firstEnd) - start;
     const endsOnDate = new Date(`${endsOn}T00:00`);
@@ -198,7 +230,7 @@ export function installDemoApi() {
       const occEnd = new Date(occStart.getTime() + duration);
       const trip = {
         id: nextId(state.trips), status: "planned", assignment: null, seriesId,
-        origin, destination, paymentStatus: paymentStatus || "unpaid", notes: notes || null,
+        origin, destination, paymentStatus: paymentStatus || "unpaid", notes: notes || null, clientId: clientId ?? null,
         scheduledStart: toLocalString(occStart), scheduledEnd: toLocalString(occEnd),
       };
       state.trips.push(trip);
@@ -226,9 +258,10 @@ export function installDemoApi() {
           continue;
         }
         const day = new Date(t.scheduledStart);
+        const { invoiceNumber: _ignored, ...shared } = body;
         const start = new Date(day.getFullYear(), day.getMonth(), day.getDate(), newStart.getHours(), newStart.getMinutes());
         const end = new Date(start.getTime() + duration);
-        Object.assign(t, body, { id: t.id, scheduledStart: toLocalString(start), scheduledEnd: toLocalString(end) });
+        Object.assign(t, shared, { id: t.id, scheduledStart: toLocalString(start), scheduledEnd: toLocalString(end) });
       }
       return [200, from];
     }

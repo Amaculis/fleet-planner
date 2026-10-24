@@ -5,6 +5,7 @@ import { useI18n } from "vue-i18n";
 import { LxButton, LxInfoBox, LxLoader, LxRow, LxValuePicker } from "@dativa-lv/lx-ui";
 import { getTrip, deleteTrip, setTripStatus, assignTrip, unassignTrip } from "@/services/trips";
 import { getBuses, getDrivers } from "@/services/fleet";
+import { getClient } from "@/services/clients";
 import { parseServerTimestamp, formatDateTime as formatDateTimeShared, formatTime as formatTimeShared } from "@/utils/dates";
 import useNotifyStore from "@/stores/notify";
 import useConfirmStore from "@/stores/confirm";
@@ -67,6 +68,45 @@ async function load() {
     loading.value = false;
   }
 }
+
+// Client details are fetched only when the planner asks to see them, then kept for the
+// rest of the visit so toggling is instant.
+const client = ref(null);
+const clientShown = ref(false);
+const clientLoading = ref(false);
+const clientError = ref("");
+
+async function toggleClient() {
+  if (clientShown.value) {
+    clientShown.value = false;
+    return;
+  }
+  if (!client.value) {
+    clientLoading.value = true;
+    clientError.value = "";
+    try {
+      client.value = (await getClient(trip.value.clientId)).data;
+    } catch (error) {
+      clientError.value = i18n.t(errors.get(error).message);
+      return;
+    } finally {
+      clientLoading.value = false;
+    }
+  }
+  clientShown.value = true;
+}
+
+const clientFields = computed(() => {
+  const c = client.value;
+  if (!c) return [];
+  return [
+    { key: "contactPerson", label: i18n.t("fields.contactPerson"), value: c.contactPerson },
+    { key: "phone", label: i18n.t("fields.phone"), value: c.phone },
+    { key: "email", label: i18n.t("fields.email"), value: c.email },
+    { key: "address", label: i18n.t("fields.address"), value: c.address },
+    { key: "notes", label: i18n.t("fields.notes"), value: c.notes },
+  ].filter((f) => f.value);
+});
 
 async function changeStatus(status, scope) {
   busy.value = true;
@@ -250,6 +290,40 @@ onMounted(load);
           </LxRow>
           <LxButton :label="i18n.t('actions.assign')" kind="primary" :loading="busy" @click="assign" />
         </template>
+      </div>
+
+      <div class="trip-panel" data-testid="trip-client-panel">
+        <h3>{{ i18n.t("trips.clientSection") }}</h3>
+        <template v-if="trip.clientId">
+          <LxButton
+            :label="clientShown ? i18n.t('trips.hideClient') : i18n.t('trips.showClient')"
+            kind="secondary"
+            :loading="clientLoading"
+            @click="toggleClient"
+          />
+          <LxInfoBox v-if="clientError" variant="error" :label="clientError" />
+          <div v-if="clientShown && client" class="trip-client-info" data-testid="trip-client-info">
+            <p class="trip-client-name">{{ client.name }}</p>
+            <p v-if="client.anonymized" class="trip-unassigned-hint">{{ i18n.t("trips.clientErased") }}</p>
+            <dl class="trip-client-fields">
+              <template v-for="field in clientFields" :key="field.key">
+                <dt>{{ field.label }}</dt>
+                <dd>{{ field.value }}</dd>
+              </template>
+            </dl>
+            <LxButton
+              :label="i18n.t('trips.editClient')"
+              kind="ghost"
+              @click="router.push({ name: 'clientEdit', params: { id: trip.clientId } })"
+            />
+          </div>
+        </template>
+        <p v-else class="trip-unassigned-hint">{{ i18n.t("trips.noClient") }}</p>
+
+        <h3 class="trip-panel-subheading">{{ i18n.t("trips.invoiceNumber") }}</h3>
+        <p class="trip-notes" :class="{ 'trip-notes-empty': !trip.invoiceNumber }" data-testid="trip-invoice">
+          {{ trip.invoiceNumber || "—" }}
+        </p>
       </div>
     </div>
 
@@ -440,6 +514,31 @@ onMounted(load);
 .trip-assignment-value {
   font-weight: 600;
   color: var(--color-brand);
+}
+.trip-client-info {
+  margin-top: 0.75rem;
+}
+.trip-client-name {
+  margin: 0 0 0.5rem;
+  font-weight: 600;
+  font-size: 1.05rem;
+}
+.trip-client-fields {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.35rem 1rem;
+  margin: 0 0 0.5rem;
+}
+.trip-client-fields dt {
+  font-size: 0.7rem;
+  color: var(--color-placeholder);
+  text-transform: uppercase;
+  align-self: center;
+}
+.trip-client-fields dd {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 .trip-unassigned-hint {
   margin: 0 0 0.75rem;

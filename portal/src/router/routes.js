@@ -60,6 +60,24 @@ const routes = [
         component: () => import("@/views/drivers/DriverForm.vue"),
       },
       {
+        path: "clients",
+        name: "clients",
+        meta: { title: "pages.clients.title" },
+        component: () => import("@/views/clients/ClientList.vue"),
+      },
+      {
+        path: "clients/new",
+        name: "clientNew",
+        meta: { title: "pages.clients.new" },
+        component: () => import("@/views/clients/ClientForm.vue"),
+      },
+      {
+        path: "clients/:id/edit",
+        name: "clientEdit",
+        meta: { title: "pages.clients.edit" },
+        component: () => import("@/views/clients/ClientForm.vue"),
+      },
+      {
         path: "trips",
         name: "trips",
         meta: { title: "pages.trips.title" },
