@@ -129,10 +129,16 @@ func (s *Server) handleTripUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 	input, err := s.tripFromForm(r, id)
 	if err == nil {
-		_, err = s.trips.Update(r.Context(), MustIdentity(r.Context()), input, s.meta(r))
-		if err == nil {
-			http.Redirect(w, r, "/trips/"+strconv.FormatInt(id, 10), http.StatusSeeOther)
-			return
+		// This frozen form has no client, bill-number or payment fields; carry over
+		// what the trip already has so editing here never silently clears them.
+		var existing domain.Trip
+		if existing, err = s.trips.Get(r.Context(), MustIdentity(r.Context()), id); err == nil {
+			input.ClientID, input.InvoiceNumber, input.PaymentStatus = existing.ClientID, existing.InvoiceNumber, existing.PaymentStatus
+			_, err = s.trips.Update(r.Context(), MustIdentity(r.Context()), input, s.meta(r))
+			if err == nil {
+				http.Redirect(w, r, "/trips/"+strconv.FormatInt(id, 10), http.StatusSeeOther)
+				return
+			}
 		}
 	}
 	// A rescheduling clash lands here with the blocking trips attached.

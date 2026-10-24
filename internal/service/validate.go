@@ -128,6 +128,41 @@ func validateDriver(d domain.Driver) (domain.Driver, error) {
 	return d, nil
 }
 
+func validateClient(c domain.Client) (domain.Client, error) {
+	name, err := validateText("field.client_name", c.Name, 1, 200)
+	if err != nil {
+		return c, err
+	}
+	c.Name = name
+
+	if c.ContactPerson = trimOptional(c.ContactPerson); c.ContactPerson != nil {
+		if utf8.RuneCountInString(*c.ContactPerson) > 200 {
+			return c, tooLong("field.contact_person", 200)
+		}
+	}
+	if c.Phone = trimOptional(c.Phone); c.Phone != nil && !phonePattern.MatchString(*c.Phone) {
+		return c, badFormat("field.phone")
+	}
+	if c.Email = trimOptional(c.Email); c.Email != nil {
+		email := NormalizeEmail(*c.Email)
+		if err := ValidateEmail(email); err != nil {
+			return c, err
+		}
+		c.Email = &email
+	}
+	if c.Address = trimOptional(c.Address); c.Address != nil {
+		if utf8.RuneCountInString(*c.Address) > 500 {
+			return c, tooLong("field.address", 500)
+		}
+	}
+	if c.Notes = trimOptional(c.Notes); c.Notes != nil {
+		if utf8.RuneCountInString(*c.Notes) > 2000 {
+			return c, tooLong("field.notes", 2000)
+		}
+	}
+	return c, nil
+}
+
 func validateTrip(t domain.Trip) (domain.Trip, error) {
 	origin, err := validateText("field.origin", t.Origin, 1, 200)
 	if err != nil {
@@ -158,6 +193,11 @@ func validateTrip(t domain.Trip) (domain.Trip, error) {
 	}
 	if _, ok := domain.ParsePaymentStatus(string(t.PaymentStatus)); !ok {
 		return t, unknownValue("field.payment_status")
+	}
+	if t.InvoiceNumber = trimOptional(t.InvoiceNumber); t.InvoiceNumber != nil {
+		if utf8.RuneCountInString(*t.InvoiceNumber) > 50 {
+			return t, tooLong("field.invoice_number", 50)
+		}
 	}
 	// Times are stored and compared in UTC; the view layer formats them per locale.
 	t.ScheduledStart = t.ScheduledStart.UTC()

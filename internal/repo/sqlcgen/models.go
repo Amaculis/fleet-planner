@@ -311,6 +311,20 @@ type Bus struct {
 	Type             BusType
 }
 
+type Client struct {
+	ID            int64
+	Name          string
+	ContactPerson *string
+	Phone         *string
+	Email         *string
+	Address       *string
+	Notes         *string
+	IsActive      bool
+	AnonymizedAt  *time.Time
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+}
+
 type Driver struct {
 	ID            int64
 	FullName      string
@@ -349,6 +363,8 @@ type Trip struct {
 	UpdatedAt      time.Time
 	PaymentStatus  PaymentStatus
 	SeriesID       *int64
+	ClientID       *int64
+	InvoiceNumber  *string
 }
 
 type TripSeries struct {
@@ -363,6 +379,7 @@ type TripSeries struct {
 	Notes         *string
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
+	ClientID      *int64
 }
 
 type User struct {

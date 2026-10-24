@@ -18,6 +18,7 @@ func (r *Repo) CreateTripSeries(ctx context.Context, s domain.TripSeries) (domai
 		EndsOn:        s.EndsOn,
 		PaymentStatus: sqlcgen.PaymentStatus(s.PaymentStatus),
 		Notes:         s.Notes,
+		ClientID:      s.ClientID,
 	})
 	if err != nil {
 		return domain.TripSeries{}, fmt.Errorf("creating trip series: %w", translate(err))

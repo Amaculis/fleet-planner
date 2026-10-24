@@ -11,10 +11,10 @@ import (
 )
 
 const createTrip = `-- name: CreateTrip :one
-INSERT INTO trips (origin, destination, scheduled_start, scheduled_end, payment_status, notes, series_id)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
+INSERT INTO trips (origin, destination, scheduled_start, scheduled_end, payment_status, notes, series_id, client_id, invoice_number)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 RETURNING id, origin, destination, scheduled_start, scheduled_end, actual_start, actual_end,
-          status, notes, created_at, updated_at, payment_status, series_id
+          status, notes, created_at, updated_at, payment_status, series_id, client_id, invoice_number
 `
 
 type CreateTripParams struct {
@@ -25,6 +25,8 @@ type CreateTripParams struct {
 	PaymentStatus  PaymentStatus
 	Notes          *string
 	SeriesID       *int64
+	ClientID       *int64
+	InvoiceNumber  *string
 }
 
 func (q *Queries) CreateTrip(ctx context.Context, arg CreateTripParams) (Trip, error) {
@@ -36,6 +38,8 @@ func (q *Queries) CreateTrip(ctx context.Context, arg CreateTripParams) (Trip, e
 		arg.PaymentStatus,
 		arg.Notes,
 		arg.SeriesID,
+		arg.ClientID,
+		arg.InvoiceNumber,
 	)
 	var i Trip
 	err := row.Scan(
@@ -52,6 +56,8 @@ func (q *Queries) CreateTrip(ctx context.Context, arg CreateTripParams) (Trip, e
 		&i.UpdatedAt,
 		&i.PaymentStatus,
 		&i.SeriesID,
+		&i.ClientID,
+		&i.InvoiceNumber,
 	)
 	return i, err
 }
@@ -123,7 +129,7 @@ func (q *Queries) FinishTripAsDriver(ctx context.Context, arg FinishTripAsDriver
 
 const getTrip = `-- name: GetTrip :one
 SELECT id, origin, destination, scheduled_start, scheduled_end, actual_start, actual_end,
-       status, notes, created_at, updated_at, payment_status, series_id
+       status, notes, created_at, updated_at, payment_status, series_id, client_id, invoice_number
 FROM trips
 WHERE id = $1
 `
@@ -145,6 +151,8 @@ func (q *Queries) GetTrip(ctx context.Context, id int64) (Trip, error) {
 		&i.UpdatedAt,
 		&i.PaymentStatus,
 		&i.SeriesID,
+		&i.ClientID,
+		&i.InvoiceNumber,
 	)
 	return i, err
 }
@@ -198,7 +206,7 @@ func (q *Queries) GetTripForDriver(ctx context.Context, arg GetTripForDriverPara
 
 const listFutureSeriesTrips = `-- name: ListFutureSeriesTrips :many
 SELECT id, origin, destination, scheduled_start, scheduled_end, actual_start, actual_end,
-       status, notes, created_at, updated_at, payment_status, series_id
+       status, notes, created_at, updated_at, payment_status, series_id, client_id, invoice_number
 FROM trips
 WHERE series_id = $1
   AND scheduled_start >= $2
@@ -237,6 +245,8 @@ func (q *Queries) ListFutureSeriesTrips(ctx context.Context, arg ListFutureSerie
 			&i.UpdatedAt,
 			&i.PaymentStatus,
 			&i.SeriesID,
+			&i.ClientID,
+			&i.InvoiceNumber,
 		); err != nil {
 			return nil, err
 		}
@@ -319,7 +329,7 @@ func (q *Queries) ListTripsForDriver(ctx context.Context, arg ListTripsForDriver
 const listTripsInRange = `-- name: ListTripsInRange :many
 
 SELECT id, origin, destination, scheduled_start, scheduled_end, actual_start, actual_end,
-       status, notes, created_at, updated_at, payment_status, series_id
+       status, notes, created_at, updated_at, payment_status, series_id, client_id, invoice_number
 FROM trips
 WHERE tstzrange(scheduled_start, scheduled_end, '[)') && tstzrange($1, $2, '[)')
 ORDER BY scheduled_start, id
@@ -330,9 +340,9 @@ type ListTripsInRangeParams struct {
 	RangeEnd   interface{}
 }
 
-// Column lists below put payment_status, then series_id, last, matching their physical
-// position from the ALTER TABLEs that added them (see 0006_trip_payment_status.up.sql,
-// 0009_trip_series.up.sql) — the repo layer converts these row types to sqlcgen.Trip via
+// Column lists below put payment_status, series_id, then client_id and invoice_number,
+// last, matching their physical position from the ALTER TABLEs that added them (see
+// 0006_trip_payment_status.up.sql, 0009_trip_series.up.sql, 0010_clients.up.sql) — the repo layer converts these row types to sqlcgen.Trip via
 // a plain Go type conversion, which needs identical field order, not just identical
 // field sets.
 // Planning list and (step 4) the timeline: trips whose window touches [$1, $2).
@@ -359,6 +369,8 @@ func (q *Queries) ListTripsInRange(ctx context.Context, arg ListTripsInRangePara
 			&i.UpdatedAt,
 			&i.PaymentStatus,
 			&i.SeriesID,
+			&i.ClientID,
+			&i.InvoiceNumber,
 		); err != nil {
 			return nil, err
 		}
@@ -375,7 +387,7 @@ UPDATE trips
 SET status = $2
 WHERE id = $1
 RETURNING id, origin, destination, scheduled_start, scheduled_end, actual_start, actual_end,
-          status, notes, created_at, updated_at, payment_status, series_id
+          status, notes, created_at, updated_at, payment_status, series_id, client_id, invoice_number
 `
 
 type SetTripStatusParams struct {
@@ -400,6 +412,8 @@ func (q *Queries) SetTripStatus(ctx context.Context, arg SetTripStatusParams) (T
 		&i.UpdatedAt,
 		&i.PaymentStatus,
 		&i.SeriesID,
+		&i.ClientID,
+		&i.InvoiceNumber,
 	)
 	return i, err
 }
@@ -461,10 +475,10 @@ func (q *Queries) StartTripAsDriver(ctx context.Context, arg StartTripAsDriverPa
 const updateTrip = `-- name: UpdateTrip :one
 UPDATE trips
 SET origin = $2, destination = $3, scheduled_start = $4, scheduled_end = $5,
-    payment_status = $6, notes = $7
+    payment_status = $6, notes = $7, client_id = $8, invoice_number = $9
 WHERE id = $1
 RETURNING id, origin, destination, scheduled_start, scheduled_end, actual_start, actual_end,
-          status, notes, created_at, updated_at, payment_status, series_id
+          status, notes, created_at, updated_at, payment_status, series_id, client_id, invoice_number
 `
 
 type UpdateTripParams struct {
@@ -475,6 +489,8 @@ type UpdateTripParams struct {
 	ScheduledEnd   time.Time
 	PaymentStatus  PaymentStatus
 	Notes          *string
+	ClientID       *int64
+	InvoiceNumber  *string
 }
 
 // Rescheduling an assigned trip cascades the new window onto its assignment, where the
@@ -489,6 +505,8 @@ func (q *Queries) UpdateTrip(ctx context.Context, arg UpdateTripParams) (Trip, e
 		arg.ScheduledEnd,
 		arg.PaymentStatus,
 		arg.Notes,
+		arg.ClientID,
+		arg.InvoiceNumber,
 	)
 	var i Trip
 	err := row.Scan(
@@ -505,6 +523,8 @@ func (q *Queries) UpdateTrip(ctx context.Context, arg UpdateTripParams) (Trip, e
 		&i.UpdatedAt,
 		&i.PaymentStatus,
 		&i.SeriesID,
+		&i.ClientID,
+		&i.InvoiceNumber,
 	)
 	return i, err
 }

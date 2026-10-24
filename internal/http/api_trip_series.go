@@ -17,6 +17,7 @@ type apiTripSeriesRequest struct {
 	EndsOn        string  `json:"endsOn"` // "YYYY-MM-DD", the last local date a trip may occur on (inclusive)
 	PaymentStatus string  `json:"paymentStatus"`
 	Notes         *string `json:"notes"`
+	ClientID      *int64  `json:"clientId"`
 }
 
 func (s *Server) handleAPITripSeriesCreate(w http.ResponseWriter, r *http.Request) {
@@ -33,6 +34,7 @@ func (s *Server) handleAPITripSeriesCreate(w http.ResponseWriter, r *http.Reques
 	input := domain.TripSeries{
 		Origin: req.Origin, Destination: req.Destination,
 		DaysOfWeek: req.DaysOfWeek, PaymentStatus: paymentStatus, Notes: req.Notes,
+		ClientID: req.ClientID,
 	}
 	var err error
 	if input.FirstStart, err = jsonTimestamp(req.FirstStart, "field.scheduled_start", s.cfg.Location); err != nil {

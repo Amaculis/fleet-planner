@@ -1,28 +1,28 @@
--- Column lists below put payment_status, then series_id, last, matching their physical
--- position from the ALTER TABLEs that added them (see 0006_trip_payment_status.up.sql,
--- 0009_trip_series.up.sql) — the repo layer converts these row types to sqlcgen.Trip via
+-- Column lists below put payment_status, series_id, then client_id and invoice_number,
+-- last, matching their physical position from the ALTER TABLEs that added them (see
+-- 0006_trip_payment_status.up.sql, 0009_trip_series.up.sql, 0010_clients.up.sql) — the repo layer converts these row types to sqlcgen.Trip via
 -- a plain Go type conversion, which needs identical field order, not just identical
 -- field sets.
 
 -- name: ListTripsInRange :many
 -- Planning list and (step 4) the timeline: trips whose window touches [$1, $2).
 SELECT id, origin, destination, scheduled_start, scheduled_end, actual_start, actual_end,
-       status, notes, created_at, updated_at, payment_status, series_id
+       status, notes, created_at, updated_at, payment_status, series_id, client_id, invoice_number
 FROM trips
 WHERE tstzrange(scheduled_start, scheduled_end, '[)') && tstzrange(@range_start, @range_end, '[)')
 ORDER BY scheduled_start, id;
 
 -- name: GetTrip :one
 SELECT id, origin, destination, scheduled_start, scheduled_end, actual_start, actual_end,
-       status, notes, created_at, updated_at, payment_status, series_id
+       status, notes, created_at, updated_at, payment_status, series_id, client_id, invoice_number
 FROM trips
 WHERE id = $1;
 
 -- name: CreateTrip :one
-INSERT INTO trips (origin, destination, scheduled_start, scheduled_end, payment_status, notes, series_id)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
+INSERT INTO trips (origin, destination, scheduled_start, scheduled_end, payment_status, notes, series_id, client_id, invoice_number)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 RETURNING id, origin, destination, scheduled_start, scheduled_end, actual_start, actual_end,
-          status, notes, created_at, updated_at, payment_status, series_id;
+          status, notes, created_at, updated_at, payment_status, series_id, client_id, invoice_number;
 
 -- name: UpdateTrip :one
 -- Rescheduling an assigned trip cascades the new window onto its assignment, where the
@@ -30,24 +30,24 @@ RETURNING id, origin, destination, scheduled_start, scheduled_end, actual_start,
 -- is not in the SET list: a single-trip edit never changes series membership.
 UPDATE trips
 SET origin = $2, destination = $3, scheduled_start = $4, scheduled_end = $5,
-    payment_status = $6, notes = $7
+    payment_status = $6, notes = $7, client_id = $8, invoice_number = $9
 WHERE id = $1
 RETURNING id, origin, destination, scheduled_start, scheduled_end, actual_start, actual_end,
-          status, notes, created_at, updated_at, payment_status, series_id;
+          status, notes, created_at, updated_at, payment_status, series_id, client_id, invoice_number;
 
 -- name: SetTripStatus :one
 UPDATE trips
 SET status = $2
 WHERE id = $1
 RETURNING id, origin, destination, scheduled_start, scheduled_end, actual_start, actual_end,
-          status, notes, created_at, updated_at, payment_status, series_id;
+          status, notes, created_at, updated_at, payment_status, series_id, client_id, invoice_number;
 
 -- name: ListFutureSeriesTrips :many
 -- The set "this and all future trips" edits/cancels apply to: a series' still-planned
 -- occurrences from a given one onward (inclusive). Ordered so the first row is always
 -- the trip scope=future was applied from — its own scheduled_start is the lower bound.
 SELECT id, origin, destination, scheduled_start, scheduled_end, actual_start, actual_end,
-       status, notes, created_at, updated_at, payment_status, series_id
+       status, notes, created_at, updated_at, payment_status, series_id, client_id, invoice_number
 FROM trips
 WHERE series_id = @series_id
   AND scheduled_start >= @from_start

@@ -188,6 +188,11 @@ type Trip struct {
 	// or cancelling "this and all future trips" operates on every planned trip sharing
 	// this id, from this one's scheduled_start onward.
 	SeriesID *int64
+	// ClientID is who the trip is for (optional). InvoiceNumber is the bill number,
+	// typed by hand and deliberately not unique. Both are planner-only, like
+	// PaymentStatus: absent from every driver-facing query and API shape.
+	ClientID      *int64
+	InvoiceNumber *string
 }
 
 // WorkedDuration is the payroll seam made explicit: once a trip is completed, this is
@@ -230,7 +235,32 @@ type TripSeries struct {
 	Notes         *string
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
+	// ClientID is copied onto every trip the series generates.
+	ClientID *int64
 }
+
+// ---------------------------------------------------------------------------
+// Clients
+// ---------------------------------------------------------------------------
+
+// Client is who a trip is for. It holds personal data of private customers (GDPR), so
+// like a driver it is never hard-deleted: erasure anonymizes the row in place and the
+// trips that reference it stay intact. Planner-only (admin/dispatcher).
+type Client struct {
+	ID            int64
+	Name          string
+	ContactPerson *string
+	Phone         *string
+	Email         *string
+	Address       *string
+	Notes         *string
+	IsActive      bool
+	AnonymizedAt  *time.Time
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+}
+
+func (c Client) IsAnonymized() bool { return c.AnonymizedAt != nil }
 
 // ---------------------------------------------------------------------------
 // Assignments

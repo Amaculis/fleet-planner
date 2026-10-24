@@ -36,6 +36,7 @@ type tripSeriesSnapshot struct {
 	EndsOn        string  `json:"ends_on"`
 	PaymentStatus string  `json:"payment_status"`
 	Notes         *string `json:"notes"`
+	ClientID      *int64  `json:"client_id,omitempty"`
 	TripCount     int     `json:"trip_count"`
 	TripIDs       []int64 `json:"trip_ids"`
 }
@@ -60,6 +61,9 @@ func (s *TripSeriesService) Create(ctx context.Context, actor domain.Identity, i
 
 	var created []domain.Trip
 	err = s.repo.InTx(ctx, func(tx *repo.Repo) error {
+		if err := checkTripClient(ctx, tx, input.ClientID, nil); err != nil {
+			return err
+		}
 		series, err := tx.CreateTripSeries(ctx, input)
 		if err != nil {
 			return err
@@ -69,7 +73,7 @@ func (s *TripSeriesService) Create(ctx context.Context, actor domain.Identity, i
 				Origin: series.Origin, Destination: series.Destination,
 				ScheduledStart: occ.start, ScheduledEnd: occ.end,
 				PaymentStatus: series.PaymentStatus, Notes: series.Notes,
-				SeriesID: &series.ID,
+				SeriesID: &series.ID, ClientID: series.ClientID,
 			}
 			t, err := tx.CreateTrip(ctx, trip)
 			if err != nil {
@@ -84,10 +88,10 @@ func (s *TripSeriesService) Create(ctx context.Context, actor domain.Identity, i
 		}
 		return NewAuditor(tx).Record(ctx, &actor.UserID, "create", "trip_series", &series.ID, nil, tripSeriesSnapshot{
 			Origin: series.Origin, Destination: series.Destination, DaysOfWeek: series.DaysOfWeek,
-			FirstStart: series.FirstStart.UTC().Format(timestampLayout),
-			FirstEnd:   series.FirstEnd.UTC().Format(timestampLayout),
-			EndsOn:     series.EndsOn.UTC().Format(timestampLayout),
-			PaymentStatus: string(series.PaymentStatus), Notes: series.Notes,
+			FirstStart:    series.FirstStart.UTC().Format(timestampLayout),
+			FirstEnd:      series.FirstEnd.UTC().Format(timestampLayout),
+			EndsOn:        series.EndsOn.UTC().Format(timestampLayout),
+			PaymentStatus: string(series.PaymentStatus), Notes: series.Notes, ClientID: series.ClientID,
 			TripCount: len(created), TripIDs: ids,
 		}, meta)
 	})
@@ -123,6 +127,9 @@ func (s *TripSeriesService) UpdateFuture(ctx context.Context, actor domain.Ident
 		if from.Status == domain.TripCompleted {
 			return Message(domain.ErrConflict, "error.trip_completed_locked")
 		}
+		if err := checkTripClient(ctx, tx, input.ClientID, from.ClientID); err != nil {
+			return err
+		}
 		future, err := tx.ListFutureSeriesTrips(ctx, *from.SeriesID, from.ScheduledStart)
 		if err != nil {
 			return err
@@ -136,8 +143,12 @@ func (s *TripSeriesService) UpdateFuture(ctx context.Context, actor domain.Ident
 			next := t
 			next.Origin, next.Destination = input.Origin, input.Destination
 			next.PaymentStatus, next.Notes = input.PaymentStatus, input.Notes
+			// The client is shared by the whole series; the bill number is per trip, so
+			// only the trip actually being edited takes the submitted one.
+			next.ClientID = input.ClientID
 			if t.ID == from.ID {
 				next.ScheduledStart, next.ScheduledEnd = input.ScheduledStart, input.ScheduledEnd
+				next.InvoiceNumber = input.InvoiceNumber
 			} else {
 				day := t.ScheduledStart.In(loc)
 				next.ScheduledStart = time.Date(day.Year(), day.Month(), day.Day(), hour, min, sec, 0, loc).UTC()

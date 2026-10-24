@@ -30,6 +30,7 @@ type Server struct {
 	fleet       *service.FleetService
 	trips       *service.TripService
 	tripSeries  *service.TripSeriesService
+	clients     *service.ClientService
 	assignments *service.AssignmentService
 	users       *service.UserService
 	i18n        *i18n.Bundle
@@ -46,6 +47,7 @@ type Services struct {
 	Fleet       *service.FleetService
 	Trips       *service.TripService
 	TripSeries  *service.TripSeriesService
+	Clients     *service.ClientService
 	Assignments *service.AssignmentService
 	Users       *service.UserService
 }
@@ -58,6 +60,7 @@ func NewServer(cfg config.Config, log *slog.Logger, svc Services, bundle *i18n.B
 		fleet:       svc.Fleet,
 		trips:       svc.Trips,
 		tripSeries:  svc.TripSeries,
+		clients:     svc.Clients,
 		assignments: svc.Assignments,
 		users:       svc.Users,
 		i18n:        bundle,
@@ -207,6 +210,10 @@ func (s *Server) Routes() http.Handler {
 				r.Post("/api/trips/{id}/unassign", s.handleAPITripUnassign)
 				r.Get("/api/buses", s.handleAPIBusList)
 				r.Get("/api/drivers", s.handleAPIDriverList)
+				r.Get("/api/clients", s.handleAPIClientList)
+				r.Get("/api/clients/{id}", s.handleAPIClientGet)
+				r.Post("/api/clients", s.handleAPIClientCreate)
+				r.Put("/api/clients/{id}", s.handleAPIClientUpdate)
 			})
 
 			// Fleet and user management: admins only.
@@ -243,6 +250,7 @@ func (s *Server) Routes() http.Handler {
 				r.Post("/api/drivers", s.handleAPIDriverCreate)
 				r.Put("/api/drivers/{id}", s.handleAPIDriverUpdate)
 				r.Post("/api/drivers/{id}/anonymize", s.handleAPIDriverAnonymize)
+				r.Post("/api/clients/{id}/anonymize", s.handleAPIClientAnonymize)
 
 				r.Get("/api/users", s.handleAPIUserList)
 				r.Post("/api/users", s.handleAPIUserCreate)

@@ -47,6 +47,9 @@ func (s *TripService) Create(ctx context.Context, actor domain.Identity, input d
 
 	var created domain.Trip
 	err = s.repo.InTx(ctx, func(tx *repo.Repo) error {
+		if err := checkTripClient(ctx, tx, input.ClientID, nil); err != nil {
+			return err
+		}
 		trip, err := tx.CreateTrip(ctx, input)
 		if err != nil {
 			return err
@@ -80,6 +83,9 @@ func (s *TripService) Update(ctx context.Context, actor domain.Identity, input d
 		}
 		if before.Status == domain.TripCompleted {
 			return Message(domain.ErrConflict, "error.trip_completed_locked")
+		}
+		if err := checkTripClient(ctx, tx, input.ClientID, before.ClientID); err != nil {
+			return err
 		}
 		// Rescheduling an assigned trip: warn with details before the constraint fires.
 		if !before.ScheduledStart.Equal(input.ScheduledStart) || !before.ScheduledEnd.Equal(input.ScheduledEnd) {

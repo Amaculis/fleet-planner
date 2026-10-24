@@ -28,6 +28,8 @@ type apiTrip struct {
 	Notes          *string        `json:"notes,omitempty"`
 	Assignment     *apiAssignment `json:"assignment,omitempty"`
 	SeriesID       *int64         `json:"seriesId,omitempty"`
+	ClientID       *int64         `json:"clientId,omitempty"`
+	InvoiceNumber  *string        `json:"invoiceNumber,omitempty"`
 }
 
 // apiTripFrom is used only by the planner-facing endpoints (list/detail/create/update —
@@ -44,6 +46,8 @@ func (s *Server) apiTripFrom(t domain.Trip) apiTrip {
 		PaymentStatus:  string(t.PaymentStatus),
 		Notes:          t.Notes,
 		SeriesID:       t.SeriesID,
+		ClientID:       t.ClientID,
+		InvoiceNumber:  t.InvoiceNumber,
 	}
 	if t.ActualStart != nil {
 		out.ActualStart = formatTimestamp(*t.ActualStart, s.cfg.Location)
@@ -61,6 +65,8 @@ type apiTripRequest struct {
 	ScheduledEnd   string  `json:"scheduledEnd"`
 	PaymentStatus  string  `json:"paymentStatus"`
 	Notes          *string `json:"notes"`
+	ClientID       *int64  `json:"clientId"`
+	InvoiceNumber  *string `json:"invoiceNumber"`
 }
 
 func (s *Server) handleAPITripList(w http.ResponseWriter, r *http.Request) {
@@ -164,6 +170,7 @@ func (s *Server) tripFromJSON(req apiTripRequest, id int64) (domain.Trip, error)
 	trip := domain.Trip{
 		ID: id, Origin: req.Origin, Destination: req.Destination,
 		PaymentStatus: paymentStatus, Notes: req.Notes,
+		ClientID: req.ClientID, InvoiceNumber: req.InvoiceNumber,
 	}
 	var err error
 	if trip.ScheduledStart, err = jsonTimestamp(req.ScheduledStart, "field.scheduled_start", s.cfg.Location); err != nil {

@@ -119,6 +119,8 @@ func tripFromRow(row sqlcgen.Trip) domain.Trip {
 		CreatedAt:      row.CreatedAt,
 		UpdatedAt:      row.UpdatedAt,
 		SeriesID:       row.SeriesID,
+		ClientID:       row.ClientID,
+		InvoiceNumber:  row.InvoiceNumber,
 	}
 }
 
@@ -133,6 +135,23 @@ func tripSeriesFromRow(row sqlcgen.TripSeries) domain.TripSeries {
 		EndsOn:        row.EndsOn,
 		PaymentStatus: domain.PaymentStatus(row.PaymentStatus),
 		Notes:         row.Notes,
+		CreatedAt:     row.CreatedAt,
+		UpdatedAt:     row.UpdatedAt,
+		ClientID:      row.ClientID,
+	}
+}
+
+func clientFromRow(row sqlcgen.Client) domain.Client {
+	return domain.Client{
+		ID:            row.ID,
+		Name:          row.Name,
+		ContactPerson: row.ContactPerson,
+		Phone:         row.Phone,
+		Email:         row.Email,
+		Address:       row.Address,
+		Notes:         row.Notes,
+		IsActive:      row.IsActive,
+		AnonymizedAt:  row.AnonymizedAt,
 		CreatedAt:     row.CreatedAt,
 		UpdatedAt:     row.UpdatedAt,
 	}

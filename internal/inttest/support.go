@@ -35,6 +35,7 @@ type env struct {
 	fleet       *service.FleetService
 	trips       *service.TripService
 	tripSeries  *service.TripSeriesService
+	clients     *service.ClientService
 	assignments *service.AssignmentService
 	users       *service.UserService
 	server      *apphttp.Server
@@ -106,6 +107,7 @@ func newEnv(t *testing.T) *env {
 		fleet:       service.NewFleetService(r, sessions, log),
 		trips:       service.NewTripService(r, log),
 		tripSeries:  service.NewTripSeriesService(r, log),
+		clients:     service.NewClientService(r, log),
 		assignments: service.NewAssignmentService(r, log),
 		users:       service.NewUserService(r, sessions, log, testHashParams()),
 		cfg:         cfg,
@@ -115,6 +117,7 @@ func newEnv(t *testing.T) *env {
 		Fleet:       e.fleet,
 		Trips:       e.trips,
 		TripSeries:  e.tripSeries,
+		Clients:     e.clients,
 		Assignments: e.assignments,
 		Users:       e.users,
 	}, bundle, r)
@@ -126,7 +129,7 @@ func newEnv(t *testing.T) *env {
 func truncate(t *testing.T, pool *pgxpool.Pool) {
 	t.Helper()
 	_, err := pool.Exec(context.Background(),
-		`TRUNCATE assignments, trips, trip_series, sessions, audit_log, users, drivers, buses RESTART IDENTITY CASCADE`)
+		`TRUNCATE assignments, trips, trip_series, clients, sessions, audit_log, users, drivers, buses RESTART IDENTITY CASCADE`)
 	if err != nil {
 		t.Fatalf("truncating tables: %v", err)
 	}

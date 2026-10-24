@@ -70,6 +70,8 @@ type tripSnapshot struct {
 	Status         string  `json:"status"`
 	PaymentStatus  string  `json:"payment_status"`
 	Notes          *string `json:"notes,omitempty"`
+	ClientID       *int64  `json:"client_id,omitempty"`
+	InvoiceNumber  *string `json:"invoice_number,omitempty"`
 }
 
 func snapshotTrip(t domain.Trip) tripSnapshot {
@@ -83,6 +85,34 @@ func snapshotTrip(t domain.Trip) tripSnapshot {
 		Status:         string(t.Status),
 		PaymentStatus:  string(t.PaymentStatus),
 		Notes:          t.Notes,
+		ClientID:       t.ClientID,
+		InvoiceNumber:  t.InvoiceNumber,
+	}
+}
+
+// clientSnapshot carries personal data, like driverSnapshot; the GDPR erasure path
+// redacts it separately.
+type clientSnapshot struct {
+	Name          string  `json:"name"`
+	ContactPerson *string `json:"contact_person,omitempty"`
+	Phone         *string `json:"phone,omitempty"`
+	Email         *string `json:"email,omitempty"`
+	Address       *string `json:"address,omitempty"`
+	Notes         *string `json:"notes,omitempty"`
+	IsActive      bool    `json:"is_active"`
+	Anonymized    bool    `json:"anonymized"`
+}
+
+func snapshotClient(c domain.Client) clientSnapshot {
+	return clientSnapshot{
+		Name:          c.Name,
+		ContactPerson: c.ContactPerson,
+		Phone:         c.Phone,
+		Email:         c.Email,
+		Address:       c.Address,
+		Notes:         c.Notes,
+		IsActive:      c.IsActive,
+		Anonymized:    c.IsAnonymized(),
 	}
 }
 

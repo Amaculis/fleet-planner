@@ -41,6 +41,8 @@ func (r *Repo) CreateTrip(ctx context.Context, t domain.Trip) (domain.Trip, erro
 		PaymentStatus:  sqlcgen.PaymentStatus(t.PaymentStatus),
 		Notes:          t.Notes,
 		SeriesID:       t.SeriesID,
+		ClientID:       t.ClientID,
+		InvoiceNumber:  t.InvoiceNumber,
 	})
 	if err != nil {
 		return domain.Trip{}, fmt.Errorf("creating trip: %w", translate(err))
@@ -59,6 +61,8 @@ func (r *Repo) UpdateTrip(ctx context.Context, t domain.Trip) (domain.Trip, erro
 		ScheduledEnd:   t.ScheduledEnd,
 		PaymentStatus:  sqlcgen.PaymentStatus(t.PaymentStatus),
 		Notes:          t.Notes,
+		ClientID:       t.ClientID,
+		InvoiceNumber:  t.InvoiceNumber,
 	})
 	if err != nil {
 		return domain.Trip{}, fmt.Errorf("updating trip: %w", translate(err))

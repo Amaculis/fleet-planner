@@ -87,6 +87,7 @@ func run() error {
 		Fleet:       service.NewFleetService(repository, sessions, log),
 		Trips:       service.NewTripService(repository, log),
 		TripSeries:  service.NewTripSeriesService(repository, log),
+		Clients:     service.NewClientService(repository, log),
 		Assignments: service.NewAssignmentService(repository, log),
 		Users:       service.NewUserService(repository, sessions, log, hashParams),
 	}

@@ -11,10 +11,10 @@ import (
 )
 
 const createTripSeries = `-- name: CreateTripSeries :one
-INSERT INTO trip_series (origin, destination, days_of_week, first_start, first_end, ends_on, payment_status, notes)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+INSERT INTO trip_series (origin, destination, days_of_week, first_start, first_end, ends_on, payment_status, notes, client_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 RETURNING id, origin, destination, days_of_week, first_start, first_end, ends_on, payment_status, notes,
-          created_at, updated_at
+          created_at, updated_at, client_id
 `
 
 type CreateTripSeriesParams struct {
@@ -26,6 +26,7 @@ type CreateTripSeriesParams struct {
 	EndsOn        time.Time
 	PaymentStatus PaymentStatus
 	Notes         *string
+	ClientID      *int64
 }
 
 func (q *Queries) CreateTripSeries(ctx context.Context, arg CreateTripSeriesParams) (TripSeries, error) {
@@ -38,6 +39,7 @@ func (q *Queries) CreateTripSeries(ctx context.Context, arg CreateTripSeriesPara
 		arg.EndsOn,
 		arg.PaymentStatus,
 		arg.Notes,
+		arg.ClientID,
 	)
 	var i TripSeries
 	err := row.Scan(
@@ -52,6 +54,7 @@ func (q *Queries) CreateTripSeries(ctx context.Context, arg CreateTripSeriesPara
 		&i.Notes,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ClientID,
 	)
 	return i, err
 }
