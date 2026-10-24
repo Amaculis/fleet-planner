@@ -1,0 +1,79 @@
+name: CI
+
+# Check-only: tests, security scans and an image build. Deploys nothing.
+# The weekly run catches newly published vulnerabilities in weeks with no commits.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1" # Mondays 06:00 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Keep in step with scripts/hooks/pre-commit and scripts/hooks/pre-push.
+  GOSEC_VERSION: v2.30.0
+  GOVULNCHECK_VERSION: v1.9.0
+
+jobs:
+  tests:
+    name: Tests (unit + integration, real Postgres)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      # The tests check that the built static assets are served, so build them with the
+      # Dockerfile's own assets stage rather than a copy of its commands.
+      - name: Build static assets (Dockerfile "assets" stage)
+        run: |
+          docker buildx build --target assets --output "type=local,dest=$RUNNER_TEMP/assets" .
+          cp -r "$RUNNER_TEMP/assets/src/web/static/." web/static/
+      - name: Run test suite
+        run: bash scripts/verify-tests.sh
+
+  go-security:
+    name: Go security (gosec + govulncheck)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      # Scan with the Go image production is built with, so the result matches what ships.
+      - name: Resolve build image
+        run: echo "GOIMAGE=$(sed -n 's/^FROM \(golang:[^ ]*\) AS build.*/\1/p' Dockerfile)" >> "$GITHUB_ENV"
+      - name: gosec
+        run: |
+          docker run --rm -v "$PWD:/src" -w /src "$GOIMAGE" \
+            go run "github.com/securego/gosec/v2/cmd/gosec@$GOSEC_VERSION" -quiet -exclude-generated ./...
+      - name: govulncheck
+        run: |
+          docker run --rm -v "$PWD:/src" -w /src "$GOIMAGE" \
+            go run "golang.org/x/vuln/cmd/govulncheck@$GOVULNCHECK_VERSION" ./...
+
+  npm-audit:
+    name: npm audit (portal, shipped packages)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: npm audit (high and critical)
+        working-directory: portal
+        run: npm audit --omit=dev --audit-level=high
+
+  image:
+    name: Production image builds
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: docker build
+        run: docker build --pull -t bus-fleet:ci .
