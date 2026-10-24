@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# Fast checks on every commit (a few seconds): no secrets staged, staged Go files
+# formatted, go vet, and gosec static analysis for risky code patterns.
+#
+# Enable once per clone:  git config core.hooksPath scripts/hooks
+# Skip in an emergency:   git commit --no-verify   (the pre-push checks still run)
+set -euo pipefail
+cd "$(git rev-parse --show-toplevel)"
+
+GOSEC_VERSION="v2.30.0"
+
+fail() {
+  echo "pre-commit: $*" >&2
+  exit 1
+}
+
+staged=$(git diff --cached --name-only --diff-filter=ACMR)
+
+# Secrets: .env files and keys must never be committed (.gitignore covers them, but
+# `git add -f` does not care).
+while IFS= read -r f; do
+  [ -z "$f" ] && continue
+  case "$f" in
+    .env.example | portal/.env.demo) ;;
+    .env | .env.* | */.env | */.env.* | *.pem | *.key | *id_rsa* | portal/e2e/.auth/*)
+      fail "refusing to commit '$f' - it looks like a secret. Unstage it: git restore --staged '$f'" ;;
+  esac
+done <<<"$staged"
+if git diff --cached -U0 | grep -qE '^\+.*-----BEGIN [A-Z ]*PRIVATE KEY-----'; then
+  fail "a private key is being committed. Remove it from the staged changes."
+fi
+
+go_files=$(grep -E '\.go$' <<<"$staged" || true)
+[ -z "$go_files" ] && exit 0
+
+echo "==> gofmt"
+unformatted=$(xargs gofmt -l <<<"$go_files")
+[ -n "$unformatted" ] && fail "not gofmt-formatted (run gofmt -w on them):
+$unformatted"
+
+echo "==> go vet"
+go vet ./... || fail "go vet failed"
+
+# A finding that is a false positive gets an in-place "#nosec Gxxx -- reason" comment,
+# never a blanket exclusion here, so every exception stays reviewable.
+echo "==> gosec"
+go run "github.com/securego/gosec/v2/cmd/gosec@$GOSEC_VERSION" -quiet -exclude-generated ./... ||
+  fail "gosec found a security issue (see above)."
+
+echo "pre-commit: OK"

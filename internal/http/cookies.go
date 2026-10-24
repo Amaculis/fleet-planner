@@ -34,7 +34,7 @@ func (s *Server) csrfCookieName() string {
 // keeping normal navigation working, and no Expires/Max-Age is set: the cookie is a
 // session cookie and the server-side row is the real expiry.
 func (s *Server) setSessionCookie(w http.ResponseWriter, token string) {
-	http.SetCookie(w, &http.Cookie{
+	http.SetCookie(w, &http.Cookie{ // #nosec G124 -- Secure is set in production; see TestProductionCookiesAreLockedDown
 		Name:     s.sessionCookieName(),
 		Value:    token,
 		Path:     "/",
@@ -45,7 +45,7 @@ func (s *Server) setSessionCookie(w http.ResponseWriter, token string) {
 }
 
 func (s *Server) clearSessionCookie(w http.ResponseWriter) {
-	http.SetCookie(w, &http.Cookie{
+	http.SetCookie(w, &http.Cookie{ // #nosec G124 -- Secure is set in production; see TestProductionCookiesAreLockedDown
 		Name:     s.sessionCookieName(),
 		Value:    "",
 		Path:     "/",
@@ -61,7 +61,7 @@ func (s *Server) clearSessionCookie(w http.ResponseWriter) {
 // token itself is an HMAC of this nonce under the app secret, so possession of the
 // cookie alone does not let an attacker forge a form value.
 func (s *Server) setCSRFNonceCookie(w http.ResponseWriter, nonce string) {
-	http.SetCookie(w, &http.Cookie{
+	http.SetCookie(w, &http.Cookie{ // #nosec G124 -- Secure is set in production; see TestProductionCookiesAreLockedDown
 		Name:     s.csrfCookieName(),
 		Value:    nonce,
 		Path:     "/",
@@ -73,7 +73,7 @@ func (s *Server) setCSRFNonceCookie(w http.ResponseWriter, nonce string) {
 }
 
 func (s *Server) clearCSRFNonceCookie(w http.ResponseWriter) {
-	http.SetCookie(w, &http.Cookie{
+	http.SetCookie(w, &http.Cookie{ // #nosec G124 -- Secure is set in production; see TestProductionCookiesAreLockedDown
 		Name:     s.csrfCookieName(),
 		Value:    "",
 		Path:     "/",

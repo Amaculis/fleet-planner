@@ -34,7 +34,7 @@ func (s *Server) portalHandler() http.Handler {
 		// just-deployed CSS fix behind the previous build until the cache expired.
 		if rel != "index.html" {
 			if f, err := dir.Open("/" + rel); err == nil {
-				f.Close()
+				_ = f.Close() // only opened to test existence
 				w.Header().Set("Cache-Control", "public, max-age=3600")
 				assets.ServeHTTP(w, r)
 				return

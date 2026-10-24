@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+# Thorough checks before code leaves this machine (about 1-2 minutes, needs Docker):
+#   1. npm audit   - known vulnerabilities in the portal's shipped npm packages
+#   2. govulncheck - known vulnerabilities in Go code and modules, scanned with the
+#                    same Go image production is built with (see Dockerfile)
+#   3. the full test suite, including the security tests, against a real database
+#
+# Enable once per clone:  git config core.hooksPath scripts/hooks
+# Skip in an emergency:   git push --no-verify
+set -euo pipefail
+ROOT="$(git rev-parse --show-toplevel)"
+cd "$ROOT"
+export MSYS_NO_PATHCONV=1
+
+GOVULNCHECK_VERSION="v1.9.0"
+
+fail() {
+  echo "pre-push: $*" >&2
+  exit 1
+}
+
+hostpath() {
+  if command -v cygpath >/dev/null 2>&1; then cygpath -m "$1"; else printf '%s' "$1"; fi
+}
+
+docker info >/dev/null 2>&1 || fail "Docker is not running; it is needed for govulncheck and the tests."
+
+# Scanning with the local Go would report the local toolchain's own bugs, not what is
+# deployed, so use the Dockerfile's build image.
+GOIMAGE=$(sed -n 's/^FROM \(golang:[^ ]*\) AS build.*/\1/p' Dockerfile)
+[ -n "$GOIMAGE" ] || fail "could not find the golang build image in the Dockerfile."
+
+echo "==> npm audit (portal, shipped dependencies, high and above)"
+(cd portal && npm audit --omit=dev --audit-level=high) ||
+  fail "the portal has high/critical npm vulnerabilities (run 'npm audit' in portal/)."
+
+echo "==> govulncheck with $GOIMAGE"
+# Pull first: a stale local copy of the tag lacks the latest Go security patch.
+docker pull -q "$GOIMAGE" >/dev/null || echo "pre-push: could not pull $GOIMAGE, scanning with the local copy" >&2
+docker run --rm \
+  -v "$(hostpath "$ROOT"):/src" -w /src \
+  -v bus-fleet-gomod:/go/pkg/mod \
+  -v bus-fleet-gobuild:/root/.cache/go-build \
+  -v bus-fleet-gotools:/tools \
+  "$GOIMAGE" sh -c "
+    bin=/tools/govulncheck-$GOVULNCHECK_VERSION
+    [ -x \$bin/govulncheck ] || GOBIN=\$bin go install golang.org/x/vuln/cmd/govulncheck@$GOVULNCHECK_VERSION
+    \$bin/govulncheck ./...
+  " || fail "govulncheck found vulnerabilities your code calls (see above)."
+
+echo "==> test suite"
+bash scripts/verify-tests.sh || fail "tests failed."
+
+echo "pre-push: OK"

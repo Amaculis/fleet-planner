@@ -97,7 +97,10 @@ func decodeHash(encoded string) (p Params, salt, key []byte, err error) {
 	if len(salt) == 0 || len(key) == 0 || p.Memory == 0 || p.Iterations == 0 || p.Parallelism == 0 {
 		return p, nil, nil, ErrInvalidHash
 	}
-	p.SaltLength = uint32(len(salt))
-	p.KeyLength = uint32(len(key))
+	if len(salt) > 1024 || len(key) > 1024 {
+		return p, nil, nil, ErrInvalidHash
+	}
+	p.SaltLength = uint32(len(salt)) // #nosec G115 -- bounded to 1024 just above
+	p.KeyLength = uint32(len(key))   // #nosec G115 -- bounded to 1024 just above
 	return p, salt, key, nil
 }

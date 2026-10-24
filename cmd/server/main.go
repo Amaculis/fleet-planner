@@ -205,7 +205,7 @@ func healthcheck() int {
 		port = "8080"
 	}
 	client := &stdhttp.Client{Timeout: 3 * time.Second}
-	resp, err := client.Get("http://127.0.0.1:" + port + "/healthz")
+	resp, err := client.Get("http://127.0.0.1:" + port + "/healthz") // #nosec G704 -- fixed loopback host; port is operator config
 	if err != nil {
 		return 1
 	}
