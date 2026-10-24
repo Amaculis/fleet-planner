@@ -126,7 +126,7 @@ func newEnv(t *testing.T) *env {
 func truncate(t *testing.T, pool *pgxpool.Pool) {
 	t.Helper()
 	_, err := pool.Exec(context.Background(),
-		`TRUNCATE assignments, trips, sessions, audit_log, users, drivers, buses RESTART IDENTITY CASCADE`)
+		`TRUNCATE assignments, trips, trip_series, sessions, audit_log, users, drivers, buses RESTART IDENTITY CASCADE`)
 	if err != nil {
 		t.Fatalf("truncating tables: %v", err)
 	}
@@ -189,7 +189,7 @@ func (e *env) newDriver(name string) domain.Driver {
 func (e *env) newBus(plate string) domain.Bus {
 	e.t.Helper()
 	bus, err := e.repo.CreateBus(context.Background(), domain.Bus{
-		Plate: plate, Model: "Setra S515", Seats: 50, Status: domain.BusActive,
+		Plate: plate, Model: "Setra S515", Seats: 50, Status: domain.BusActive, Type: domain.BusTourist,
 	})
 	if err != nil {
 		e.t.Fatalf("creating bus: %v", err)
@@ -197,8 +197,9 @@ func (e *env) newBus(plate string) domain.Bus {
 	return bus
 }
 
-// baseDay anchors every trip in the tests to a fixed date, so overlaps are obvious.
-var baseDay = time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)
+// baseDay anchors every trip in the tests to one day, two days out so trips stay in the
+// future (some rules reject past trips), keeping overlaps obvious.
+var baseDay = time.Now().UTC().Truncate(24*time.Hour).AddDate(0, 0, 2)
 
 // at returns baseDay at the given hour, in UTC.
 func at(hour int) time.Time { return baseDay.Add(time.Duration(hour) * time.Hour) }
@@ -210,6 +211,7 @@ func (e *env) newTrip(origin, destination string, startHour, endHour int) domain
 		Destination:    destination,
 		ScheduledStart: at(startHour),
 		ScheduledEnd:   at(endHour),
+		PaymentStatus:  domain.PaymentUnpaid,
 	})
 	if err != nil {
 		e.t.Fatalf("creating trip: %v", err)

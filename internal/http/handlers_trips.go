@@ -168,7 +168,7 @@ func (s *Server) handleTripDelete(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) tripFromForm(r *http.Request, id int64) (domain.Trip, error) {
-	trip := domain.Trip{ID: id}
+	trip := domain.Trip{ID: id, PaymentStatus: domain.PaymentUnpaid}
 	if err := r.ParseForm(); err != nil {
 		return trip, domain.ErrValidation
 	}

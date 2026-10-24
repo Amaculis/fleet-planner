@@ -302,7 +302,7 @@ func TestMutationsAreAudited(t *testing.T) {
 
 	trip, err := e.trips.Create(ctx, actor, domain.Trip{
 		Origin: "Riga", Destination: "Liepaja",
-		ScheduledStart: at(8), ScheduledEnd: at(12),
+		ScheduledStart: at(8), ScheduledEnd: at(12), PaymentStatus: domain.PaymentUnpaid,
 	}, service.Meta{RequestID: "test"})
 	if err != nil {
 		t.Fatalf("creating trip: %v", err)

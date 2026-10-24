@@ -104,6 +104,7 @@ func TestFormSubmissionUnaffectedByFieldIslands(t *testing.T) {
 		"model":  {"MAN Lion's Coach"},
 		"seats":  {"55"},
 		"status": {"active"},
+		"type":   {"tourist"},
 	})
 	defer resp.Body.Close()
 	if resp.StatusCode != 303 {

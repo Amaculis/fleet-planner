@@ -93,6 +93,7 @@ func (s *Server) busFromForm(r *http.Request, id int64) (domain.Bus, error) {
 	bus.Plate = formString(r, "plate")
 	bus.Model = formString(r, "model")
 	bus.Status = domain.BusStatus(formString(r, "status"))
+	bus.Type = domain.BusType(formString(r, "type"))
 
 	seats, err := strconv.ParseInt(formString(r, "seats"), 10, 16)
 	if err != nil {
