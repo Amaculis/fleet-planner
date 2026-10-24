@@ -33,8 +33,10 @@ jobs:
       # Dockerfile's own assets stage rather than a copy of its commands.
       - name: Build static assets (Dockerfile "assets" stage)
         run: |
-          docker buildx build --target assets --output "type=local,dest=$RUNNER_TEMP/assets" .
-          cp -r "$RUNNER_TEMP/assets/src/web/static/." web/static/
+          docker build --target assets -t bus-fleet-assets .
+          id=$(docker create bus-fleet-assets)
+          docker cp "$id:/src/web/static/." web/static/
+          docker rm "$id"
       - name: Run test suite
         run: bash scripts/verify-tests.sh
 
