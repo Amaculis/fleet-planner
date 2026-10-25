@@ -10,8 +10,10 @@ import useFilterTexts from "@/hooks/filterTexts";
 import useConfirmStore from "@/stores/confirm";
 import useErrors from "@/hooks/errors";
 import useStateDictionaries from "@/hooks/stateDictionaries";
+import useRights from "@/hooks/rights";
 
 const i18n = useI18n();
+const rights = useRights();
 const { busStatusDictionary } = useStateDictionaries();
 const router = useRouter();
 const notify = useNotifyStore();
@@ -64,10 +66,16 @@ const columnDefinitions = computed(() => [
   { id: "status", attributeName: "status", name: i18n.t("fields.status"), type: "state", dictionary: busStatusDictionary.value },
 ]);
 
-const actionDefinitions = computed(() => [
-  { id: "edit", name: i18n.t("actions.edit"), icon: "edit" },
-  { id: "delete", name: i18n.t("actions.delete"), icon: "delete", destructive: true },
-]);
+// Creating, editing and deleting buses is admin-only on the server (RequireRole), so a
+// dispatcher gets no row actions and no Add button instead of buttons that lead to 403.
+const actionDefinitions = computed(() =>
+  rights.isAdmin()
+    ? [
+        { id: "edit", name: i18n.t("actions.edit"), icon: "edit" },
+        { id: "delete", name: i18n.t("actions.delete"), icon: "delete", destructive: true },
+      ]
+    : []
+);
 
 const rows = computed(() => {
   const mapped = buses.value.map((b) => ({
@@ -153,7 +161,7 @@ onMounted(load);
     @action-click="onActionClick"
   >
     <template #toolbar>
-      <LxButton :label="i18n.t('pages.buses.new')" icon="add" @click="router.push({ name: 'busNew' })" />
+      <LxButton v-if="rights.isAdmin()" :label="i18n.t('pages.buses.new')" icon="add" @click="router.push({ name: 'busNew' })" />
     </template>
   </LxDataGrid>
 </template>

@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, computed } from "vue";
 import { useI18n } from "vue-i18n";
-import { LxButton, LxEmptyState, LxLoaderView, LxRow, LxSection, LxStack, LxStateDisplay } from "@dativa-lv/lx-ui";
+import { LxButton, LxEmptyState, LxLoaderView, LxRow, LxSection, LxStack, LxStateDisplay, LxTextInput } from "@dativa-lv/lx-ui";
 import { getMyTrips, startMyTrip, finishMyTrip } from "@/services/myTrips";
 import { parseServerTimestamp, formatDateTime, formatTime } from "@/utils/dates";
 import useNotifyStore from "@/stores/notify";
@@ -75,24 +75,29 @@ onMounted(load);
   <LxLoaderView :loading="loading">
     <LxEmptyState v-if="!sorted.length" :label="i18n.t('myTrips.empty')" icon="calendar" />
     <LxStack v-else horizontal-alignment="stretch">
-      <LxSection
-        v-for="trip in sorted"
-        :key="trip.id"
-        :label="`${trip.origin} → ${trip.destination}`"
-        :description="`${timeRangeLabel(trip)} · ${i18n.t('fields.bus')}: ${trip.busPlate}`"
-      >
-        <LxRow :label="i18n.t('fields.status')">
-          <LxStateDisplay :value="trip.status" :dictionary="tripStatusDictionary" />
-        </LxRow>
-        <LxRow v-if="actionFor(trip)" :label="i18n.t(`actions.${actionFor(trip)}`)" hide-label>
-          <LxButton
-            :label="i18n.t(`actions.${actionFor(trip)}`)"
-            kind="primary"
-            :loading="busy === trip.id"
-            @click="act(trip)"
-          />
-        </LxRow>
-      </LxSection>
+      <!-- lx-region: lx-ui's own card surface (background, border, padding), so each
+           trip reads as one unit and its action button can't be mistaken for the next. -->
+      <div v-for="trip in sorted" :key="trip.id" class="lx-region">
+        <LxSection :label="`${trip.origin} → ${trip.destination}`" :column-count="2">
+          <LxRow :label="i18n.t('trips.form.schedule')" :column-span="2">
+            <LxTextInput :model-value="timeRangeLabel(trip)" read-only />
+          </LxRow>
+          <LxRow :label="i18n.t('fields.bus')">
+            <LxTextInput :model-value="trip.busPlate" read-only />
+          </LxRow>
+          <LxRow :label="i18n.t('fields.status')">
+            <LxStateDisplay :value="trip.status" :dictionary="tripStatusDictionary" />
+          </LxRow>
+          <LxRow v-if="actionFor(trip)" :label="i18n.t(`actions.${actionFor(trip)}`)" hide-label :column-span="2">
+            <LxButton
+              :label="i18n.t(`actions.${actionFor(trip)}`)"
+              kind="primary"
+              :loading="busy === trip.id"
+              @click="act(trip)"
+            />
+          </LxRow>
+        </LxSection>
+      </div>
     </LxStack>
   </LxLoaderView>
 </template>

@@ -132,6 +132,7 @@ async function logout() {
     :nav-items="nav"
     :nav-items-selected="selectedNavItems"
     :page-label="pageLabel"
+    :page-header-visible="!route.meta.hidePageHeader"
     :page-breadcrumbs="breadcrumbs"
     :page-back-button-visible="breadcrumbs.length > 0"
     :page-index-path="{ name: 'dashboard' }"

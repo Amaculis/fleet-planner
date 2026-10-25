@@ -144,13 +144,14 @@ const routes = [
       {
         path: "forbidden",
         name: "forbidden",
-        meta: { title: "pages.forbidden.title" },
+        // LxErrorPage shows its own title — the shell header would repeat it.
+        meta: { title: "pages.forbidden.title", hidePageHeader: true },
         component: () => import("@/views/Forbidden.vue"),
       },
       {
         path: ":pathMatch(.*)*",
         name: "notFound",
-        meta: { title: "pages.notFound.title", anonymous: true },
+        meta: { title: "pages.notFound.title", anonymous: true, hidePageHeader: true },
         component: () => import("@/views/NotFound.vue"),
       },
     ],

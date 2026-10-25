@@ -10,8 +10,10 @@ import useFilterTexts from "@/hooks/filterTexts";
 import useConfirmStore from "@/stores/confirm";
 import useErrors from "@/hooks/errors";
 import useStateDictionaries from "@/hooks/stateDictionaries";
+import useRights from "@/hooks/rights";
 
 const i18n = useI18n();
+const rights = useRights();
 const { activeDictionary } = useStateDictionaries();
 const router = useRouter();
 const notify = useNotifyStore();
@@ -50,10 +52,16 @@ const columnDefinitions = computed(() => [
   { id: "activeState", attributeName: "activeState", name: i18n.t("fields.isActive"), type: "state", dictionary: activeDictionary.value },
 ]);
 
-const actionDefinitions = computed(() => [
-  { id: "edit", name: i18n.t("actions.edit"), icon: "edit" },
-  { id: "anonymize", name: i18n.t("actions.anonymize"), icon: "delete", destructive: true },
-]);
+// Creating, editing and anonymizing drivers is admin-only on the server (RequireRole),
+// so a dispatcher gets no row actions and no Add button instead of buttons that lead to 403.
+const actionDefinitions = computed(() =>
+  rights.isAdmin()
+    ? [
+        { id: "edit", name: i18n.t("actions.edit"), icon: "edit" },
+        { id: "anonymize", name: i18n.t("actions.anonymize"), icon: "delete", destructive: true },
+      ]
+    : []
+);
 
 const rows = computed(() => {
   const mapped = drivers.value.map((d) => ({
@@ -126,7 +134,7 @@ onMounted(load);
     @action-click="onActionClick"
   >
     <template #toolbar>
-      <LxButton :label="i18n.t('pages.drivers.new')" icon="add" @click="router.push({ name: 'driverNew' })" />
+      <LxButton v-if="rights.isAdmin()" :label="i18n.t('pages.drivers.new')" icon="add" @click="router.push({ name: 'driverNew' })" />
     </template>
   </LxDataGrid>
 </template>
