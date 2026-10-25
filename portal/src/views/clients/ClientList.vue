@@ -10,8 +10,10 @@ import useDataGridTexts from "@/hooks/dataGridTexts";
 import useFilterTexts from "@/hooks/filterTexts";
 import useConfirmStore from "@/stores/confirm";
 import useErrors from "@/hooks/errors";
+import useStateDictionaries from "@/hooks/stateDictionaries";
 
 const i18n = useI18n();
+const { activeDictionary } = useStateDictionaries();
 const router = useRouter();
 const authStore = useAuthStore();
 const notify = useNotifyStore();
@@ -46,7 +48,7 @@ const columnDefinitions = computed(() => [
   { id: "name", attributeName: "name", name: i18n.t("fields.clientName"), kind: "primary" },
   { id: "contactPerson", attributeName: "contactPerson", name: i18n.t("fields.contactPerson") },
   { id: "phone", attributeName: "phone", name: i18n.t("fields.phone") },
-  { id: "activeLabel", attributeName: "activeLabel", name: i18n.t("fields.isActive") },
+  { id: "activeState", attributeName: "activeState", name: i18n.t("fields.isActive"), type: "state", dictionary: activeDictionary.value },
 ]);
 
 // Erasing personal data is admin-only; the server enforces it too.
@@ -61,7 +63,7 @@ const actionDefinitions = computed(() => {
 const rows = computed(() => {
   const mapped = clients.value.map((c) => ({
     ...c,
-    activeLabel: c.anonymized ? "—" : c.isActive ? i18n.t("common.yes") : i18n.t("common.no"),
+    activeState: c.anonymized ? "erased" : String(c.isActive),
   }));
   const byActive =
     activeFilter.value === "all" ? mapped : mapped.filter((c) => c.isActive === (activeFilter.value === "active"));

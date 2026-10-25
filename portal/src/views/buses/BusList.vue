@@ -9,8 +9,10 @@ import useDataGridTexts from "@/hooks/dataGridTexts";
 import useFilterTexts from "@/hooks/filterTexts";
 import useConfirmStore from "@/stores/confirm";
 import useErrors from "@/hooks/errors";
+import useStateDictionaries from "@/hooks/stateDictionaries";
 
 const i18n = useI18n();
+const { busStatusDictionary } = useStateDictionaries();
 const router = useRouter();
 const notify = useNotifyStore();
 const dataGridTexts = useDataGridTexts();
@@ -59,7 +61,7 @@ const columnDefinitions = computed(() => [
   { id: "model", attributeName: "model", name: i18n.t("fields.model") },
   { id: "seats", attributeName: "seats", name: i18n.t("fields.seats") },
   { id: "typeLabel", attributeName: "typeLabel", name: i18n.t("fields.type") },
-  { id: "statusLabel", attributeName: "statusLabel", name: i18n.t("fields.status") },
+  { id: "status", attributeName: "status", name: i18n.t("fields.status"), type: "state", dictionary: busStatusDictionary.value },
 ]);
 
 const actionDefinitions = computed(() => [
@@ -70,7 +72,6 @@ const actionDefinitions = computed(() => [
 const rows = computed(() => {
   const mapped = buses.value.map((b) => ({
     ...b,
-    statusLabel: i18n.t(`busStatus.${b.status}`),
     typeLabel: i18n.t(`busType.${b.type}`),
   }));
   const byStatus = statusFilter.value === "all" ? mapped : mapped.filter((b) => b.status === statusFilter.value);

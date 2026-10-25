@@ -9,8 +9,10 @@ import useNotifyStore from "@/stores/notify";
 import useDataGridTexts from "@/hooks/dataGridTexts";
 import useFilterTexts from "@/hooks/filterTexts";
 import useErrors from "@/hooks/errors";
+import useStateDictionaries from "@/hooks/stateDictionaries";
 
 const i18n = useI18n();
+const { tripStatusDictionary, paymentStatusDictionary } = useStateDictionaries();
 const router = useRouter();
 const notify = useNotifyStore();
 const dataGridTexts = useDataGridTexts();
@@ -58,8 +60,14 @@ const paymentStatusFilterItems = computed(() => [
 const columnDefinitions = computed(() => [
   { id: "route", attributeName: "route", name: i18n.t("fields.origin"), kind: "primary" },
   { id: "scheduledStartLabel", attributeName: "scheduledStartLabel", name: i18n.t("fields.scheduledStart") },
-  { id: "statusLabel", attributeName: "statusLabel", name: i18n.t("fields.status") },
-  { id: "paymentStatusLabel", attributeName: "paymentStatusLabel", name: i18n.t("fields.paymentStatus") },
+  { id: "status", attributeName: "status", name: i18n.t("fields.status"), type: "state", dictionary: tripStatusDictionary.value },
+  {
+    id: "paymentStatus",
+    attributeName: "paymentStatus",
+    name: i18n.t("fields.paymentStatus"),
+    type: "state",
+    dictionary: paymentStatusDictionary.value,
+  },
   { id: "assignmentLabel", attributeName: "assignmentLabel", name: i18n.t("trips.assignment") },
   { id: "notesLabel", attributeName: "notesLabel", name: i18n.t("fields.notes") },
 ]);
@@ -71,8 +79,6 @@ const rows = computed(() => {
     ...t,
     route: `${t.origin} → ${t.destination}`,
     scheduledStartLabel: formatDateTime(parseServerTimestamp(t.scheduledStart), i18n.locale.value),
-    statusLabel: i18n.t(`tripStatus.${t.status}`),
-    paymentStatusLabel: i18n.t(`paymentStatus.${t.paymentStatus}`),
     assignmentLabel: t.assignment
       ? `${t.assignment.busPlate} · ${t.assignment.driverName}`
       : i18n.t("trips.unassigned"),

@@ -237,14 +237,14 @@ onMounted(load);
       :label="i18n.t('trips.form.schedule')"
       :description="isNew && repeat ? i18n.t('trips.form.firstOccurrenceHint') : i18n.t('trips.form.scheduleDescription')"
     >
-      <LxRow v-if="isNew" :label="i18n.t('trips.form.repeat')" :description="i18n.t('trips.form.repeatHint')">
-        <LxToggle v-model="repeat" />
+      <LxRow v-if="isNew" :label="i18n.t('trips.form.repeat')">
+        <LxToggle v-model="repeat" :helper-text="i18n.t('trips.form.repeatHint')" />
       </LxRow>
       <LxRow :label="i18n.t('fields.scheduledStart')" required>
         <DateTimeField v-model="scheduledStart" v-bind="invalidProps('scheduledStart')" />
       </LxRow>
-      <LxRow :label="i18n.t('fields.scheduledEnd')" :description="i18n.t('trips.form.endHint')" required>
-        <DateTimeField v-model="scheduledEnd" v-bind="invalidProps('scheduledEnd')" />
+      <LxRow :label="i18n.t('fields.scheduledEnd')" required>
+        <DateTimeField v-model="scheduledEnd" v-bind="invalidProps('scheduledEnd')" :helper-text="i18n.t('trips.form.endHint')" />
       </LxRow>
       <template v-if="isNew && repeat">
         <LxRow :label="i18n.t('trips.form.daysOfWeek')" required>
@@ -263,11 +263,12 @@ onMounted(load);
     </LxSection>
 
     <LxSection :label="i18n.t('trips.form.booking')">
-      <LxRow :label="i18n.t('fields.paymentStatus')" :description="i18n.t('trips.form.paymentHint')" required>
-        <LxValuePicker v-model="paymentStatus" :items="paymentStatusItems" variant="dropdown" selection-kind="single" />
+      <LxRow :label="i18n.t('fields.paymentStatus')" required>
+        <LxValuePicker v-model="paymentStatus" :items="paymentStatusItems" variant="dropdown" selection-kind="single" :helper-text="i18n.t('trips.form.paymentHint')" />
       </LxRow>
-      <LxRow :label="i18n.t('fields.client')" :description="i18n.t('trips.form.clientHint')">
+      <LxRow :label="i18n.t('fields.client')">
         <LxValuePicker
+          :helper-text="i18n.t('trips.form.clientHint')"
           v-model="clientId"
           :items="clientItems"
           variant="dropdown"
@@ -278,9 +279,9 @@ onMounted(load);
       </LxRow>
       <LxRow
         :label="i18n.t('fields.invoiceNumber')"
-        :description="isNew && repeat ? i18n.t('trips.form.invoiceSeriesHint') : i18n.t('trips.form.invoiceHint')"
       >
         <LxTextInput
+          :helper-text="isNew && repeat ? i18n.t('trips.form.invoiceSeriesHint') : i18n.t('trips.form.invoiceHint')"
           v-model="invoiceNumber"
           :maxlength="MAX_INVOICE"
           :disabled="isNew && repeat"

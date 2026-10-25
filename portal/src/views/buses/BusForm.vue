@@ -138,8 +138,8 @@ onMounted(load);
     <LxInfoBox v-if="errorMessage" variant="error" :label="errorMessage" />
 
     <LxSection :label="i18n.t('busForm.vehicle')" :description="i18n.t('busForm.vehicleDescription')">
-      <LxRow :label="i18n.t('fields.plate')" :description="i18n.t('busForm.plateHint')" required>
-        <LxTextInput v-model="plate" uppercase v-bind="invalidProps('plate')" />
+      <LxRow :label="i18n.t('fields.plate')" required>
+        <LxTextInput v-model="plate" uppercase v-bind="invalidProps('plate')" :helper-text="i18n.t('busForm.plateHint')" />
       </LxRow>
       <LxRow :label="i18n.t('fields.model')" required>
         <LxTextInput v-model="model" :maxlength="MAX_MODEL" v-bind="invalidProps('model')" />
