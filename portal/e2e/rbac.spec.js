@@ -84,16 +84,16 @@ test("driver's nav has no links to planner/admin pages, and visiting one directl
   }
   await expect(page.getByRole("link", { name: /my trips/i })).toBeVisible();
 
-  // Navigating there directly (no client-side route guard, see routes.js) must still
-  // be blocked server-side — BusList.vue's own toolbar button renders unconditionally
-  // (the component doesn't know the caller's role), so the real assertion is on the
-  // underlying API response, not on what's in the DOM.
+  // Navigating there directly hits the client-side route guard (meta.access in
+  // routes.js) and shows the 403 page without loading any data...
   const errors = [];
   page.on("pageerror", (e) => errors.push(String(e)));
-  const [busesResponse] = await Promise.all([
-    page.waitForResponse((r) => r.url().includes("/api/buses") && r.request().method() === "GET"),
-    page.goto("/app/buses"),
-  ]);
-  expect(busesResponse.status(), "GET /api/buses as a driver, triggered by loading the page").toBe(403);
+  await page.goto("/app/buses");
+  await expect(page).toHaveURL(/\/app\/forbidden$/);
+  await expect(page.getByRole("heading", { name: "Access denied" }).first()).toBeVisible();
   expect(errors, `uncaught page errors visiting /app/buses as a driver:\n${errors.join("\n")}`).toEqual([]);
+
+  // ...but the guard is presentation only: the real boundary is the API itself.
+  const status = await page.evaluate(() => fetch("/api/buses").then((r) => r.status));
+  expect(status, "GET /api/buses as a driver").toBe(403);
 });
