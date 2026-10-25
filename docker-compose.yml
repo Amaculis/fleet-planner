@@ -84,7 +84,7 @@ services:
     security_opt: ["no-new-privileges:true"]
 
   db:
-    image: postgres:17.6-alpine
+    image: postgres:17.11-alpine
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
