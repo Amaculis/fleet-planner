@@ -36,12 +36,21 @@ docker run -d --name "$PG" --network "$NET" \
   -v "$(hostpath "$ROOT/deploy/postgres/init"):/docker-entrypoint-initdb.d:ro" \
   "$PGIMAGE" >/dev/null
 
+# Check over TCP, not the socket: during first start the image runs the init scripts
+# (deploy/postgres/init, which create fleet_owner) against a temporary socket-only
+# server that pg_isready already reports as ready. Only the final server listens on TCP.
 echo -n "==> waiting for postgres"
-for _ in $(seq 1 60); do
-  if docker exec "$PG" pg_isready -U postgres -d fleet >/dev/null 2>&1; then break; fi
+ready=""
+for _ in $(seq 1 90); do
+  if docker exec "$PG" pg_isready -h 127.0.0.1 -U postgres -d fleet >/dev/null 2>&1; then ready=1; break; fi
   echo -n .; sleep 1
 done
 echo
+if [ -z "$ready" ]; then
+  echo "postgres did not become ready; container log:" >&2
+  docker logs "$PG" >&2
+  exit 1
+fi
 
 echo "==> applying migrations"
 for f in "$ROOT"/db/migrations/*.up.sql; do

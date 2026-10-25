@@ -2,7 +2,7 @@
 import { ref, computed, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
-import { LxButton, LxInfoBox, LxLoader, LxRow, LxValuePicker } from "@dativa-lv/lx-ui";
+import { LxButton, LxInfoBox, LxListItem, LxLoader, LxRow, LxStack, LxValuePicker } from "@dativa-lv/lx-ui";
 import { getTrip, deleteTrip, setTripStatus, assignTrip, unassignTrip } from "@/services/trips";
 import { getBuses, getDrivers } from "@/services/fleet";
 import { getClient } from "@/services/clients";
@@ -268,16 +268,22 @@ onMounted(load);
       <div class="trip-panel">
         <h3>{{ i18n.t("trips.assignment") }}</h3>
         <template v-if="trip.assignment">
-          <div class="trip-assignment-card">
-            <button type="button" class="trip-assignment-link" @click="assignedBus && router.push({ name: 'busEdit', params: { id: assignedBus.id } })">
-              <span class="trip-assignment-label">{{ i18n.t("fields.bus") }}</span>
-              <span class="trip-assignment-value">{{ trip.assignment.busPlate }}</span>
-            </button>
-            <button type="button" class="trip-assignment-link" @click="assignedDriver && router.push({ name: 'driverEdit', params: { id: assignedDriver.id } })">
-              <span class="trip-assignment-label">{{ i18n.t("fields.driver") }}</span>
-              <span class="trip-assignment-value">{{ trip.assignment.driverName }}</span>
-            </button>
-          </div>
+          <!-- href is null when the bus/driver isn't in the assignable lists — LxListItem
+               then renders non-interactive instead of a dead link. -->
+          <LxStack>
+            <LxListItem
+              :label="trip.assignment.busPlate"
+              :description="i18n.t('fields.bus')"
+              icon="driving-license"
+              :href="assignedBus ? { name: 'busEdit', params: { id: assignedBus.id } } : null"
+            />
+            <LxListItem
+              :label="trip.assignment.driverName"
+              :description="i18n.t('fields.driver')"
+              icon="user-profile"
+              :href="assignedDriver ? { name: 'driverEdit', params: { id: assignedDriver.id } } : null"
+            />
+          </LxStack>
           <LxButton :label="i18n.t('actions.unassign')" kind="ghost" :loading="busy" @click="unassign" />
         </template>
         <template v-else>
@@ -476,44 +482,6 @@ onMounted(load);
 .trip-notes-empty {
   color: var(--color-placeholder);
   font-style: italic;
-}
-.trip-assignment-card {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
-}
-/* .trip-detail-qualified, not bare .trip-assignment-link: lx-buttons.css ships a
-   blanket ".lx-layout.lx-override button { background/color/padding/... }" rule
-   that has the exact same specificity as a bare scoped selector on a <button> and
-   wins the tiebreak (it also has a "button" type selector) — confirmed by this
-   exact bug before, in the timeline components (see TimelineWeekView.vue's fuller
-   writeup). Without the extra ancestor qualifier here, these links rendered as
-   solid-blue boxes with invisible text, the button's own background/color winning
-   over this component's. */
-.trip-detail .trip-assignment-link {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.1rem;
-  padding: 0.5rem 0.75rem;
-  border: none;
-  border-radius: 0.35rem;
-  background: var(--color-background);
-  cursor: pointer;
-  text-align: left;
-}
-.trip-detail .trip-assignment-link:hover {
-  background: var(--color-region-hover, var(--color-region));
-}
-.trip-assignment-label {
-  font-size: 0.7rem;
-  color: var(--color-placeholder);
-  text-transform: uppercase;
-}
-.trip-assignment-value {
-  font-weight: 600;
-  color: var(--color-brand);
 }
 .trip-client-info {
   margin-top: 0.75rem;
