@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
-import { LxButton, LxSection, LxContentSwitcher, LxLoader } from "@dativa-lv/lx-ui";
+import { LxButton, LxContentSwitcher, LxLoaderView, LxStack, LxTextInput } from "@dativa-lv/lx-ui";
 import { getTrips } from "@/services/trips";
 import { getBuses } from "@/services/fleet";
 import DateField from "@/components/DateField.vue";
@@ -113,23 +113,20 @@ onMounted(load);
 </script>
 
 <template>
-  <LxSection :label="i18n.t('pages.timeline.title')">
-    <div class="timeline-toolbar">
-      <div class="timeline-nav">
-        <LxButton class="timeline-prev" icon="previous-page" :label="previousLabel" kind="ghost" @click="step(-1)" />
-        <LxButton :label="i18n.t('timeline.today')" kind="tertiary" @click="goToday" />
-        <LxButton icon="next-page" :label="nextLabel" kind="ghost" @click="step(1)" />
-        <!-- Direct jump, not just stepping: one date picker for every view — picking any
-             date selects the day, or the whole week / month containing it (rangeStart
-             snaps the anchor to that week's Monday / month's 1st). -->
-        <DateField v-model="anchor" class="timeline-date-field" />
-        <span v-if="viewMode !== 'day'" class="timeline-range-label">{{ rangeLabel }}</span>
-      </div>
+  <LxStack horizontal-alignment="stretch">
+    <LxStack orientation="horizontal" vertical-alignment="center">
+      <!-- icon-only: the label stays the accessible name and tooltip ("Previous day"). -->
+      <LxButton icon="previous-page" :label="previousLabel" kind="ghost" variant="icon-only" @click="step(-1)" />
+      <LxButton :label="i18n.t('timeline.today')" kind="tertiary" @click="goToday" />
+      <LxButton icon="next-page" :label="nextLabel" kind="ghost" variant="icon-only" @click="step(1)" />
+      <!-- Direct jump, not just stepping: one date picker for every view — picking any
+           date selects the day, or the whole week / month containing it (rangeStart
+           snaps the anchor to that week's Monday / month's 1st). -->
+      <DateField v-model="anchor" class="timeline-date-field" />
+      <LxTextInput v-if="viewMode !== 'day'" :model-value="rangeLabel" read-only class="timeline-range-label" />
       <LxContentSwitcher v-model="viewMode" :items="viewItems" />
-    </div>
-
-    <LxLoader v-if="loading" :loading="true" />
-    <template v-else>
+    </LxStack>
+    <LxLoaderView :loading="loading">
       <TimelineDayView v-if="viewMode === 'day'" :buses="buses" :trips="trips" :date="anchor" @open-day="goToDay" />
       <TimelineWeekView
         v-else-if="viewMode === 'week'"
@@ -139,45 +136,6 @@ onMounted(load);
         @open-day="goToDay"
       />
       <TimelineMonthView v-else :buses="buses" :trips="trips" :month-start="rangeStart" @open-day="goToDay" />
-    </template>
-  </LxSection>
+    </LxLoaderView>
+  </LxStack>
 </template>
-
-<style scoped>
-.timeline-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
-}
-.timeline-nav {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-.timeline-date-field {
-  min-width: 10rem;
-}
-/* LxButton puts its icon after the label (grid areas "content icon" from the theme).
-   Overriding the theme's --button-ghost-grid-areas variable didn't take (a more
-   specific theme rule sets it on the button itself), so this sets the wrapper's grid
-   directly — with enough ancestor classes to beat the theme's
-   ".lx .lx-button.lx-button-ghost .lx-button-content-wrapper" — to put the "previous"
-   arrow on the left where it belongs. */
-.timeline-nav :deep(.timeline-prev .lx-button-content-wrapper) {
-  /* Anchored on .timeline-nav (an element this component owns), not on the LxButton
-     itself: scoped-style attributes don't reach LxButton's root, so a rule keyed to
-     the button silently never matched (computed style stayed "content icon" through
-     two earlier attempts). !important because this ties the theme's specificity. */
-  grid-template-areas: "icon content" !important;
-  grid-template-columns: auto 1fr !important;
-}
-.timeline-range-label {
-  font-weight: 600;
-  padding: 0 0.5rem;
-  min-width: 10rem;
-}
-</style>

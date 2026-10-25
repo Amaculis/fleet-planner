@@ -199,6 +199,7 @@
     "unassigned": "Не назначен",
     "unassignedHint": "Автобус и водитель ещё не назначены.",
     "noNotes": "Заметок нет.",
+    "duration": "Длительность",
     "markAs": "Отметить как",
     "partOfSeries": "Часть повторяющейся серии",
     "clientSection": "Клиент",
@@ -271,7 +272,8 @@
     "unset": "—",
     "all": "Все",
     "active": "Активен",
-    "inactive": "Неактивен"
+    "inactive": "Неактивен",
+    "erased": "Удалено"
   },
   "busForm": {
     "vehicle": "Автобус",

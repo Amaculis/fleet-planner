@@ -48,14 +48,16 @@ test("timeline switches between day, week and month views without erroring", asy
   expect(errors, `console errors switching timeline views:\n${errors.join("\n")}`).toEqual([]);
 });
 
-test("the previous button's arrow sits to the left of its label", async ({ page }) => {
+// Previous/next are icon-only LxButtons (no CSS override of LxButton's icon order);
+// their label stays the accessible name and tooltip.
+test("the previous/next buttons are icon-only with an accessible name", async ({ page }) => {
   await page.goto("/app/timeline");
   await page.waitForTimeout(500);
-  const arrowIsLeft = await page.evaluate(() => {
-    const wrap = document.querySelector(".timeline-prev .lx-button-content-wrapper");
-    return wrap.querySelector("svg").getBoundingClientRect().left < wrap.querySelector(".lx-button-content").getBoundingClientRect().left;
-  });
-  expect(arrowIsLeft).toBe(true);
+  for (const name of [/previous day/i, /next day/i]) {
+    const button = page.getByRole("button", { name });
+    await expect(button).toBeVisible();
+    await expect(button).toHaveClass(/lx-button-icon-only/);
+  }
 });
 
 // Jumping straight to a date, not only stepping with previous/next: the same picker

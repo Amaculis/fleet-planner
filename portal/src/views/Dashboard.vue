@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { useI18n } from "vue-i18n";
-import { LxTile, LxLoader, LxIcon, LxBadge } from "@dativa-lv/lx-ui";
+import { LxList, LxLoaderView, LxRow, LxSection, LxStack, LxTile } from "@dativa-lv/lx-ui";
 import { getBuses, getDrivers } from "@/services/fleet";
 import { getTrips } from "@/services/trips";
 import { getMyTrips } from "@/services/myTrips";
@@ -157,6 +157,32 @@ function tripTime(trip) {
   return `${dayLabel} ${String(s.getHours()).padStart(2, "0")}:${String(s.getMinutes()).padStart(2, "0")}`;
 }
 
+// LxList rows (its default attribute names: name/description/href/icon/category).
+const expiringItems = computed(() =>
+  expiringSoon.value.map((item) => ({
+    id: `${item.kind}-${item.label}-${item.expiry}`,
+    name: `${item.label} — ${i18n.t(`dashboard.expiry.${item.kind}`)}`,
+    description:
+      item.daysLeft < 0
+        ? i18n.t("dashboard.expiredDaysAgo", { n: Math.abs(item.daysLeft) })
+        : i18n.t("dashboard.daysLeft", { n: item.daysLeft }),
+    href: item.to,
+    icon: "warning",
+    category: item.daysLeft < 0 ? "red" : "orange",
+  }))
+);
+
+const upcomingItems = computed(() =>
+  upcomingTrips.value.map((trip) => ({
+    id: trip.id,
+    name: `${trip.origin} → ${trip.destination}`,
+    description: trip.assignment ? tripTime(trip) : `${tripTime(trip)} · ${i18n.t("trips.unassigned")}`,
+    href: { name: "tripDetail", params: { id: trip.id } },
+    icon: "calendar",
+    category: trip.assignment ? null : "orange",
+  }))
+);
+
 // --- Driver tiles ----------------------------------------------------------------
 const myTodayCount = computed(
   () => myTrips.value.filter((t) => t.status !== "cancelled" && dayOf(t.scheduledStart) === today).length
@@ -191,15 +217,27 @@ const driverTiles = computed(() => [
     to: { name: "myTrips" },
   },
 ]);
+const nextTripItems = computed(() =>
+  nextMyTrip.value
+    ? [
+        {
+          id: nextMyTrip.value.id,
+          name: `${nextMyTrip.value.origin} → ${nextMyTrip.value.destination}`,
+          description: `${tripTime(nextMyTrip.value)} · ${nextMyTrip.value.busPlate}`,
+          href: { name: "myTrips" },
+          icon: "calendar",
+        },
+      ]
+    : []
+);
 </script>
 
 <template>
-  <div class="dashboard">
-    <h2 class="dashboard-greeting">{{ i18n.t("dashboard.greeting", { email: auth.session?.email }) }}</h2>
+  <LxLoaderView :loading="loading">
+    <LxStack horizontal-alignment="stretch">
+      <LxSection :label="i18n.t('dashboard.greeting', { email: auth.session?.email })" />
 
-    <LxLoader v-if="loading" :loading="true" />
-    <template v-else>
-      <div v-if="isPlanner" class="dashboard-tiles">
+      <div v-if="isPlanner" class="lx-dashboard">
         <LxTile
           v-for="tile in plannerTiles"
           :key="tile.id"
@@ -213,7 +251,7 @@ const driverTiles = computed(() => [
         />
       </div>
 
-      <div v-else-if="isDriver" class="dashboard-tiles dashboard-tiles-narrow">
+      <div v-else-if="isDriver" class="lx-dashboard">
         <LxTile
           v-for="tile in driverTiles"
           :key="tile.id"
@@ -224,160 +262,31 @@ const driverTiles = computed(() => [
         />
       </div>
 
-      <div v-if="isDriver && nextMyTrip" class="dashboard-panel dashboard-next-trip">
-        <h3>{{ i18n.t("dashboard.nextTrip") }}</h3>
-        <router-link :to="{ name: 'myTrips' }" class="dashboard-next-trip-link">
-          <LxIcon value="calendar" class="dashboard-row-icon" />
-          <div>
-            <div class="dashboard-next-trip-route">{{ nextMyTrip.origin }} → {{ nextMyTrip.destination }}</div>
-            <div class="dashboard-next-trip-time">{{ tripTime(nextMyTrip) }} · {{ nextMyTrip.busPlate }}</div>
-          </div>
-        </router-link>
-      </div>
+      <LxSection v-if="isDriver && nextMyTrip" :label="i18n.t('dashboard.nextTrip')">
+        <LxRow :label="i18n.t('dashboard.nextTrip')" hide-label>
+          <LxList :items="nextTripItems" :has-virtualization="false" />
+        </LxRow>
+      </LxSection>
 
-      <div v-if="isPlanner" class="dashboard-panels">
-        <div class="dashboard-panel">
-          <h3>{{ i18n.t("dashboard.expiringSoon") }}</h3>
-          <p v-if="!expiringSoon.length" class="dashboard-empty">{{ i18n.t("dashboard.noExpiring") }}</p>
-          <router-link
-            v-for="item in expiringSoon"
-            :key="`${item.kind}-${item.label}-${item.expiry}`"
-            :to="item.to"
-            class="dashboard-info-row"
-          >
-            <LxIcon
-              value="warning"
-              class="dashboard-row-icon"
-              :class="item.daysLeft < 0 ? 'dashboard-icon-error' : 'dashboard-icon-warning'"
-            />
-            <div>
-              <div class="dashboard-info-primary">{{ item.label }} — {{ i18n.t(`dashboard.expiry.${item.kind}`) }}</div>
-              <div class="dashboard-info-secondary">
-                {{ item.daysLeft < 0
-                  ? i18n.t("dashboard.expiredDaysAgo", { n: Math.abs(item.daysLeft) })
-                  : i18n.t("dashboard.daysLeft", { n: item.daysLeft }) }}
-              </div>
-            </div>
-          </router-link>
-        </div>
+      <template v-if="isPlanner">
+        <LxSection
+          :label="i18n.t('dashboard.expiringSoon')"
+          :description="expiringItems.length ? null : i18n.t('dashboard.noExpiring')"
+        >
+          <LxRow v-if="expiringItems.length" :label="i18n.t('dashboard.expiringSoon')" hide-label>
+            <LxList :items="expiringItems" :has-virtualization="false" />
+          </LxRow>
+        </LxSection>
 
-        <div class="dashboard-panel">
-          <h3>{{ i18n.t("dashboard.upcomingTrips") }}</h3>
-          <p v-if="!upcomingTrips.length" class="dashboard-empty">{{ i18n.t("dashboard.noUpcoming") }}</p>
-          <router-link
-            v-for="trip in upcomingTrips"
-            :key="trip.id"
-            :to="{ name: 'tripDetail', params: { id: trip.id } }"
-            class="dashboard-info-row"
-          >
-            <LxIcon value="calendar" class="dashboard-row-icon" />
-            <div>
-              <div class="dashboard-info-primary">{{ trip.origin }} → {{ trip.destination }}</div>
-              <div class="dashboard-info-secondary">
-                {{ tripTime(trip) }}
-                <LxBadge v-if="!trip.assignment" :value="i18n.t('trips.unassigned')" :tooltip="i18n.t('trips.assignment')" />
-              </div>
-            </div>
-          </router-link>
-        </div>
-      </div>
-    </template>
-  </div>
+        <LxSection
+          :label="i18n.t('dashboard.upcomingTrips')"
+          :description="upcomingItems.length ? null : i18n.t('dashboard.noUpcoming')"
+        >
+          <LxRow v-if="upcomingItems.length" :label="i18n.t('dashboard.upcomingTrips')" hide-label>
+            <LxList :items="upcomingItems" :has-virtualization="false" />
+          </LxRow>
+        </LxSection>
+      </template>
+    </LxStack>
+  </LxLoaderView>
 </template>
-
-<style scoped>
-.dashboard {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-.dashboard-greeting {
-  margin: 0;
-  font-weight: 500;
-}
-.dashboard-tiles {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
-  gap: 0.75rem;
-}
-.dashboard-tiles-narrow {
-  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
-  max-width: 24rem;
-}
-.dashboard-panels {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
-  gap: 1.5rem;
-}
-.dashboard-panel h3 {
-  margin: 0 0 0.75rem;
-  font-size: 1rem;
-}
-.dashboard-empty {
-  color: var(--color-placeholder);
-  font-size: 0.9rem;
-}
-.dashboard-info-row {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  padding: 0.5rem 0.25rem;
-  border-radius: 0.3rem;
-  text-decoration: none;
-  color: inherit;
-}
-.dashboard-row-icon {
-  width: var(--icon-size-m, 1.5rem);
-  height: var(--icon-size-m, 1.5rem);
-  flex-shrink: 0;
-}
-/* lx-buttons.css has a global `.lx a:hover` that paints links with the interactive
-   hover foreground (white) — keep the row's own text color on hover. */
-.dashboard-info-row:hover {
-  background: var(--color-region);
-  color: inherit;
-}
-.dashboard-info-primary {
-  font-size: 0.9rem;
-  font-weight: 500;
-}
-.dashboard-info-secondary {
-  font-size: 0.8rem;
-  color: var(--color-placeholder);
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-.dashboard-icon-warning {
-  fill: var(--color-warning);
-}
-.dashboard-icon-error {
-  fill: var(--color-error);
-}
-.dashboard-next-trip h3 {
-  margin: 0 0 0.5rem;
-  font-size: 1rem;
-}
-.dashboard-next-trip-link {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  text-decoration: none;
-  color: inherit;
-  padding: 0.75rem;
-  border-radius: 0.4rem;
-  background: var(--color-region);
-  max-width: 24rem;
-}
-.dashboard-next-trip-link:hover {
-  color: inherit;
-  background: var(--color-region);
-}
-.dashboard-next-trip-route {
-  font-weight: 600;
-}
-.dashboard-next-trip-time {
-  font-size: 0.85rem;
-  color: var(--color-placeholder);
-}
-</style>

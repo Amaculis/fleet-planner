@@ -2,7 +2,18 @@
 import { ref, computed, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
-import { LxButton, LxInfoBox, LxListItem, LxLoader, LxRow, LxStack, LxValuePicker } from "@dativa-lv/lx-ui";
+import {
+  LxForm,
+  LxInfoBox,
+  LxListItem,
+  LxLoaderView,
+  LxRichTextDisplay,
+  LxRow,
+  LxSection,
+  LxStateDisplay,
+  LxTextInput,
+  LxValuePicker,
+} from "@dativa-lv/lx-ui";
 import { getTrip, deleteTrip, setTripStatus, assignTrip, unassignTrip } from "@/services/trips";
 import { getBuses, getDrivers } from "@/services/fleet";
 import { getClient } from "@/services/clients";
@@ -10,6 +21,7 @@ import { parseServerTimestamp, formatDateTime as formatDateTimeShared, formatTim
 import useNotifyStore from "@/stores/notify";
 import useConfirmStore from "@/stores/confirm";
 import useErrors from "@/hooks/errors";
+import useStateDictionaries from "@/hooks/stateDictionaries";
 
 // Mirrors domain.CanTransitionTrip (internal/domain/entities.go) — presentation only;
 // the server re-checks every transition regardless of what this shows.
@@ -20,21 +32,8 @@ const TRANSITIONS = {
   cancelled: ["planned"],
 };
 
-const STATUS_CLASS = {
-  planned: "trip-status-planned",
-  in_progress: "trip-status-in-progress",
-  completed: "trip-status-completed",
-  cancelled: "trip-status-cancelled",
-};
-
-const PAYMENT_STATUS_CLASS = {
-  unpaid: "trip-payment-unpaid",
-  reserved: "trip-payment-reserved",
-  advance_paid: "trip-payment-advance-paid",
-  paid: "trip-payment-paid",
-};
-
 const i18n = useI18n();
+const { tripStatusDictionary, paymentStatusDictionary } = useStateDictionaries();
 const route = useRoute();
 const router = useRouter();
 const notify = useNotifyStore();
@@ -205,311 +204,151 @@ const durationLabel = computed(() => {
   return parts.join(" ");
 });
 
+// Trip-level actions live in LxForm's footer (it renders primary/secondary/tertiary
+// kinds); section-level ones in each LxSection's header.
+const footerActions = computed(() => [
+  { id: "edit", name: i18n.t("actions.edit"), kind: "primary", icon: "edit" },
+  ...nextStatuses.value.map((status) => ({
+    id: `status:${status}`,
+    name: i18n.t(`tripStatus.${status}`),
+    kind: "secondary",
+    loading: busy.value,
+  })),
+  { id: "delete", name: i18n.t("actions.delete"), kind: "tertiary", icon: "delete", destructive: true },
+]);
+
+function onFooterAction(actionId) {
+  if (actionId === "edit") router.push({ name: "tripEdit", params: { id: id.value } });
+  else if (actionId === "delete") confirmDelete();
+  else if (actionId.startsWith("status:")) markAs(actionId.slice("status:".length));
+}
+
+const assignmentActions = computed(() =>
+  trip.value?.assignment
+    ? [{ id: "unassign", name: i18n.t("actions.unassign"), icon: "remove", loading: busy.value }]
+    : [{ id: "assign", name: i18n.t("actions.assign"), icon: "link", loading: busy.value }]
+);
+
+function onAssignmentAction(actionId) {
+  if (actionId === "assign") assign();
+  else unassign();
+}
+
+const clientActions = computed(() =>
+  trip.value?.clientId
+    ? [
+        {
+          id: "toggle",
+          name: clientShown.value ? i18n.t("trips.hideClient") : i18n.t("trips.showClient"),
+          icon: clientShown.value ? "hidden" : "visible",
+          loading: clientLoading.value,
+        },
+      ]
+    : []
+);
+
+// LxRichTextDisplay (not a read-only LxTextArea, which collapses whitespace) so notes
+// keep their line breaks. Escaped first; the component sanitizes again regardless.
+function multiline(text) {
+  if (!text) return "";
+  const escaped = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return escaped.replace(/\r?\n/g, "<br>");
+}
+
 onMounted(load);
 </script>
 
 <template>
-  <LxLoader v-if="loading" :loading="true" />
+  <LxLoaderView :loading="loading">
+    <LxInfoBox v-if="errorMessage" variant="error" :label="errorMessage" />
+    <LxForm
+      v-if="trip"
+      :column-count="2"
+      :show-header="false"
+      :aria-label="`${trip.origin} → ${trip.destination}`"
+      :action-definitions="footerActions"
+      @action-click="onFooterAction"
+    >
+      <LxInfoBox v-if="trip.seriesId" variant="info" :label="i18n.t('trips.partOfSeries')" />
 
-  <div v-else-if="trip" class="trip-detail">
+      <LxSection :label="`${trip.origin} → ${trip.destination}`">
+        <LxRow :label="i18n.t('fields.status')">
+          <LxStateDisplay :value="trip.status" :dictionary="tripStatusDictionary" />
+        </LxRow>
+        <LxRow :label="i18n.t('fields.paymentStatus')">
+          <LxStateDisplay :value="trip.paymentStatus" :dictionary="paymentStatusDictionary" />
+        </LxRow>
+        <LxRow :label="i18n.t('fields.scheduledStart')">
+          <LxTextInput :model-value="formatDateTime(startDate)" read-only />
+        </LxRow>
+        <LxRow :label="i18n.t('fields.scheduledEnd')">
+          <LxTextInput :model-value="sameDay ? formatTime(endDate) : formatDateTime(endDate)" read-only />
+        </LxRow>
+        <LxRow :label="i18n.t('trips.duration')">
+          <LxTextInput :model-value="durationLabel" read-only />
+        </LxRow>
+        <LxRow :label="i18n.t('fields.invoiceNumber')">
+          <LxTextInput :model-value="trip.invoiceNumber" read-only data-testid="trip-invoice" />
+        </LxRow>
+        <LxRow :label="i18n.t('fields.notes')" :column-span="2">
+          <LxRichTextDisplay v-if="trip.notes" :value="multiline(trip.notes)" />
+          <LxTextInput v-else :model-value="i18n.t('trips.noNotes')" read-only />
+        </LxRow>
+      </LxSection>
 
-    <div class="trip-header">
-      <div class="trip-header-main">
-        <h2 class="trip-route">{{ trip.origin }} → {{ trip.destination }}</h2>
-        <div class="trip-header-meta">
-          <span class="trip-status-badge" :class="STATUS_CLASS[trip.status]">{{ i18n.t(`tripStatus.${trip.status}`) }}</span>
-          <span class="trip-payment-badge" :class="PAYMENT_STATUS_CLASS[trip.paymentStatus]">{{ i18n.t(`paymentStatus.${trip.paymentStatus}`) }}</span>
-          <span v-if="trip.seriesId" class="trip-series-badge">{{ i18n.t("trips.partOfSeries") }}</span>
-          <span class="trip-duration">{{ durationLabel }}</span>
-        </div>
-      </div>
-      <div class="trip-header-actions">
-        <LxButton :label="i18n.t('actions.edit')" kind="ghost" @click="router.push({ name: 'tripEdit', params: { id } })" />
-        <LxButton :label="i18n.t('actions.delete')" kind="ghost" destructive @click="confirmDelete" />
-      </div>
-    </div>
-
-    <div class="trip-panels">
-      <div class="trip-panel">
-        <h3>{{ i18n.t("fields.scheduledStart") }} / {{ i18n.t("fields.scheduledEnd") }}</h3>
-        <div class="trip-time-range">
-          <div class="trip-time-block">
-            <span class="trip-time-label">{{ i18n.t("fields.scheduledStart") }}</span>
-            <span class="trip-time-value">{{ formatDateTime(startDate) }}</span>
-          </div>
-          <span class="trip-time-arrow">→</span>
-          <div class="trip-time-block">
-            <span class="trip-time-label">{{ i18n.t("fields.scheduledEnd") }}</span>
-            <span class="trip-time-value">{{ sameDay ? formatTime(endDate) : formatDateTime(endDate) }}</span>
-          </div>
-        </div>
-
-        <template v-if="nextStatuses.length">
-          <h3 class="trip-panel-subheading">{{ i18n.t("trips.markAs") }}</h3>
-          <div class="trip-status-actions">
-            <LxButton
-              v-for="status in nextStatuses"
-              :key="status"
-              :label="i18n.t(`tripStatus.${status}`)"
-              kind="secondary"
-              :loading="busy"
-              @click="markAs(status)"
-            />
-          </div>
-        </template>
-
-        <h3 class="trip-panel-subheading">{{ i18n.t("fields.notes") }}</h3>
-        <p class="trip-notes" :class="{ 'trip-notes-empty': !trip.notes }">
-          {{ trip.notes || i18n.t("trips.noNotes") }}
-        </p>
-      </div>
-
-      <div class="trip-panel">
-        <h3>{{ i18n.t("trips.assignment") }}</h3>
+      <LxSection
+        :label="i18n.t('trips.assignment')"
+        :description="trip.assignment ? null : i18n.t('trips.unassignedHint')"
+        :action-definitions="assignmentActions"
+        @action-click="onAssignmentAction"
+      >
         <template v-if="trip.assignment">
           <!-- href is null when the bus/driver isn't in the assignable lists — LxListItem
                then renders non-interactive instead of a dead link. -->
-          <LxStack>
+          <LxRow :label="i18n.t('fields.bus')">
             <LxListItem
               :label="trip.assignment.busPlate"
-              :description="i18n.t('fields.bus')"
               icon="driving-license"
               :href="assignedBus ? { name: 'busEdit', params: { id: assignedBus.id } } : null"
             />
+          </LxRow>
+          <LxRow :label="i18n.t('fields.driver')">
             <LxListItem
               :label="trip.assignment.driverName"
-              :description="i18n.t('fields.driver')"
               icon="user-profile"
               :href="assignedDriver ? { name: 'driverEdit', params: { id: assignedDriver.id } } : null"
             />
-          </LxStack>
-          <LxButton :label="i18n.t('actions.unassign')" kind="ghost" :loading="busy" @click="unassign" />
+          </LxRow>
         </template>
         <template v-else>
-          <p class="trip-unassigned-hint">{{ i18n.t("trips.unassignedHint") }}</p>
           <LxRow :label="i18n.t('fields.bus')">
             <LxValuePicker v-model="selectedBusId" :items="busItems" variant="dropdown" selection-kind="single" />
           </LxRow>
           <LxRow :label="i18n.t('fields.driver')">
             <LxValuePicker v-model="selectedDriverId" :items="driverItems" variant="dropdown" selection-kind="single" />
           </LxRow>
-          <LxButton :label="i18n.t('actions.assign')" kind="primary" :loading="busy" @click="assign" />
         </template>
-      </div>
+      </LxSection>
 
-      <div class="trip-panel" data-testid="trip-client-panel">
-        <h3>{{ i18n.t("trips.clientSection") }}</h3>
-        <template v-if="trip.clientId">
-          <LxButton
-            :label="clientShown ? i18n.t('trips.hideClient') : i18n.t('trips.showClient')"
-            kind="secondary"
-            :loading="clientLoading"
-            @click="toggleClient"
-          />
-          <LxInfoBox v-if="clientError" variant="error" :label="clientError" />
-          <div v-if="clientShown && client" class="trip-client-info" data-testid="trip-client-info">
-            <p class="trip-client-name">{{ client.name }}</p>
-            <p v-if="client.anonymized" class="trip-unassigned-hint">{{ i18n.t("trips.clientErased") }}</p>
-            <dl class="trip-client-fields">
-              <template v-for="field in clientFields" :key="field.key">
-                <dt>{{ field.label }}</dt>
-                <dd>{{ field.value }}</dd>
-              </template>
-            </dl>
-            <LxButton
-              :label="i18n.t('trips.editClient')"
-              kind="ghost"
-              @click="router.push({ name: 'clientEdit', params: { id: trip.clientId } })"
-            />
-          </div>
-        </template>
-        <p v-else class="trip-unassigned-hint">{{ i18n.t("trips.noClient") }}</p>
+      <LxSection
+        :label="i18n.t('trips.clientSection')"
+        :description="trip.clientId ? clientError || null : i18n.t('trips.noClient')"
+        :action-definitions="clientActions"
+        @action-click="toggleClient"
+      />
 
-        <h3 class="trip-panel-subheading">{{ i18n.t("trips.invoiceNumber") }}</h3>
-        <p class="trip-notes" :class="{ 'trip-notes-empty': !trip.invoiceNumber }" data-testid="trip-invoice">
-          {{ trip.invoiceNumber || "—" }}
-        </p>
-      </div>
-    </div>
-
-    <LxInfoBox v-if="errorMessage" variant="error" :label="errorMessage" />
-  </div>
+      <LxSection
+        v-if="clientShown && client"
+        :label="client.name"
+        :description="client.anonymized ? i18n.t('trips.clientErased') : null"
+        :action-definitions="[{ id: 'editClient', name: i18n.t('trips.editClient'), icon: 'edit' }]"
+        data-testid="trip-client-info"
+        @action-click="router.push({ name: 'clientEdit', params: { id: trip.clientId } })"
+      >
+        <LxRow v-for="field in clientFields" :key="field.key" :label="field.label">
+          <LxRichTextDisplay :value="multiline(field.value)" />
+        </LxRow>
+      </LxSection>
+    </LxForm>
+  </LxLoaderView>
 </template>
-
-<style scoped>
-.trip-detail {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  max-width: 56rem;
-}
-.trip-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 1rem;
-}
-.trip-route {
-  margin: 0 0 0.4rem;
-  font-size: 1.5rem;
-}
-.trip-header-meta {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-.trip-duration {
-  color: var(--color-placeholder);
-  font-size: 0.9rem;
-}
-.trip-header-actions {
-  display: flex;
-  gap: 0.5rem;
-  flex-shrink: 0;
-}
-.trip-status-badge {
-  display: inline-block;
-  padding: 0.2rem 0.6rem;
-  border-radius: 1rem;
-  font-size: 0.78rem;
-  font-weight: 600;
-}
-.trip-status-planned {
-  background: var(--color-new-background, var(--color-blue-background));
-  color: var(--color-new-foreground, var(--color-blue-foreground));
-}
-.trip-status-in-progress {
-  background: var(--color-ongoing-background, var(--color-orange-background));
-  color: var(--color-ongoing-foreground, var(--color-orange-foreground));
-}
-.trip-status-completed {
-  background: var(--color-finished-background, var(--color-green-background));
-  color: var(--color-finished-foreground, var(--color-green-foreground));
-}
-.trip-status-cancelled {
-  background: var(--color-region);
-  color: var(--color-placeholder);
-}
-.trip-payment-badge {
-  display: inline-block;
-  padding: 0.2rem 0.6rem;
-  border-radius: 1rem;
-  font-size: 0.78rem;
-  font-weight: 600;
-  border: 1px solid var(--color-region);
-}
-.trip-payment-unpaid {
-  background: var(--color-region);
-  color: var(--color-placeholder);
-}
-.trip-payment-reserved {
-  background: var(--color-new-background, var(--color-blue-background));
-  color: var(--color-new-foreground, var(--color-blue-foreground));
-}
-.trip-payment-advance-paid {
-  background: var(--color-ongoing-background, var(--color-orange-background));
-  color: var(--color-ongoing-foreground, var(--color-orange-foreground));
-}
-.trip-payment-paid {
-  background: var(--color-finished-background, var(--color-green-background));
-  color: var(--color-finished-foreground, var(--color-green-foreground));
-}
-.trip-series-badge {
-  display: inline-block;
-  padding: 0.2rem 0.6rem;
-  border-radius: 1rem;
-  font-size: 0.78rem;
-  font-weight: 600;
-  border: 1px solid var(--color-region);
-  color: var(--color-placeholder);
-}
-.trip-panels {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
-  gap: 1.5rem;
-}
-.trip-panel {
-  background: var(--color-card-background, var(--color-region));
-  border-radius: 0.5rem;
-  padding: 1rem 1.25rem;
-}
-.trip-panel h3 {
-  margin: 0 0 0.75rem;
-  font-size: 0.9rem;
-  color: var(--color-placeholder);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-}
-.trip-panel-subheading {
-  margin-top: 1.25rem;
-}
-.trip-time-range {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
-.trip-time-block {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-}
-.trip-time-label {
-  font-size: 0.7rem;
-  color: var(--color-placeholder);
-  text-transform: uppercase;
-}
-.trip-time-value {
-  font-weight: 600;
-}
-.trip-time-arrow {
-  color: var(--color-placeholder);
-  align-self: center;
-  margin-top: 0.9rem;
-}
-.trip-status-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-.trip-notes {
-  margin: 0;
-  white-space: pre-wrap;
-}
-.trip-notes-empty {
-  color: var(--color-placeholder);
-  font-style: italic;
-}
-.trip-client-info {
-  margin-top: 0.75rem;
-}
-.trip-client-name {
-  margin: 0 0 0.5rem;
-  font-weight: 600;
-  font-size: 1.05rem;
-}
-.trip-client-fields {
-  display: grid;
-  grid-template-columns: max-content 1fr;
-  gap: 0.35rem 1rem;
-  margin: 0 0 0.5rem;
-}
-.trip-client-fields dt {
-  font-size: 0.7rem;
-  color: var(--color-placeholder);
-  text-transform: uppercase;
-  align-self: center;
-}
-.trip-client-fields dd {
-  margin: 0;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-.trip-unassigned-hint {
-  margin: 0 0 0.75rem;
-  color: var(--color-placeholder);
-  font-size: 0.85rem;
-}
-</style>

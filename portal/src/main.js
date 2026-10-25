@@ -43,6 +43,7 @@ import "@dativa-lv/lx-ui/dist/styles/lx-value-pickers.css"; // LxValuePicker
 import "@dativa-lv/lx-ui/dist/styles/lx-date-pickers.css"; // LxDateTimePicker
 import "@dativa-lv/lx-ui/dist/styles/lx-toggles.css"; // LxToggle
 import "@dativa-lv/lx-ui/dist/styles/lx-badges.css"; // LxBadge
+import "@dativa-lv/lx-ui/dist/styles/lx-state-displays.css"; // LxStateDisplay (trip/payment status)
 import "@dativa-lv/lx-ui/dist/styles/lx-info-boxes.css"; // LxInfoBox — distinct from lx-notifications.css
 import "@dativa-lv/lx-ui/dist/styles/lx-expanders.css"; // LxAccessibilitySettings
 import "@dativa-lv/lx-ui/dist/styles/lx-stack.css"; // LxAccessibilitySettings' internal LxStack

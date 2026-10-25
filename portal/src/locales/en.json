@@ -199,6 +199,7 @@
     "unassigned": "Unassigned",
     "unassignedHint": "No bus or driver assigned yet.",
     "noNotes": "No notes.",
+    "duration": "Duration",
     "markAs": "Mark as",
     "partOfSeries": "Part of a repeating series",
     "clientSection": "Client",
@@ -271,7 +272,8 @@
     "unset": "—",
     "all": "All",
     "active": "Active",
-    "inactive": "Inactive"
+    "inactive": "Inactive",
+    "erased": "Erased"
   },
   "busForm": {
     "vehicle": "Vehicle",

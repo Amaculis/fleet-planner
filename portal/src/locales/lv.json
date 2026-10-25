@@ -199,6 +199,7 @@
     "unassigned": "Nav norīkots",
     "unassignedHint": "Vēl nav piešķirts autobuss vai vadītājs.",
     "noNotes": "Nav piezīmju.",
+    "duration": "Ilgums",
     "markAs": "Atzīmēt kā",
     "partOfSeries": "Daļa no atkārtota reisu cikla",
     "clientSection": "Klients",
@@ -271,7 +272,8 @@
     "unset": "—",
     "all": "Visi",
     "active": "Aktīvs",
-    "inactive": "Neaktīvs"
+    "inactive": "Neaktīvs",
+    "erased": "Dzēsts"
   },
   "busForm": {
     "vehicle": "Transportlīdzeklis",
