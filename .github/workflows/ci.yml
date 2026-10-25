@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # The tests check that the built static assets are served, so build them with the
       # Dockerfile's own assets stage rather than a copy of its commands.
       - name: Build static assets (Dockerfile "assets" stage)
@@ -45,7 +45,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # Scan with the Go image production is built with, so the result matches what ships.
       - name: Resolve build image
         run: echo "GOIMAGE=$(sed -n 's/^FROM \(golang:[^ ]*\) AS build.*/\1/p' Dockerfile)" >> "$GITHUB_ENV"
@@ -63,8 +63,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       - name: npm audit (high and critical)
@@ -76,6 +76,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: docker build
         run: docker build --pull -t bus-fleet:ci .
