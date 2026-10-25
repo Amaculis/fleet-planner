@@ -7,7 +7,7 @@
 # changing db/queries/*.sql or a .templ file.
 
 # --- assets: Tailwind stylesheet, vendored htmx, the lx-ui calendar island ---------
-FROM node:22-alpine AS assets
+FROM node:26-alpine AS assets
 WORKDIR /src
 COPY package.json vite.calendar.config.mjs ./
 RUN npm install --no-audit --no-fund
@@ -34,7 +34,7 @@ RUN mkdir -p web/static/css web/static/js web/static/lx-fonts \
 # (portal/package.json), not a handful of files copied into web/static, and its
 # output is NOT go:embed'd into the binary (see config.PortalDir) — it is copied
 # straight into the runtime image below and served from disk.
-FROM node:22-alpine AS portal
+FROM node:26-alpine AS portal
 WORKDIR /src/portal
 COPY portal/package.json portal/package-lock.json ./
 # npm install, not ci: `npm ci` repeatedly failed here with "Missing: @esbuild/...
