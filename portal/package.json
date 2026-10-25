@@ -17,7 +17,7 @@
     "@dativa-lv/lx-ui": "2.3.10",
     "axios": "^1.7.9",
     "axios-mock-adapter": "^2.1.0",
-    "pinia": "^2.1.7",
+    "pinia": "^4.1.0",
     "vue": "3.5.44",
     "vue-i18n": "^9.14.2",
     "vue-router": "^4.4.5"
