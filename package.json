@@ -8,13 +8,13 @@
   },
   "devDependencies": {
     "@tailwindcss/cli": "4.3.3",
-    "@vitejs/plugin-vue": "6.0.9",
+    "@vitejs/plugin-vue": "6.0.10",
     "tailwindcss": "4.3.3",
     "vite": "8.3.5"
   },
   "dependencies": {
     "@dativa-lv/lx-ui": "2.3.10",
-    "htmx.org": "2.0.10",
-    "vue": "3.5.43"
+    "htmx.org": "2.0.11",
+    "vue": "3.5.44"
   }
 }
