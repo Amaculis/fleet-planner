@@ -95,6 +95,7 @@ const plannerTiles = computed(() => [
     to: { name: "trips" },
     badge: inProgressNow.value > 0 ? String(inProgressNow.value) : "",
     badgeType: "success",
+    badgeTitle: i18n.t("dashboard.inProgressNow"),
   },
   {
     id: "unassigned",
@@ -104,6 +105,7 @@ const plannerTiles = computed(() => [
     to: { name: "trips" },
     badge: unassignedCount.value > 0 ? i18n.t("dashboard.needsAttention") : "",
     badgeType: "warning",
+    badgeTitle: i18n.t("dashboard.unassignedTrips"),
   },
 ]);
 
@@ -207,6 +209,7 @@ const driverTiles = computed(() => [
           :to="tile.to"
           :badge="tile.badge"
           :badge-type="tile.badgeType"
+          :badge-title="tile.badgeTitle"
         />
       </div>
 
@@ -272,7 +275,7 @@ const driverTiles = computed(() => [
               <div class="dashboard-info-primary">{{ trip.origin }} → {{ trip.destination }}</div>
               <div class="dashboard-info-secondary">
                 {{ tripTime(trip) }}
-                <LxBadge v-if="!trip.assignment" :value="i18n.t('trips.unassigned')" />
+                <LxBadge v-if="!trip.assignment" :value="i18n.t('trips.unassigned')" :tooltip="i18n.t('trips.assignment')" />
               </div>
             </div>
           </router-link>

@@ -23,6 +23,10 @@
       "title": "Lapa nav atrasta",
       "description": "Meklētā lapa neeksistē."
     },
+    "forbidden": {
+      "title": "Piekļuve liegta",
+      "description": "Jums nav tiesību atvērt šo lapu."
+    },
     "accessibility": { "title": "Pieejamības iestatījumi" },
     "error": { "title": "Kļūda", "goBack": "Atpakaļ", "goHome": "Sākums" },
     "buses": { "title": "Autobusi", "new": "Pievienot autobusu", "edit": "Labot autobusu" },

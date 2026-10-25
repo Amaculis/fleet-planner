@@ -132,7 +132,7 @@ function openTrip(id) {
       <div class="tl-unassigned-list">
         <div v-for="trip in unassigned" :key="trip.id" class="tl-unassigned-item">
           <LxButton :label="`${trip.origin} → ${trip.destination}`" kind="ghost" @click="openTrip(trip.id)" />
-          <LxBadge :value="i18n.t(`tripStatus.${trip.status}`)" />
+          <LxBadge :value="i18n.t(`tripStatus.${trip.status}`)" :tooltip="i18n.t('fields.status')" />
         </div>
       </div>
     </div>

@@ -1,8 +1,8 @@
 <script setup>
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useI18n } from "vue-i18n";
-import { LxTextInput, LxButton, LxSection, LxRow, LxInfoBox } from "@dativa-lv/lx-ui";
+import { LxTextInput, LxForm, LxSection, LxRow, LxInfoBox } from "@dativa-lv/lx-ui";
 import useAuthStore from "@/stores/auth";
 import useErrors from "@/hooks/errors";
 
@@ -16,6 +16,10 @@ const email = ref("");
 const password = ref("");
 const submitting = ref(false);
 const errorMessage = ref("");
+
+const actionDefinitions = computed(() => [
+  { id: "submit", name: i18n.t("login.submit"), kind: "primary", loading: submitting.value },
+]);
 
 async function submit() {
   errorMessage.value = "";
@@ -35,17 +39,22 @@ async function submit() {
 
 <template>
   <div class="lx-region lx-region-primary">
-    <LxSection :label="i18n.t('login.title')">
-      <LxRow :label="i18n.t('login.email')" required>
-        <LxTextInput v-model="email" mask="email" autocomplete="username" @keyup.enter="submit" />
-      </LxRow>
-      <LxRow :label="i18n.t('login.password')" required>
-        <LxTextInput v-model="password" kind="password" autocomplete="current-password" @keyup.enter="submit" />
-      </LxRow>
-
+    <LxForm
+      :show-header="false"
+      required-mode="required-asterisk"
+      :aria-label="i18n.t('login.title')"
+      :action-definitions="actionDefinitions"
+      @action-click="submit"
+    >
       <LxInfoBox v-if="errorMessage" variant="error" :label="errorMessage" />
-
-      <LxButton :label="i18n.t('login.submit')" kind="primary" :loading="submitting" @click="submit" />
-    </LxSection>
+      <LxSection :label="i18n.t('login.title')">
+        <LxRow :label="i18n.t('login.email')" required>
+          <LxTextInput v-model="email" mask="email" autocomplete="username" @keyup.enter="submit" />
+        </LxRow>
+        <LxRow :label="i18n.t('login.password')" required>
+          <LxTextInput v-model="password" kind="password" autocomplete="current-password" @keyup.enter="submit" />
+        </LxRow>
+      </LxSection>
+    </LxForm>
   </div>
 </template>

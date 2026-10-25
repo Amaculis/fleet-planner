@@ -1,4 +1,11 @@
 import useAuthStore from "@/stores/auth";
+import useAppStore from "@/stores/app";
+import useRights from "@/hooks/rights";
+
+function canAccess(to) {
+  const rights = useRights();
+  return to.matched.every((r) => typeof r.meta.access !== "function" || r.meta.access(rights));
+}
 
 // Deliberate deviation from the skill's default `lxFlowUtils.beforeEach` — that helper
 // is written against `LxAuthStore`'s OIDC session shape (token expiry, refresh, an
@@ -8,6 +15,8 @@ import useAuthStore from "@/stores/auth";
 // forcing that shape through a helper built for a different auth model.
 export default (router) => {
   router.beforeEach(async (to) => {
+    // Drives LxShell's :navigating progress indicator (lazy route chunks + bootstrap).
+    useAppStore().startNavigating();
     const auth = useAuthStore();
     if (!auth.ready) {
       await auth.bootstrap();
@@ -22,6 +31,11 @@ export default (router) => {
     if (onlyAnonymous && auth.isAuthorized) {
       return { name: "dashboard" };
     }
+    if (auth.isAuthorized && !canAccess(to)) {
+      return { name: "forbidden", replace: true };
+    }
     return true;
   });
+  router.afterEach(() => useAppStore().stopNavigating());
+  router.onError(() => useAppStore().stopNavigating());
 };

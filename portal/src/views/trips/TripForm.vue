@@ -222,6 +222,7 @@ onMounted(load);
     @action-click="onAction"
   >
     <LxInfoBox v-if="errorMessage" variant="error" :label="errorMessage" />
+    <LxInfoBox v-if="!isNew && seriesId" variant="info" :label="i18n.t('trips.partOfSeries')" />
 
     <LxSection :label="i18n.t('trips.form.route')" :description="i18n.t('trips.form.routeDescription')">
       <LxRow :label="i18n.t('fields.origin')" required>
@@ -239,7 +240,6 @@ onMounted(load);
       <LxRow v-if="isNew" :label="i18n.t('trips.form.repeat')" :description="i18n.t('trips.form.repeatHint')">
         <LxToggle v-model="repeat" />
       </LxRow>
-      <LxInfoBox v-if="!isNew && seriesId" variant="info" :label="i18n.t('trips.partOfSeries')" />
       <LxRow :label="i18n.t('fields.scheduledStart')" required>
         <DateTimeField v-model="scheduledStart" v-bind="invalidProps('scheduledStart')" />
       </LxRow>

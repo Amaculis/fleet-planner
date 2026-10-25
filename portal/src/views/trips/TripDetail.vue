@@ -212,7 +212,6 @@ onMounted(load);
   <LxLoader v-if="loading" :loading="true" />
 
   <div v-else-if="trip" class="trip-detail">
-    <LxButton icon="previous-page" :label="i18n.t('actions.back')" kind="ghost" @click="router.push({ name: 'trips' })" />
 
     <div class="trip-header">
       <div class="trip-header-main">

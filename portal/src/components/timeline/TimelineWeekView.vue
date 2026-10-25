@@ -243,7 +243,7 @@ function openTrip(id) {
             <button type="button" class="tl-chip tl-chip-unassigned" @click="openTrip(trip.id)">
               {{ trip.origin }} → {{ trip.destination }}
             </button>
-            <LxBadge :value="i18n.t(`tripStatus.${trip.status}`)" />
+            <LxBadge :value="i18n.t(`tripStatus.${trip.status}`)" :tooltip="i18n.t('fields.status')" />
           </span>
         </template>
       </div>
