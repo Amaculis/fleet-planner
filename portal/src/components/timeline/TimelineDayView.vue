@@ -186,7 +186,7 @@ function openTrip(id) {
   top: 0;
   bottom: 0;
   width: 1px;
-  background: var(--color-region-hover-background, rgba(0, 0, 0, 0.08));
+  background: var(--color-region-hover-background);
 }
 .tl-now-line {
   position: absolute;
@@ -222,13 +222,13 @@ function openTrip(id) {
   display: flex;
   align-items: center;
   gap: 0.35rem;
-  box-shadow: 0 1px 2px var(--color-shadow, rgba(0, 0, 0, 0.15));
+  box-shadow: 0 1px 2px var(--color-shadow);
   transition: transform 0.1s ease, box-shadow 0.1s ease;
   text-align: left;
 }
 .tl-day .tl-block:hover {
   transform: translateY(-1px) scaleY(1.05);
-  box-shadow: 0 2px 5px var(--color-shadow, rgba(0, 0, 0, 0.25));
+  box-shadow: 0 2px 5px var(--color-shadow);
   z-index: 2;
 }
 .tl-payment-dot {
@@ -236,19 +236,19 @@ function openTrip(id) {
   width: 0.5rem;
   height: 0.5rem;
   border-radius: 50%;
-  border: 1px solid rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--color-chrome);
 }
 .tl-payment-unpaid {
   background: var(--color-placeholder);
 }
 .tl-payment-reserved {
-  background: var(--color-blue, #2f6fed);
+  background: var(--color-blue);
 }
 .tl-payment-advance-paid {
-  background: var(--color-orange, #e08a1e);
+  background: var(--color-orange);
 }
 .tl-payment-paid {
-  background: var(--color-green, #2e9e5b);
+  background: var(--color-green);
 }
 .tl-block-time {
   font-weight: 600;
