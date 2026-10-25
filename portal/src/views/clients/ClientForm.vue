@@ -133,8 +133,8 @@ onMounted(load);
       <LxRow :label="i18n.t('fields.contactPerson')">
         <LxTextInput v-model="contactPerson" :maxlength="MAX_NAME" v-bind="invalidProps('contactPerson')" />
       </LxRow>
-      <LxRow :label="i18n.t('fields.phone')" :description="i18n.t('driverForm.phoneHint')">
-        <LxTextInput v-model="phone" v-bind="invalidProps('phone')" />
+      <LxRow :label="i18n.t('fields.phone')">
+        <LxTextInput v-model="phone" v-bind="invalidProps('phone')" :helper-text="i18n.t('driverForm.phoneHint')" />
       </LxRow>
       <LxRow :label="i18n.t('fields.email')">
         <LxTextInput v-model="email" :maxlength="MAX_EMAIL" v-bind="invalidProps('email')" />

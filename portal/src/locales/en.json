@@ -23,6 +23,10 @@
       "title": "Page not found",
       "description": "The page you are looking for does not exist."
     },
+    "forbidden": {
+      "title": "Access denied",
+      "description": "You don't have permission to open this page."
+    },
     "accessibility": { "title": "Accessibility settings" },
     "error": { "title": "Error", "goBack": "Go back", "goHome": "Home" },
     "buses": { "title": "Buses", "new": "Add bus", "edit": "Edit bus" },
@@ -195,6 +199,7 @@
     "unassigned": "Unassigned",
     "unassignedHint": "No bus or driver assigned yet.",
     "noNotes": "No notes.",
+    "duration": "Duration",
     "markAs": "Mark as",
     "partOfSeries": "Part of a repeating series",
     "clientSection": "Client",
@@ -267,7 +272,8 @@
     "unset": "—",
     "all": "All",
     "active": "Active",
-    "inactive": "Inactive"
+    "inactive": "Inactive",
+    "erased": "Erased"
   },
   "busForm": {
     "vehicle": "Vehicle",

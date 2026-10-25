@@ -59,15 +59,15 @@ function reset() {
   flex-wrap: wrap;
   gap: 0.5rem;
   padding: 0.5rem 1rem;
-  background: var(--color-brand);
-  color: var(--color-inverse, #fff);
+  background: var(--color-interactive-background);
+  color: var(--color-interactive-foreground);
   font-size: 0.85rem;
   position: fixed;
   left: 0;
   right: 0;
   bottom: 0;
   z-index: 9000;
-  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 -2px 8px var(--color-shadow);
 }
 .demo-banner-label a {
   color: inherit;

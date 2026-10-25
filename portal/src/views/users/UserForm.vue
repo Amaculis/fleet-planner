@@ -100,8 +100,8 @@ onMounted(load);
       <LxRow :label="i18n.t('fields.email')" required>
         <LxTextInput v-model="email" mask="email" v-bind="invalidProps('email')" />
       </LxRow>
-      <LxRow :label="i18n.t('fields.password')" :description="i18n.t('userForm.passwordHint')" required>
-        <LxTextInput v-model="password" kind="password" autocomplete="new-password" v-bind="invalidProps('password')" />
+      <LxRow :label="i18n.t('fields.password')" required>
+        <LxTextInput v-model="password" kind="password" autocomplete="new-password" v-bind="invalidProps('password')" :helper-text="i18n.t('userForm.passwordHint')" />
       </LxRow>
     </LxSection>
 
@@ -109,8 +109,9 @@ onMounted(load);
       <LxRow :label="i18n.t('fields.role')" required>
         <LxValuePicker v-model="role" :items="roleItems" variant="dropdown" selection-kind="single" />
       </LxRow>
-      <LxRow v-if="role === 'driver'" :label="i18n.t('fields.driver')" :description="i18n.t('userForm.driverHint')" required>
+      <LxRow v-if="role === 'driver'" :label="i18n.t('fields.driver')" required>
         <LxValuePicker
+          :helper-text="i18n.t('userForm.driverHint')"
           v-model="driverId"
           :items="driverItems"
           variant="dropdown"

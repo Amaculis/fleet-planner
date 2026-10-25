@@ -143,8 +143,8 @@ onMounted(load);
       <LxRow :label="i18n.t('fields.fullName')" required>
         <LxTextInput v-model="fullName" :maxlength="MAX_NAME" v-bind="invalidProps('fullName')" />
       </LxRow>
-      <LxRow :label="i18n.t('fields.phone')" :description="i18n.t('driverForm.phoneHint')">
-        <LxTextInput v-model="phone" v-bind="invalidProps('phone')" />
+      <LxRow :label="i18n.t('fields.phone')">
+        <LxTextInput v-model="phone" v-bind="invalidProps('phone')" :helper-text="i18n.t('driverForm.phoneHint')" />
       </LxRow>
     </LxSection>
 
@@ -158,8 +158,8 @@ onMounted(load);
     </LxSection>
 
     <LxSection :label="i18n.t('driverForm.pay')" :description="i18n.t('driverForm.payDescription')">
-      <LxRow :label="i18n.t('fields.hourlyRate')" :description="i18n.t('driverForm.rateHint')">
-        <LxTextInput v-model="hourlyRate" v-bind="invalidProps('hourlyRate')" />
+      <LxRow :label="i18n.t('fields.hourlyRate')">
+        <LxTextInput v-model="hourlyRate" v-bind="invalidProps('hourlyRate')" :helper-text="i18n.t('driverForm.rateHint')" />
       </LxRow>
       <LxRow :label="i18n.t('fields.payType')">
         <LxValuePicker v-model="payType" :items="payTypeItems" variant="dropdown" selection-kind="single" nullable />

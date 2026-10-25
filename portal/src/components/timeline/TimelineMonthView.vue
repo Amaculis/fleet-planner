@@ -207,20 +207,20 @@ function openTrip(id) {
   width: 0.4rem;
   height: 0.4rem;
   border-radius: 50%;
-  border: 1px solid rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--color-chrome);
   margin-right: 0.2rem;
 }
 .tl-payment-unpaid {
   background: var(--color-placeholder);
 }
 .tl-payment-reserved {
-  background: var(--color-blue, #2f6fed);
+  background: var(--color-blue);
 }
 .tl-payment-advance-paid {
-  background: var(--color-orange, #e08a1e);
+  background: var(--color-orange);
 }
 .tl-payment-paid {
-  background: var(--color-green, #2e9e5b);
+  background: var(--color-green);
 }
 .tl-month-more {
   font-size: 0.65rem;

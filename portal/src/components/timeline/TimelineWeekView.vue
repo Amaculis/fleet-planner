@@ -243,7 +243,7 @@ function openTrip(id) {
             <button type="button" class="tl-chip tl-chip-unassigned" @click="openTrip(trip.id)">
               {{ trip.origin }} → {{ trip.destination }}
             </button>
-            <LxBadge :value="i18n.t(`tripStatus.${trip.status}`)" />
+            <LxBadge :value="i18n.t(`tripStatus.${trip.status}`)" :tooltip="i18n.t('fields.status')" />
           </span>
         </template>
       </div>
@@ -358,7 +358,7 @@ function openTrip(id) {
   gap: 0.3rem;
   overflow: hidden;
   white-space: nowrap;
-  box-shadow: 0 1px 2px var(--color-shadow, rgba(0, 0, 0, 0.15));
+  box-shadow: 0 1px 2px var(--color-shadow);
 }
 .tl-span-label {
   overflow: hidden;
@@ -402,19 +402,19 @@ function openTrip(id) {
   width: 0.5rem;
   height: 0.5rem;
   border-radius: 50%;
-  border: 1px solid rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--color-chrome);
 }
 .tl-payment-unpaid {
   background: var(--color-placeholder);
 }
 .tl-payment-reserved {
-  background: var(--color-blue, #2f6fed);
+  background: var(--color-blue);
 }
 .tl-payment-advance-paid {
-  background: var(--color-orange, #e08a1e);
+  background: var(--color-orange);
 }
 .tl-payment-paid {
-  background: var(--color-green, #2e9e5b);
+  background: var(--color-green);
 }
 .tl-week .tl-chip-planned,
 .tl-week .tl-span-bar.tl-chip-planned {

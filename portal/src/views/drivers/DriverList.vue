@@ -9,8 +9,10 @@ import useDataGridTexts from "@/hooks/dataGridTexts";
 import useFilterTexts from "@/hooks/filterTexts";
 import useConfirmStore from "@/stores/confirm";
 import useErrors from "@/hooks/errors";
+import useStateDictionaries from "@/hooks/stateDictionaries";
 
 const i18n = useI18n();
+const { activeDictionary } = useStateDictionaries();
 const router = useRouter();
 const notify = useNotifyStore();
 const dataGridTexts = useDataGridTexts();
@@ -45,7 +47,7 @@ const activeFilterItems = computed(() => [
 const columnDefinitions = computed(() => [
   { id: "fullName", attributeName: "fullName", name: i18n.t("fields.fullName"), kind: "primary" },
   { id: "phone", attributeName: "phone", name: i18n.t("fields.phone") },
-  { id: "activeLabel", attributeName: "activeLabel", name: i18n.t("fields.isActive") },
+  { id: "activeState", attributeName: "activeState", name: i18n.t("fields.isActive"), type: "state", dictionary: activeDictionary.value },
 ]);
 
 const actionDefinitions = computed(() => [
@@ -56,7 +58,7 @@ const actionDefinitions = computed(() => [
 const rows = computed(() => {
   const mapped = drivers.value.map((d) => ({
     ...d,
-    activeLabel: d.anonymized ? "—" : d.isActive ? i18n.t("common.yes") : i18n.t("common.no"),
+    activeState: d.anonymized ? "erased" : String(d.isActive),
   }));
   const byActive =
     activeFilter.value === "all" ? mapped : mapped.filter((d) => d.isActive === (activeFilter.value === "active"));

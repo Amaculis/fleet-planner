@@ -71,6 +71,10 @@ const selectedNavItems = computed(() => ({
   [NAV_ALIASES[route.name] ?? route.name]: true,
 }));
 
+const breadcrumbs = computed(() =>
+  (route.meta.breadcrumbs ?? []).map((item) => ({ label: i18n.t(item.text), to: item.to }))
+);
+
 const pageLabel = computed(() => {
   if (typeof route.meta.title === "function") return route.meta.title(i18n);
   return route.meta?.title ? i18n.t(route.meta.title) : "";
@@ -120,15 +124,16 @@ async function logout() {
 <template>
   <LxShell
     :route-name="route.name?.toString()"
-    system-name="Bus Fleet"
-    system-name-short="Fleet"
+    :system-name="i18n.t('title.fullName')"
+    :system-name-short="i18n.t('title.shortName')"
     :user-info="userInfo"
     has-avatar
     avatar-kind="initials"
     :nav-items="nav"
     :nav-items-selected="selectedNavItems"
     :page-label="pageLabel"
-    :page-back-button-visible="false"
+    :page-breadcrumbs="breadcrumbs"
+    :page-back-button-visible="breadcrumbs.length > 0"
     :page-index-path="{ name: 'dashboard' }"
     :navigating="appStore.$state.isNavigating"
     :confirm-dialog-data="confirmStore"

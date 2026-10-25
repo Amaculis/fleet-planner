@@ -8,8 +8,10 @@ import useNotifyStore from "@/stores/notify";
 import useDataGridTexts from "@/hooks/dataGridTexts";
 import useFilterTexts from "@/hooks/filterTexts";
 import useErrors from "@/hooks/errors";
+import useStateDictionaries from "@/hooks/stateDictionaries";
 
 const i18n = useI18n();
+const { activeDictionary } = useStateDictionaries();
 const router = useRouter();
 const notify = useNotifyStore();
 const dataGridTexts = useDataGridTexts();
@@ -55,7 +57,7 @@ const activeFilterItems = computed(() => [
 const columnDefinitions = computed(() => [
   { id: "email", attributeName: "email", name: i18n.t("fields.email"), kind: "primary" },
   { id: "roleLabel", attributeName: "roleLabel", name: i18n.t("fields.role") },
-  { id: "activeLabel", attributeName: "activeLabel", name: i18n.t("fields.isActive") },
+  { id: "activeState", attributeName: "activeState", name: i18n.t("fields.isActive"), type: "state", dictionary: activeDictionary.value },
 ]);
 
 const actionDefinitions = computed(() => [
@@ -68,7 +70,7 @@ const rows = computed(() => {
   const mapped = users.value.map((u) => ({
     ...u,
     roleLabel: i18n.t(`roles.${u.role}`),
-    activeLabel: u.isActive ? i18n.t("common.yes") : i18n.t("common.no"),
+    activeState: String(u.isActive),
   }));
   const byRole = roleFilter.value === "all" ? mapped : mapped.filter((u) => u.role === roleFilter.value);
   const byActive =

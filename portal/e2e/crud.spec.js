@@ -147,7 +147,7 @@ test("user: add, activate/deactivate", async ({ page }) => {
   // Deactivate, then reactivate — the one row action users currently have.
   const row = page.getByRole("row", { name: new RegExp(email) });
   await row.getByRole("button").click();
-  await expect(page.getByRole("row", { name: new RegExp(email) }).getByText(/^no$/i)).toBeVisible();
+  await expect(page.getByRole("row", { name: new RegExp(email) }).getByText(/^inactive$/i)).toBeVisible();
   await page.getByRole("row", { name: new RegExp(email) }).getByRole("button").click();
-  await expect(page.getByRole("row", { name: new RegExp(email) }).getByText(/^yes$/i)).toBeVisible();
+  await expect(page.getByRole("row", { name: new RegExp(email) }).getByText(/^active$/i)).toBeVisible();
 });

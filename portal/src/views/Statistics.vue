@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from "vue";
 import { useI18n } from "vue-i18n";
-import { LxSection, LxDataVisualizer, LxContentSwitcher, LxLoader } from "@dativa-lv/lx-ui";
+import { LxContentSwitcher, LxDataVisualizer, LxEmptyState, LxLoaderView, LxRow, LxSection, LxStack } from "@dativa-lv/lx-ui";
 import { getBuses, getDrivers } from "@/services/fleet";
 import { getTrips } from "@/services/trips";
 import useNotifyStore from "@/stores/notify";
@@ -119,63 +119,41 @@ const fleetByStatusItems = computed(() =>
 </script>
 
 <template>
-  <div class="statistics">
-    <div class="statistics-toolbar">
+  <LxStack horizontal-alignment="stretch">
+    <LxStack orientation="horizontal" horizontal-alignment="trailing">
       <LxContentSwitcher v-model="period" :items="periodItems" />
-    </div>
-
-    <LxLoader v-if="loading" :loading="true" />
-    <template v-else>
-      <LxSection :label="i18n.t('statistics.tripVolume')" :description="i18n.t('statistics.tripVolumeDescription')">
-        <p v-if="!tripVolumeItems.length" class="statistics-empty">{{ i18n.t("statistics.noData") }}</p>
-        <LxDataVisualizer
-          v-else
-          kind="bars-vertical"
-          :items="tripVolumeItems"
-          :texts="dataVisualizerTexts"
-        />
-      </LxSection>
-
-      <div class="statistics-grid">
-        <LxSection :label="i18n.t('statistics.busiestBuses')" :description="i18n.t('statistics.busiestBusesDescription')">
-          <p v-if="!busiestBuses.length" class="statistics-empty">{{ i18n.t("statistics.noData") }}</p>
-          <LxDataVisualizer v-else kind="bars-horizontal" :items="busiestBuses" :texts="dataVisualizerTexts" />
+    </LxStack>
+    <LxLoaderView :loading="loading">
+      <LxStack horizontal-alignment="stretch">
+        <LxSection :label="i18n.t('statistics.tripVolume')" :description="i18n.t('statistics.tripVolumeDescription')">
+          <LxRow :label="i18n.t('statistics.tripVolume')" hide-label>
+            <LxEmptyState v-if="!tripVolumeItems.length" :label="i18n.t('statistics.noData')" />
+            <LxDataVisualizer v-else kind="bars-vertical" :items="tripVolumeItems" :texts="dataVisualizerTexts" />
+          </LxRow>
         </LxSection>
 
-        <LxSection
-          :label="i18n.t('statistics.busiestDrivers')"
-          :description="i18n.t('statistics.busiestDriversDescription')"
-        >
-          <p v-if="!busiestDrivers.length" class="statistics-empty">{{ i18n.t("statistics.noData") }}</p>
-          <LxDataVisualizer v-else kind="bars-horizontal" :items="busiestDrivers" :texts="dataVisualizerTexts" />
+        <!-- One two-column section rather than two side-by-side sections: LxSection's
+             own grid collapses to one column on narrow screens. -->
+        <LxSection :column-count="2">
+          <LxRow :label="i18n.t('statistics.busiestBuses')" :description="i18n.t('statistics.busiestBusesDescription')">
+            <LxEmptyState v-if="!busiestBuses.length" :label="i18n.t('statistics.noData')" />
+            <LxDataVisualizer v-else kind="bars-horizontal" :items="busiestBuses" :texts="dataVisualizerTexts" />
+          </LxRow>
+          <LxRow
+            :label="i18n.t('statistics.busiestDrivers')"
+            :description="i18n.t('statistics.busiestDriversDescription')"
+          >
+            <LxEmptyState v-if="!busiestDrivers.length" :label="i18n.t('statistics.noData')" />
+            <LxDataVisualizer v-else kind="bars-horizontal" :items="busiestDrivers" :texts="dataVisualizerTexts" />
+          </LxRow>
         </LxSection>
-      </div>
 
-      <LxSection :label="i18n.t('statistics.fleetByStatus')" :description="i18n.t('statistics.fleetByStatusDescription')">
-        <LxDataVisualizer kind="bars-horizontal" :items="fleetByStatusItems" :texts="dataVisualizerTexts" />
-      </LxSection>
-    </template>
-  </div>
+        <LxSection :label="i18n.t('statistics.fleetByStatus')" :description="i18n.t('statistics.fleetByStatusDescription')">
+          <LxRow :label="i18n.t('statistics.fleetByStatus')" hide-label>
+            <LxDataVisualizer kind="bars-horizontal" :items="fleetByStatusItems" :texts="dataVisualizerTexts" />
+          </LxRow>
+        </LxSection>
+      </LxStack>
+    </LxLoaderView>
+  </LxStack>
 </template>
-
-<style scoped>
-.statistics {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-.statistics-toolbar {
-  display: flex;
-  justify-content: flex-end;
-}
-.statistics-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
-  gap: 1.5rem;
-}
-.statistics-empty {
-  color: var(--color-placeholder);
-  font-size: 0.9rem;
-  margin: 0;
-}
-</style>

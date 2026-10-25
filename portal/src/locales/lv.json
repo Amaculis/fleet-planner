@@ -23,6 +23,10 @@
       "title": "Lapa nav atrasta",
       "description": "Meklētā lapa neeksistē."
     },
+    "forbidden": {
+      "title": "Piekļuve liegta",
+      "description": "Jums nav tiesību atvērt šo lapu."
+    },
     "accessibility": { "title": "Pieejamības iestatījumi" },
     "error": { "title": "Kļūda", "goBack": "Atpakaļ", "goHome": "Sākums" },
     "buses": { "title": "Autobusi", "new": "Pievienot autobusu", "edit": "Labot autobusu" },
@@ -195,6 +199,7 @@
     "unassigned": "Nav norīkots",
     "unassignedHint": "Vēl nav piešķirts autobuss vai vadītājs.",
     "noNotes": "Nav piezīmju.",
+    "duration": "Ilgums",
     "markAs": "Atzīmēt kā",
     "partOfSeries": "Daļa no atkārtota reisu cikla",
     "clientSection": "Klients",
@@ -267,7 +272,8 @@
     "unset": "—",
     "all": "Visi",
     "active": "Aktīvs",
-    "inactive": "Neaktīvs"
+    "inactive": "Neaktīvs",
+    "erased": "Dzēsts"
   },
   "busForm": {
     "vehicle": "Transportlīdzeklis",
