@@ -68,7 +68,7 @@ services:
   # One-shot: applies pending migrations as the schema owner, then exits. The app only
   # starts after it succeeds, and the app role itself can never run DDL.
   migrate:
-    image: migrate/migrate:v4.18.3
+    image: migrate/migrate:v4.20.1
     restart: "no"
     environment:
       MIGRATE_URL: postgres://fleet_owner:${FLEET_OWNER_PASSWORD:?FLEET_OWNER_PASSWORD is required}@db:5432/fleet?sslmode=disable
