@@ -1,0 +1,46 @@
+# Weekly dependency update PRs. CI (.github/workflows/ci.yml) tests each one, but it
+# does not run the browser tests: run scripts/verify-e2e.sh locally before merging an
+# lx-ui or Vue update (lx-ui 2.3.10 changed the list search box, for example).
+version: 2
+
+updates:
+  - package-ecosystem: gomod
+    directory: /
+    schedule: { interval: weekly, day: monday, time: "05:00", timezone: Europe/Riga }
+    groups:
+      go-minor-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directory: /portal
+    schedule: { interval: weekly, day: monday, time: "05:00", timezone: Europe/Riga }
+    groups:
+      portal-minor-patch:
+        update-types: [minor, patch]
+
+  # Tailwind, htmx and the lx-ui calendar island for the server-rendered pages.
+  - package-ecosystem: npm
+    directory: /
+    schedule: { interval: weekly, day: monday, time: "05:00", timezone: Europe/Riga }
+    groups:
+      assets-minor-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: docker
+    directory: /
+    schedule: { interval: weekly, day: monday, time: "05:00", timezone: Europe/Riga }
+
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule: { interval: weekly, day: monday, time: "05:00", timezone: Europe/Riga }
+    ignore:
+      # A Postgres major upgrade needs a dump/restore of the data volume, not a tag bump.
+      - dependency-name: postgres
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly, day: monday, time: "05:00", timezone: Europe/Riga }
+    groups:
+      actions:
+        patterns: ["*"]
