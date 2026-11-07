@@ -1,0 +1,14 @@
+# Overlay for the e2e run only (scripts/verify-e2e.sh applies and removes it).
+#
+# Every Playwright browser reaches the app from one IP (the test container, via
+# Caddy), so the production per-IP login limit (5, then 1 per minute) would refuse
+# the suite's own logins. Here the limit stays on, but is wide and refills fast:
+# parallel logins fit in the burst, and authEdgeCases.spec.js still proves the
+# limiter trips by sending more attempts at once than the burst allows.
+#
+# Never use this file outside the e2e run.
+services:
+  app:
+    environment:
+      LOGIN_RATE_BURST: "30"
+      LOGIN_RATE_EVERY: "100ms"

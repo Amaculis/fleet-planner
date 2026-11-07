@@ -90,7 +90,8 @@ test("driver's nav has no links to planner/admin pages, and visiting one directl
   page.on("pageerror", (e) => errors.push(String(e)));
   await page.goto("/app/buses");
   await expect(page).toHaveURL(/\/app\/forbidden$/);
-  await expect(page.getByRole("heading", { name: "Access denied" }).first()).toBeVisible();
+  // LxErrorPage renders its title as styled text, not a heading element.
+  await expect(page.getByText("Access denied", { exact: true }).first()).toBeVisible();
   expect(errors, `uncaught page errors visiting /app/buses as a driver:\n${errors.join("\n")}`).toEqual([]);
 
   // ...but the guard is presentation only: the real boundary is the API itself.

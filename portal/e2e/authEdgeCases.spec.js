@@ -78,28 +78,29 @@ test("a state-changing request without a valid CSRF token is rejected", async ({
   expect(results.wrongToken, "POST with a garbage X-CSRF-Token").toBe(403);
 });
 
-// Runs last and deliberately exhausts the shared per-IP login bucket (5/minute, see
-// internal/http/server.go's loginLimiter) — any test after this one in the same
-// container run would itself start failing logins, hence it living alone at the end
-// of its own file and the container needing a restart before other login-heavy specs
-// run again (documented in the verify-e2e workflow, not something this test can fix).
+// The per-IP login limit (internal/http/server.go's loginLimiter). Sends three times
+// the burst at once, so the bucket must run dry however fast it refills. Every attempt
+// uses a different email, so the per-account limit can't be what answers 429.
+// E2E_LOGIN_BURST matches docker-compose.e2e.yml (scripts/verify-e2e.sh sets it); the
+// fallback is the production default. The e2e overlay refills in about 3 seconds, so
+// this no longer starves the other specs' logins.
+const LOGIN_BURST = Number(process.env.E2E_LOGIN_BURST || 5);
+
 test("the login rate limiter trips after repeated attempts from the same client", async ({ page }) => {
   await page.goto("/app/");
 
-  const statuses = await page.evaluate(async () => {
+  const statuses = await page.evaluate(async (attempts) => {
     const me = await fetch("/api/auth/me").then((r) => r.json());
-    const results = [];
-    for (let i = 0; i < 10; i++) {
-      const resp = await fetch("/api/auth/login", {
+    const run = Date.now();
+    const requests = Array.from({ length: attempts }, (_, i) =>
+      fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-CSRF-Token": me.csrfToken },
-        body: JSON.stringify({ email: "nobody@example.com", password: "wrong-password" }),
-      });
-      results.push(resp.status);
-      if (resp.status === 429) break;
-    }
-    return results;
-  });
+        body: JSON.stringify({ email: `nobody-${run}-${i}@example.com`, password: "wrong-password" }),
+      }).then((r) => r.status)
+    );
+    return Promise.all(requests);
+  }, LOGIN_BURST * 3);
 
   expect(statuses, "login attempts should eventually hit 429").toContain(429);
 });

@@ -58,8 +58,22 @@ docker run --rm \
 
 : "${APP_DOMAIN:?APP_DOMAIN must be set in .env — it's what Caddy's site block and TLS SNI match on}"
 
+# Every test browser reaches the app from this one container's IP, so the production
+# per-IP login limit would refuse the suite's own logins. Recreate the app with the
+# e2e overlay (wider, fast-refilling limit) for the run, and put the normal config
+# back afterwards, also when the run fails.
+E2E_LOGIN_BURST=30 # keep in sync with docker-compose.e2e.yml
+echo "==> restarting app with the e2e login limit"
+docker compose -f docker-compose.yml -f docker-compose.e2e.yml up -d --no-deps --wait app
+restore_app() {
+  echo "==> restoring app with the normal login limit"
+  docker compose -f docker-compose.yml up -d --no-deps --wait app
+}
+trap restore_app EXIT
+
 echo "==> running e2e suite against https://$APP_DOMAIN (via caddy)"
 docker run --rm --network bus-fleet_frontend \
+  -e "E2E_LOGIN_BURST=$E2E_LOGIN_BURST" \
   -v "$(hostpath "$ROOT/portal"):/work" \
   -v bus-fleet-e2e-node-modules:/work/node_modules \
   -w /work \
