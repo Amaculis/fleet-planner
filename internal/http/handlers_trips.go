@@ -76,16 +76,18 @@ func (s *Server) tripDetail(r *http.Request) (templates.TripDetail, error) {
 
 	detail := templates.TripDetail{Trip: trip, Buses: buses, Drivers: drivers}
 	if assignment, err := s.assignments.GetForTrip(ctx, identity, id); err == nil {
-		detail.Assignment = &domain.AssignmentDetail{Assignment: assignment}
-		for _, bus := range buses {
-			if bus.ID == assignment.BusID {
-				detail.Assignment.BusPlate = bus.Plate
-			}
+		// By id, not from the active-only picker lists: a bus in maintenance or a
+		// deactivated driver must still show on the trips they are booked on.
+		bus, err := s.fleet.GetBus(ctx, identity, assignment.BusID)
+		if err != nil {
+			return templates.TripDetail{}, err
 		}
-		for _, driver := range drivers {
-			if driver.ID == assignment.DriverID {
-				detail.Assignment.DriverName = driver.FullName
-			}
+		driver, err := s.fleet.GetDriver(ctx, identity, assignment.DriverID)
+		if err != nil {
+			return templates.TripDetail{}, err
+		}
+		detail.Assignment = &domain.AssignmentDetail{
+			Assignment: assignment, BusPlate: bus.Plate, DriverName: driver.FullName,
 		}
 	} else if !errors.Is(err, domain.ErrNotFound) {
 		return templates.TripDetail{}, err

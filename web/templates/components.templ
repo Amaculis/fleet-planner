@@ -80,6 +80,16 @@ templ PostButton(v View, action, labelKey, class string) {
 	</form>
 }
 
+// ConfirmPostButton is PostButton for actions that are hard to undo: app.js asks the
+// user to confirm (data-confirm) before the form submits. Without JavaScript it simply
+// posts, like PostButton — the server rules apply either way.
+templ ConfirmPostButton(v View, action, labelKey, class, confirmKey string) {
+	<form method="post" action={ templ.SafeURL(action) } class="inline" data-confirm={ v.T(confirmKey) }>
+		@CSRFField(v)
+		<button type="submit" class={ class }>{ v.T(labelKey) }</button>
+	</form>
+}
+
 // Field wraps a labelled input. The label carries a predictable id (<field-id>-label)
 // so anything needing aria-labelledby — currently just the calendar island — can find
 // it without every call site inventing its own id.

@@ -11,3 +11,11 @@ FROM audit_log
 WHERE entity = $1 AND entity_id = $2
 ORDER BY created_at DESC
 LIMIT $3;
+
+-- name: RedactAuditPII :one
+-- GDPR erasure: strips personal-data keys from one entity's snapshots (see 0011).
+SELECT redact_audit_pii(@entity::text, @entity_id::bigint)::bigint AS redacted;
+
+-- name: PurgeOldAuditLog :one
+-- Retention: deletes entries older than the fixed period in 0012.
+SELECT purge_old_audit_log()::bigint AS purged;

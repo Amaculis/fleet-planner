@@ -27,7 +27,7 @@ templ UsersPage(v View, users []domain.UserListItem) {
 							<td class="py-2 whitespace-nowrap">
 								if u.ID != v.Identity.UserID {
 									if u.IsActive {
-										@PostButton(v, "/users/"+strconv.FormatInt(u.ID, 10)+"/deactivate", "users.deactivate", dangerButton)
+										@ConfirmPostButton(v, "/users/"+strconv.FormatInt(u.ID, 10)+"/deactivate", "users.deactivate", dangerButton, "confirm.deactivate_user")
 									} else {
 										@PostButton(v, "/users/"+strconv.FormatInt(u.ID, 10)+"/activate", "users.activate", linkButton)
 									}

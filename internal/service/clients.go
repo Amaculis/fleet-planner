@@ -119,8 +119,13 @@ func (s *ClientService) Anonymize(ctx context.Context, actor domain.Identity, id
 			return err
 		}
 		erased = after
-		return NewAuditor(tx).Record(ctx, &actor.UserID, "anonymize", "client", &id,
-			snapshotClient(before), snapshotClient(after), meta)
+		if err := NewAuditor(tx).Record(ctx, &actor.UserID, "anonymize", "client", &id,
+			snapshotClient(before), snapshotClient(after), meta); err != nil {
+			return err
+		}
+		// Last, so the entry just written is redacted too: erasure covers the trail.
+		_, err = tx.RedactAuditPII(ctx, "client", id)
+		return err
 	})
 	if err != nil {
 		return domain.Client{}, fmt.Errorf("anonymizing client: %w", err)

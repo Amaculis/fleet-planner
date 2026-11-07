@@ -88,7 +88,10 @@ func (s *TripService) Update(ctx context.Context, actor domain.Identity, input d
 			return err
 		}
 		// Rescheduling an assigned trip: warn with details before the constraint fires.
-		if !before.ScheduledStart.Equal(input.ScheduledStart) || !before.ScheduledEnd.Equal(input.ScheduledEnd) {
+		// A cancelled trip holds no booking (the EXCLUDE constraints skip it), so it
+		// cannot clash; un-cancelling re-checks the slot instead.
+		rescheduled := !before.ScheduledStart.Equal(input.ScheduledStart) || !before.ScheduledEnd.Equal(input.ScheduledEnd)
+		if rescheduled && before.Status != domain.TripCancelled {
 			if err := s.checkRescheduleConflicts(ctx, tx, input); err != nil {
 				return err
 			}
@@ -162,9 +165,13 @@ func (s *TripService) SetStatus(ctx context.Context, actor domain.Identity, id i
 		if !domain.CanTransitionTrip(before.Status, status) {
 			return Message(domain.ErrValidation, "error.invalid_transition")
 		}
+		actualStart, actualEnd, err := actualsForTransition(before, status, time.Now().UTC())
+		if err != nil {
+			return err
+		}
 		// Un-cancelling puts the bus and driver back into the exclusion window; the
 		// constraint decides, and the error comes back as ErrTimeConflict.
-		after, err := tx.SetTripStatus(ctx, id, status)
+		after, err := tx.SetTripStatus(ctx, id, status, actualStart, actualEnd)
 		if err != nil {
 			return err
 		}
@@ -176,6 +183,42 @@ func (s *TripService) SetStatus(ctx context.Context, actor domain.Identity, id i
 		return domain.Trip{}, fmt.Errorf("setting trip status: %w", err)
 	}
 	return updated, nil
+}
+
+// actualsForTransition keeps the worked-time window (payroll-seam) consistent with the
+// status a planner sets by hand, so a trip can never end up "completed" with no times,
+// or "planned" with a start recorded (both also rejected by DB CHECKs):
+//
+//	planned     -> in_progress : start now (the planner starts it on the driver's behalf)
+//	in_progress -> completed   : end now; needs a recorded start
+//	in_progress -> cancelled   : end now if it had started — the time driven is kept
+//	completed   -> in_progress : clear the end, so the trip can be finished again
+//	cancelled   -> planned     : clear both; the trip is back to not having run
+func actualsForTransition(before domain.Trip, to domain.TripStatus, now time.Time) (start, end *time.Time, err error) {
+	start, end = before.ActualStart, before.ActualEnd
+	switch {
+	case before.Status == domain.TripPlanned && to == domain.TripInProgress:
+		start, end = &now, nil
+	case before.Status == domain.TripInProgress && to == domain.TripCompleted:
+		if start == nil {
+			return nil, nil, Message(domain.ErrConflict, "error.trip_never_started")
+		}
+		end = &now
+	case before.Status == domain.TripInProgress && to == domain.TripCancelled:
+		if start != nil {
+			end = &now
+		}
+	case before.Status == domain.TripCompleted && to == domain.TripInProgress:
+		end = nil
+	case before.Status == domain.TripCancelled && to == domain.TripPlanned:
+		start, end = nil, nil
+	}
+	if start != nil && end != nil && !end.After(*start) {
+		// A start recorded this very instant: nudge so the CHECK (end > start) holds.
+		later := start.Add(time.Second)
+		end = &later
+	}
+	return start, end, nil
 }
 
 // Delete removes a trip that was never assigned. Anything with history is cancelled
@@ -261,6 +304,11 @@ func (s *TripService) driverTransition(
 		}
 
 		after, err := apply(tx, driverID)
+		if errors.Is(err, domain.ErrNotFound) {
+			// The trip is the caller's (read above) but not in the state this action
+			// needs — typically a double tap, or the planner changed it meanwhile.
+			return driverTransitionRefused(action, before.Status)
+		}
 		if err != nil {
 			return err
 		}
@@ -272,6 +320,21 @@ func (s *TripService) driverTransition(
 		return domain.Trip{}, fmt.Errorf("%sing trip: %w", action, err)
 	}
 	return updated, nil
+}
+
+// driverTransitionRefused names why a start/finish did nothing, instead of "not found".
+func driverTransitionRefused(action string, status domain.TripStatus) error {
+	switch {
+	case action == "start" && status == domain.TripInProgress:
+		return Message(domain.ErrConflict, "error.trip_already_started")
+	case action == "finish" && status == domain.TripCompleted:
+		return Message(domain.ErrConflict, "error.trip_already_finished")
+	case status == domain.TripCancelled:
+		return Message(domain.ErrConflict, "error.trip_cancelled_by_planner")
+	case action == "finish" && status == domain.TripPlanned:
+		return Message(domain.ErrConflict, "error.trip_not_started_yet")
+	}
+	return Message(domain.ErrConflict, "error.invalid_transition")
 }
 
 // driverIDOf resolves the caller's driver record from the session. A non-driver, or a

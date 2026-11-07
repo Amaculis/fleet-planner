@@ -95,6 +95,7 @@ func run() error {
 	srv := apphttp.NewServer(cfg, log, services, bundle, repository)
 	srv.StartBackground(ctx)
 	go purgeSessions(ctx, sessions, log)
+	go purgeOldAuditLog(ctx, repository, log)
 
 	httpServer := &stdhttp.Server{
 		Addr:    cfg.ListenAddr,
@@ -174,6 +175,35 @@ func purgeSessions(ctx context.Context, sessions *auth.Manager, log *slog.Logger
 			if n > 0 {
 				log.Info("purged expired sessions", "count", n)
 			}
+		}
+	}
+}
+
+// purgeOldAuditLog applies the audit log retention period (2 years, fixed in migration
+// 0012) once at start-up and then daily. GDPR storage limitation: old entries hold IP
+// addresses and personal-data snapshots.
+func purgeOldAuditLog(ctx context.Context, repository *repo.Repo, log *slog.Logger) {
+	run := func() {
+		purgeCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+		defer cancel()
+		n, err := repository.PurgeOldAuditLog(purgeCtx)
+		if err != nil {
+			log.Error("purging old audit entries", "error", err)
+			return
+		}
+		if n > 0 {
+			log.Info("purged old audit entries", "count", n)
+		}
+	}
+	run()
+	ticker := time.NewTicker(24 * time.Hour)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			run()
 		}
 	}
 }

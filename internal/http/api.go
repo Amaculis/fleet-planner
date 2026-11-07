@@ -34,15 +34,32 @@ func readJSON(r *http.Request, v any) error {
 // apiError is the JSON shape every failed API call renders. A booking clash's
 // conflicting trips ride along the same way the HTML flash banner carries them.
 type apiError struct {
-	Error     string            `json:"error"`
-	Conflicts []domain.Conflict `json:"conflicts,omitempty"`
+	Error     string        `json:"error"`
+	Conflicts []apiConflict `json:"conflicts,omitempty"`
+}
+
+// apiConflict is one booking in the way, in the same wire format as the trips API
+// (local wall-clock times), so the SPA can name it: "Riga -> Liepaja, 08:00-12:00".
+type apiConflict struct {
+	TripID      int64  `json:"tripId"`
+	Origin      string `json:"origin"`
+	Destination string `json:"destination"`
+	Start       string `json:"start"`
+	End         string `json:"end"`
 }
 
 // writeAPIError maps a service error to a status and this shape, logging internal
 // detail exactly the way s.abort does for HTML responses — nothing more, nothing less.
 func (s *Server) writeAPIError(w http.ResponseWriter, r *http.Request, err error) {
 	status, msg := s.failed(r, err)
-	s.writeJSON(w, r, status, apiError{Error: msg.Text, Conflicts: msg.Conflicts})
+	out := apiError{Error: msg.Text}
+	for _, c := range msg.Conflicts {
+		out.Conflicts = append(out.Conflicts, apiConflict{
+			TripID: c.TripID, Origin: c.Origin, Destination: c.Destination,
+			Start: formatTimestamp(c.Start, s.cfg.Location), End: formatTimestamp(c.End, s.cfg.Location),
+		})
+	}
+	s.writeJSON(w, r, status, out)
 }
 
 // jsonDate parses a "YYYY-MM-DD" string — the same wire format a plain <input

@@ -39,6 +39,10 @@ type Server struct {
 	// Two limiters: a strict one for credential endpoints, a loose global default.
 	loginLimiter  *Limiter
 	globalLimiter *Limiter
+	// Per account (email), spent only by failed logins: stops a distributed guess at one
+	// password that the per-IP limiter cannot see. Keyed on whatever email was typed,
+	// so it reveals nothing about which accounts exist.
+	accountLimiter *Limiter
 }
 
 // Services groups the business services the HTTP layer drives.
@@ -71,6 +75,8 @@ func NewServer(cfg config.Config, log *slog.Logger, svc Services, bundle *i18n.B
 		// (sized for the old server-rendered app) is too tight for the SPA's chunk
 		// waterfall on a cold load.
 		globalLimiter: NewLimiter(orDuration(cfg.GlobalRateEvery, 100*time.Millisecond), orInt(cfg.GlobalRateBurst, 600)),
+		// 10 failures, then one more try every 3 minutes (full refill: 30 minutes).
+		accountLimiter: NewLimiter(3*time.Minute, 10).WithIdleTTL(30 * time.Minute),
 	}
 }
 
@@ -94,6 +100,7 @@ func orInt(v, fallback int) int {
 func (s *Server) StartBackground(ctx context.Context) {
 	s.loginLimiter.StartCleanup(ctx)
 	s.globalLimiter.StartCleanup(ctx)
+	s.accountLimiter.StartCleanup(ctx)
 }
 
 // Routes builds the router. Middleware order is fixed:

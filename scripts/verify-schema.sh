@@ -11,7 +11,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 CONTAINER="bus-fleet-schema-check-$$"
-PGIMAGE="postgres:17.6-alpine"
+PGIMAGE="postgres:17.11-alpine@sha256:3540c0362c809df084ffac0ae69fe794515f9de92692f02178bcdce0ef0302ac"
 OWNER_PW="verify-owner"
 APP_PW="verify-app"
 

@@ -55,12 +55,18 @@ import "@dativa-lv/lx-ui/dist/styles/lx-popovers.css"; // LxValuePicker's dropdo
 // e.ValuePicker_exports)) and its popover panel (.lx-dropdown-panel etc.) is defined here, not
 // in lx-value-pickers.css — without it the panel renders unstyled/unsized ("big logo" bug).
 import "@dativa-lv/lx-ui/dist/styles/lx-data-visualizer.css"; // LxDataVisualizer (Statistics)
+import "@dativa-lv/lx-ui/dist/styles/lx-modals.css"; // LxModalForm (user password reset)
 
 import App from "@/App.vue";
 import router from "@/router";
 import events from "@/router/events";
 import i18n from "@/i18n";
-import { APP_CONFIG } from "@/constants";
+import { APP_CONFIG, APP_VERSION } from "@/constants";
+
+// lxVersionCheckUtils compares globalThis.config.version with /app/version.json (see
+// layouts/MainLayout.vue). This app has no window.config <script> (the CSP forbids
+// inline scripts - see constants.js), so the two fields it reads are set here.
+globalThis.config = { ...(globalThis.config ?? {}), version: APP_VERSION, environment: APP_CONFIG.environment };
 
 const app = createApp(App);
 
@@ -95,7 +101,10 @@ const app = createApp(App);
     // `getGlobals().locale?.locale` (verified against the installed
     // DateTimePicker chunk); `tag` was silently ignored and the picker fell back
     // to its hardcoded "lv-LV" default regardless of APP_CONFIG.defaultLocale.
-    locale: { locale: APP_CONFIG.defaultLocale, firstDayOfTheWeek: 1 },
+    // The language the app starts in (saved choice or browser language, see
+    // i18n/index.js). LX UI fixes this at install time; switching language later
+    // does not re-localize date pickers.
+    locale: { locale: i18n.global.locale.value, firstDayOfTheWeek: 1 },
     preload: {
       components: [
         LxShell, LxButton, LxTextInput, LxErrorPage, LxAccessibilitySettings, LxLoaderView, LxInfoBox,

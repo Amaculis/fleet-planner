@@ -207,7 +207,7 @@ func UsersPage(v View, users []domain.UserListItem) templ.Component {
 				}
 				if u.ID != v.Identity.UserID {
 					if u.IsActive {
-						templ_7745c5c3_Err = PostButton(v, "/users/"+strconv.FormatInt(u.ID, 10)+"/deactivate", "users.deactivate", dangerButton).Render(ctx, templ_7745c5c3_Buffer)
+						templ_7745c5c3_Err = ConfirmPostButton(v, "/users/"+strconv.FormatInt(u.ID, 10)+"/deactivate", "users.deactivate", dangerButton, "confirm.deactivate_user").Render(ctx, templ_7745c5c3_Buffer)
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}

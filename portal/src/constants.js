@@ -18,3 +18,12 @@ export const APP_CONFIG = {
   // src/demo/mockApi.js. The regular build the Go server embeds never sets this.
   demo: import.meta.env.VITE_DEMO === "true",
 };
+
+// localStorage key for the language picked in LxShell's language picker (see
+// hooks/language.js); read back at startup by i18n/index.js.
+export const LOCALE_STORAGE_KEY = "bus-fleet-locale";
+
+// Build id baked in by vite.config.mjs. lxVitePortalVersionPlugin writes the same value
+// into dist/version.json, and lxVersionCheckUtils compares the two to spot a new deploy.
+// eslint-disable-next-line no-undef
+export const APP_VERSION = typeof __APP_VERSION__ === "string" ? __APP_VERSION__ : "dev";

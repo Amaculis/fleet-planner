@@ -103,6 +103,17 @@ func (s *UserService) SetActive(ctx context.Context, actor domain.Identity, id i
 		if err != nil {
 			return err
 		}
+		// A driver login may only come back if its driver record is usable: an erased
+		// or deactivated driver's account stays off.
+		if active && before.DriverID != nil {
+			driver, err := tx.GetDriver(ctx, *before.DriverID)
+			if err != nil {
+				return err
+			}
+			if !driver.IsActive || driver.IsAnonymized() {
+				return Message(domain.ErrConflict, "error.driver_login_inactive_driver")
+			}
+		}
 		after, err := tx.SetUserActive(ctx, id, active)
 		if err != nil {
 			return err

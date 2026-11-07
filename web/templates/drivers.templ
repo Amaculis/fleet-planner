@@ -43,7 +43,7 @@ templ DriversPage(v View, drivers []domain.Driver) {
 										<a href={ templ.SafeURL("/drivers/" + strconv.FormatInt(d.ID, 10) + "/edit") } class={ linkButton }>
 											{ v.T("common.edit") }
 										</a>
-										@PostButton(v, "/drivers/"+strconv.FormatInt(d.ID, 10)+"/anonymize", "drivers.erase", dangerButton)
+										@ConfirmPostButton(v, "/drivers/"+strconv.FormatInt(d.ID, 10)+"/anonymize", "drivers.erase", dangerButton, "confirm.erase_driver")
 									}
 								</td>
 							}

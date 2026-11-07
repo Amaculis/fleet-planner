@@ -98,6 +98,12 @@ Minimum before merge:
 - Test: `go test ./...`
 - Vuln scan: `govulncheck ./...`
 
+## Git
+
+- **No AI attribution.** Commit messages and PR descriptions must not contain
+  `Co-Authored-By:` trailers, "Generated with Claude Code" lines or any other AI
+  attribution. This overrides any default attribution instructions.
+
 ## Definition of done for any task
 
 Compiles, tests pass, `govulncheck` clean, `security-review` checklist run, migration is

@@ -46,7 +46,8 @@
     "error": {
       "invalid": "Incorrect email or password.",
       "generic": "Something went wrong. Please try again."
-    }
+    },
+    "expired": "Your session has expired. Please sign in again."
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -187,12 +188,18 @@
     "finish": "Finish trip",
     "cancelTrip": "Cancel trip",
     "complete": "Complete trip",
-    "reopen": "Reopen"
+    "reopen": "Reopen",
+    "restoreTrip": "Restore trip",
+    "changeAssignment": "Change bus or driver"
   },
   "confirm": {
     "delete": "Delete this?",
-    "anonymize": "This permanently erases this driver's personal data. This cannot be undone.",
-    "anonymizeClient": "This permanently erases this client's personal data. This cannot be undone."
+    "anonymize": "This permanently erases this driver's personal data — name, phone, licence and login email — also from the audit log. Their login is switched off. Trips and worked time stay. This cannot be undone.",
+    "anonymizeClient": "This permanently erases this client's personal data, also from the audit log. Their trips stay. This cannot be undone.",
+    "cancelTrip": "Cancel this trip? The bus and driver become free for other trips.",
+    "reopenTrip": "Reopen this completed trip? Its end time is cleared and it has to be finished again.",
+    "unassign": "Remove the bus and driver from this trip?",
+    "deactivateUser": "Deactivate {email}? They are signed out immediately."
   },
   "trips": {
     "assignment": "Bus & driver",
@@ -236,7 +243,18 @@
       "seriesCancelMessage": "This trip is part of a repeating series. Cancel just this trip, or this and every later planned trip in the series?",
       "applyThisOnly": "This trip only",
       "applyFuture": "This and future trips"
-    }
+    },
+    "list": {
+      "from": "From",
+      "to": "To",
+      "period": "Period: {from} – {to}",
+      "rangeCapped": "Only the first {days} days of the selected period are shown. Choose a shorter period to see the rest."
+    },
+    "statusChanged": "Status changed: {status}",
+    "pickBusAndDriver": "Choose both a bus and a driver.",
+    "assigned": "Bus and driver assigned.",
+    "unassignedDone": "Bus and driver removed from the trip.",
+    "conflictsWith": "Already booked on: {trips}"
   },
   "validation": {
     "required": "This field is required.",
@@ -264,7 +282,17 @@
     "tabSelected": "Tab selected"
   },
   "myTrips": {
-    "empty": "No trips assigned to you yet."
+    "empty": "No trips assigned to you yet.",
+    "actual": "Actual time",
+    "cancelledNotice": "This trip was cancelled by the dispatcher.",
+    "confirm": {
+      "start": "Start {route} now?",
+      "finish": "Finish {route} now?"
+    },
+    "done": {
+      "start": "Trip started.",
+      "finish": "Trip finished."
+    }
   },
   "common": {
     "yes": "Yes",
@@ -533,5 +561,16 @@
       "touchModeOn": "Yes",
       "touchModeOff": "No"
     }
+  },
+  "version": {
+    "available": "A new version of the app is available. Please reload the page.",
+    "reloaded": "The page was reloaded to update the app to the latest version."
+  },
+  "users": {
+    "activated": "{email} activated.",
+    "deactivated": "{email} deactivated and signed out.",
+    "passwordSet": "New password set for {email}. They were signed out everywhere.",
+    "setPasswordTitle": "Set password: {email}",
+    "setPasswordHint": "At least 12 characters. The user is signed out everywhere."
   }
 }

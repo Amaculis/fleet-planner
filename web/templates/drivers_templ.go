@@ -324,7 +324,7 @@ func DriversPage(v View, drivers []domain.Driver) templ.Component {
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
-						templ_7745c5c3_Err = PostButton(v, "/drivers/"+strconv.FormatInt(d.ID, 10)+"/anonymize", "drivers.erase", dangerButton).Render(ctx, templ_7745c5c3_Buffer)
+						templ_7745c5c3_Err = ConfirmPostButton(v, "/drivers/"+strconv.FormatInt(d.ID, 10)+"/anonymize", "drivers.erase", dangerButton, "confirm.erase_driver").Render(ctx, templ_7745c5c3_Buffer)
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}

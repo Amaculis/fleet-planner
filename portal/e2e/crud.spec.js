@@ -144,10 +144,11 @@ test("user: add, activate/deactivate", async ({ page }) => {
   await gridSearch(page).fill(email);
   await expect(page.getByText(email)).toBeVisible();
 
-  // Deactivate, then reactivate — the one row action users currently have.
-  const row = page.getByRole("row", { name: new RegExp(email) });
-  await row.getByRole("button").click();
+  // Deactivate (asks for confirmation: it signs the user out), then reactivate.
+  const toggle = () => page.getByRole("row", { name: new RegExp(email) }).getByRole("button", { name: /activate/i });
+  await toggle().click();
+  await page.getByRole("button", { name: /^yes$/i }).click();
   await expect(page.getByRole("row", { name: new RegExp(email) }).getByText(/^inactive$/i)).toBeVisible();
-  await page.getByRole("row", { name: new RegExp(email) }).getByRole("button").click();
+  await toggle().click();
   await expect(page.getByRole("row", { name: new RegExp(email) }).getByText(/^active$/i)).toBeVisible();
 });

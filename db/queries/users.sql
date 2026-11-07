@@ -41,3 +41,10 @@ RETURNING id, email, password_hash, role, driver_id, locale, is_active, created_
 UPDATE users SET password_hash = $2
 WHERE id = $1
 RETURNING id, email, password_hash, role, driver_id, locale, is_active, created_at, updated_at;
+
+-- name: AnonymizeUserEmail :one
+-- GDPR erasure of a driver's login: the address is replaced by a unique, non-routable
+-- placeholder (.invalid is reserved by RFC 2606). The row stays: audit_log references it.
+UPDATE users SET email = 'erased-' || id || '@erased.invalid', is_active = false
+WHERE id = $1
+RETURNING id, email, password_hash, role, driver_id, locale, is_active, created_at, updated_at;

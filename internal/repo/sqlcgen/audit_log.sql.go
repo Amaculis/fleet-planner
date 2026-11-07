@@ -95,3 +95,32 @@ func (q *Queries) ListAuditEntriesForEntity(ctx context.Context, arg ListAuditEn
 	}
 	return items, nil
 }
+
+const purgeOldAuditLog = `-- name: PurgeOldAuditLog :one
+SELECT purge_old_audit_log()::bigint AS purged
+`
+
+// Retention: deletes entries older than the fixed period in 0012.
+func (q *Queries) PurgeOldAuditLog(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, purgeOldAuditLog)
+	var purged int64
+	err := row.Scan(&purged)
+	return purged, err
+}
+
+const redactAuditPII = `-- name: RedactAuditPII :one
+SELECT redact_audit_pii($1::text, $2::bigint)::bigint AS redacted
+`
+
+type RedactAuditPIIParams struct {
+	Entity   string
+	EntityID int64
+}
+
+// GDPR erasure: strips personal-data keys from one entity's snapshots (see 0011).
+func (q *Queries) RedactAuditPII(ctx context.Context, arg RedactAuditPIIParams) (int64, error) {
+	row := q.db.QueryRow(ctx, redactAuditPII, arg.Entity, arg.EntityID)
+	var redacted int64
+	err := row.Scan(&redacted)
+	return redacted, err
+}

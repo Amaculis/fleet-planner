@@ -326,7 +326,7 @@ func BusesPage(v View, buses []domain.Bus) templ.Component {
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = PostButton(v, "/buses/"+strconv.FormatInt(bus.ID, 10)+"/delete", "common.delete", dangerButton).Render(ctx, templ_7745c5c3_Buffer)
+					templ_7745c5c3_Err = ConfirmPostButton(v, "/buses/"+strconv.FormatInt(bus.ID, 10)+"/delete", "common.delete", dangerButton, "confirm.delete_bus").Render(ctx, templ_7745c5c3_Buffer)
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}

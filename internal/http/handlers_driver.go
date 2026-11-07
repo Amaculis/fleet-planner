@@ -30,7 +30,7 @@ func (s *Server) handleMyTripStart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if _, err := s.trips.StartMine(r.Context(), MustIdentity(r.Context()), id, s.meta(r)); err != nil {
-		s.abort(w, r, err)
+		s.myTripsWithError(w, r, err)
 		return
 	}
 	http.Redirect(w, r, "/my/trips", http.StatusSeeOther)
@@ -44,8 +44,27 @@ func (s *Server) handleMyTripFinish(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if _, err := s.trips.FinishMine(r.Context(), MustIdentity(r.Context()), id, s.meta(r)); err != nil {
-		s.abort(w, r, err)
+		s.myTripsWithError(w, r, err)
 		return
 	}
 	http.Redirect(w, r, "/my/trips", http.StatusSeeOther)
+}
+
+// myTripsWithError shows a refused start/finish (a double tap, a trip the dispatcher
+// just cancelled) on the driver's own list, so they stay where they were instead of
+// landing on a dead-end error page.
+func (s *Server) myTripsWithError(w http.ResponseWriter, r *http.Request, cause error) {
+	status, msg := s.failed(r, cause)
+	if status >= http.StatusInternalServerError || status == http.StatusForbidden {
+		s.renderErrorText(w, r, status, msg.Text)
+		return
+	}
+	trips, err := s.trips.ListMine(r.Context(), MustIdentity(r.Context()), time.Now().Add(-24*time.Hour))
+	if err != nil {
+		s.abort(w, r, err)
+		return
+	}
+	v := s.viewWithError(r, msg)
+	v.Path = "/my/trips"
+	s.render(w, r, status, templates.MyTripsPage(v, trips))
 }

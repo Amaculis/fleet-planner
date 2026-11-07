@@ -71,11 +71,14 @@ func (r *Repo) UpdateTrip(ctx context.Context, t domain.Trip) (domain.Trip, erro
 }
 
 // SetTripStatus can also fail with domain.ErrTimeConflict: un-cancelling a trip puts its
-// bus and driver back into the exclusion window.
-func (r *Repo) SetTripStatus(ctx context.Context, id int64, status domain.TripStatus) (domain.Trip, error) {
+// bus and driver back into the exclusion window. actualStart/actualEnd are written as
+// given (payroll-seam) — the service decides them per transition.
+func (r *Repo) SetTripStatus(ctx context.Context, id int64, status domain.TripStatus, actualStart, actualEnd *time.Time) (domain.Trip, error) {
 	row, err := r.q.SetTripStatus(ctx, sqlcgen.SetTripStatusParams{
-		ID:     id,
-		Status: sqlcgen.TripStatus(status),
+		ID:          id,
+		Status:      sqlcgen.TripStatus(status),
+		ActualStart: actualStart,
+		ActualEnd:   actualEnd,
 	})
 	if err != nil {
 		return domain.Trip{}, fmt.Errorf("setting trip status: %w", translate(err))

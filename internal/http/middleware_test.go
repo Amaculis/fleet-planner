@@ -296,3 +296,34 @@ func TestRateLimiter(t *testing.T) {
 		t.Fatal("an empty key was allowed")
 	}
 }
+
+func TestLimiterKeyGroupsIPv6By64(t *testing.T) {
+	a := limiterKey("2001:db8:1:2:aaaa::1")
+	b := limiterKey("2001:db8:1:2:ffff::9")
+	c := limiterKey("2001:db8:1:3::1")
+	if a != b {
+		t.Errorf("same /64 must share a bucket: %q vs %q", a, b)
+	}
+	if a == c {
+		t.Errorf("different /64s must not share a bucket: %q", a)
+	}
+	if got := limiterKey("192.0.2.7"); got != "192.0.2.7" {
+		t.Errorf("IPv4 key changed: %q", got)
+	}
+	if got := limiterKey(""); got != "" {
+		t.Errorf("unresolvable IP must stay empty (refused), got %q", got)
+	}
+}
+
+func TestLimiterHasTokenDoesNotSpend(t *testing.T) {
+	l := NewLimiter(time.Hour, 1)
+	for i := 0; i < 3; i++ {
+		if !l.HasToken("k") {
+			t.Fatal("peeking must not consume")
+		}
+	}
+	l.Allow("k")
+	if l.HasToken("k") {
+		t.Fatal("bucket should be empty after spending its only token")
+	}
+}

@@ -101,3 +101,14 @@ var (
 	// assignments_no_bus_overlap / assignments_no_driver_overlap EXCLUDE constraint).
 	ErrTimeConflict = errors.New("time conflict")
 )
+
+// UniqueViolation names the unique constraint a write ran into (a duplicate plate,
+// email, licence number, ...), so the UI can say which value is taken. It matches
+// ErrConflict under errors.Is, so callers that only branch on the sentinel are unchanged.
+type UniqueViolation struct {
+	Constraint string
+}
+
+func (e *UniqueViolation) Error() string { return "unique violation (" + e.Constraint + ")" }
+
+func (e *UniqueViolation) Is(target error) bool { return target == ErrConflict }

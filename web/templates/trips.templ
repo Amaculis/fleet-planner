@@ -144,7 +144,7 @@ templ TripDetailPage(v View, d TripDetail) {
 			</form>
 			if d.Assignment != nil {
 				<p class="mt-2">
-					@PostButton(v, "/trips/"+strconv.FormatInt(d.Trip.ID, 10)+"/unassign", "trips.unassign", dangerButton)
+					@ConfirmPostButton(v, "/trips/"+strconv.FormatInt(d.Trip.ID, 10)+"/unassign", "trips.unassign", dangerButton, "confirm.unassign")
 				</p>
 			}
 		</section>
@@ -153,9 +153,9 @@ templ TripDetailPage(v View, d TripDetail) {
 				{ v.T("common.edit") }
 			</a>
 			for _, next := range nextStatuses(d.Trip.Status) {
-				@StatusButton(v, d.Trip.ID, next)
+				@StatusButton(v, d.Trip.ID, d.Trip.Status, next)
 			}
-			@PostButton(v, "/trips/"+strconv.FormatInt(d.Trip.ID, 10)+"/delete", "common.delete", dangerButton)
+			@ConfirmPostButton(v, "/trips/"+strconv.FormatInt(d.Trip.ID, 10)+"/delete", "common.delete", dangerButton, "confirm.delete_trip")
 			<a href="/trips" class={ linkButton }>{ v.T("common.back") }</a>
 		</section>
 	}
@@ -163,12 +163,24 @@ templ TripDetailPage(v View, d TripDetail) {
 
 // StatusButton posts one allowed transition. The allowed set comes from the domain, so
 // the buttons and the server rule cannot drift apart — and the server checks anyway.
-templ StatusButton(v View, tripID int64, next domain.TripStatus) {
-	<form method="post" action={ templ.SafeURL("/trips/" + strconv.FormatInt(tripID, 10) + "/status") } class="inline">
+templ StatusButton(v View, tripID int64, from, next domain.TripStatus) {
+	<form method="post" action={ templ.SafeURL("/trips/" + strconv.FormatInt(tripID, 10) + "/status") } class="inline" data-confirm={ statusConfirm(v, from, next) }>
 		@CSRFField(v)
 		<input type="hidden" name="status" value={ string(next) }/>
 		<button type="submit" class={ linkButton }>{ v.T("trips.mark_" + string(next)) }</button>
 	</form>
+}
+
+// statusConfirm asks before the transitions that are hard to take back: cancelling,
+// and reopening a completed trip (it unlocks the payroll-relevant assignment).
+func statusConfirm(v View, from, next domain.TripStatus) string {
+	switch {
+	case next == domain.TripCancelled:
+		return v.T("confirm.cancel_trip")
+	case from == domain.TripCompleted && next == domain.TripInProgress:
+		return v.T("confirm.reopen_trip")
+	}
+	return ""
 }
 
 func nextStatuses(from domain.TripStatus) []domain.TripStatus {

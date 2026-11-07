@@ -37,10 +37,15 @@ func (s *Server) LoadSession(next http.Handler) http.Handler {
 			}
 		}
 
-		// Locale: user preference (server-side) -> Accept-Language -> en.
+		// Locale: the SPA's current language (X-App-Locale, chosen in its language
+		// picker) -> user preference (server-side) -> Accept-Language -> en. Match
+		// ignores any value that is not a supported locale.
 		var userPref *string
 		if haveID {
 			userPref = identity.Locale
+		}
+		if uiLocale := r.Header.Get("X-App-Locale"); uiLocale != "" {
+			userPref = &uiLocale
 		}
 		printer := s.i18n.Printer(s.i18n.Match(userPref, r.Header.Get("Accept-Language")))
 		r = withValue(r, ctxKeyPrinter, printer)

@@ -37,6 +37,14 @@ func describeError(p *i18n.Printer, err error) (int, UserMessage) {
 		return statusFor(msg.Sentinel), UserMessage{Text: p.T(msg.Key, args...)}
 	}
 
+	// A duplicate names the value that is taken rather than a generic "conflict".
+	var dup *domain.UniqueViolation
+	if errors.As(err, &dup) {
+		if key, ok := duplicateMessages[dup.Constraint]; ok {
+			return http.StatusConflict, UserMessage{Text: p.T(key)}
+		}
+	}
+
 	switch {
 	case errors.Is(err, domain.ErrNotFound):
 		return http.StatusNotFound, UserMessage{Text: p.T("error.not_found")}
@@ -54,6 +62,14 @@ func describeError(p *i18n.Printer, err error) (int, UserMessage) {
 	default:
 		return http.StatusInternalServerError, UserMessage{Text: p.T("error.server")}
 	}
+}
+
+// duplicateMessages maps unique constraints (see db/migrations) to what the user did.
+var duplicateMessages = map[string]string{
+	"buses_plate_key":            "error.duplicate_plate",
+	"users_email_key":            "error.duplicate_email",
+	"users_driver_id_key":        "error.duplicate_driver_login",
+	"drivers_license_number_key": "error.duplicate_license",
 }
 
 func statusFor(sentinel error) int {

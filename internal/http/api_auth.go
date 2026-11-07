@@ -77,8 +77,14 @@ func (s *Server) handleAPILogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, _, identity, err := s.auth.Login(ctx, req.Email, req.Password, s.meta(r))
+	token, identity, err := s.attemptLogin(ctx, req.Email, req.Password, s.meta(r))
 	if err != nil {
+		if errors.Is(err, errAccountThrottled) {
+			s.log.Warn("login throttled for account", "request_id", RequestIDFrom(ctx))
+			w.Header().Set("Retry-After", "180")
+			s.writeJSON(w, r, http.StatusTooManyRequests, apiError{Error: s.printerFor(r).T("error.rate_limited")})
+			return
+		}
 		if errors.Is(err, domain.ErrUnauthorized) {
 			s.log.Warn("failed login", "request_id", RequestIDFrom(ctx))
 			s.writeJSON(w, r, http.StatusUnauthorized, apiError{Error: s.printerFor(r).T("login.error.invalid")})

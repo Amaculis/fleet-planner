@@ -36,9 +36,11 @@ RETURNING id, origin, destination, scheduled_start, scheduled_end, actual_start,
           status, notes, created_at, updated_at, payment_status, series_id, client_id, invoice_number;
 
 -- name: SetTripStatus :one
+-- payroll-seam: the service decides actual_start/actual_end for every transition (see
+-- TripService.SetStatus), so the worked-time window always matches the status.
 UPDATE trips
-SET status = $2
-WHERE id = $1
+SET status = @status, actual_start = @actual_start, actual_end = @actual_end
+WHERE id = @id
 RETURNING id, origin, destination, scheduled_start, scheduled_end, actual_start, actual_end,
           status, notes, created_at, updated_at, payment_status, series_id, client_id, invoice_number;
 
@@ -61,6 +63,8 @@ DELETE FROM trips WHERE id = $1;
 -- name: ListTripsForDriver :many
 -- A driver's own trips. Ownership lives in the WHERE clause: the driver id comes from
 -- the session, never from the request, and no query returns another driver's trips.
+-- A trip still in progress is always listed, however old, so it can be finished.
+-- Cancelled trips stay visible (marked in the UI) so a driver learns of the cancellation.
 SELECT t.id, t.origin, t.destination, t.scheduled_start, t.scheduled_end,
        t.actual_start, t.actual_end, t.status, t.notes, t.created_at, t.updated_at,
        b.plate AS bus_plate
@@ -68,8 +72,7 @@ FROM trips t
 JOIN assignments a ON a.trip_id = t.id
 JOIN buses b ON b.id = a.bus_id
 WHERE a.driver_id = @driver_id
-  AND t.status <> 'cancelled'
-  AND t.scheduled_end >= @since
+  AND (t.scheduled_end >= @since OR t.status = 'in_progress')
 ORDER BY t.scheduled_start;
 
 -- name: StartTripAsDriver :one

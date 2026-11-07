@@ -56,7 +56,9 @@ const PRELOAD_COMPONENTS = [LxDateTimePicker, LxTextInput, LxToggle, LxValuePick
 function lxConfig(bcp47) {
   return {
     locale: {
-      tag: bcp47,
+      // `locale.locale`, not `locale.tag`: LxDateTimePicker reads getGlobals().locale.locale
+      // (same fix as portal/src/main.js); with `tag` it silently fell back to lv-LV.
+      locale: bcp47,
       // Monday-first everywhere the app is used (EU); lx-ui's own default is Tuesday
       // per their docs, which reads as a documentation typo more than a real default,
       // so this is set explicitly rather than trusted.

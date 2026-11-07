@@ -63,6 +63,7 @@ const endsOn = ref("");
 const loadingTrip = ref(false);
 const saving = ref(false);
 const errorMessage = ref("");
+const conflictDescription = ref("");
 
 const paymentStatusItems = computed(() =>
   ["unpaid", "reserved", "advance_paid", "paid"].map((id) => ({ id, name: i18n.t(`paymentStatus.${id}`) }))
@@ -174,7 +175,12 @@ async function submit(scope) {
     const trip = (await (isNew.value ? createTrip(payload) : updateTrip(id.value, payload, scope))).data;
     router.push({ name: "tripDetail", params: { id: trip.id } });
   } catch (error) {
-    errorMessage.value = i18n.t(errors.get(error).message);
+    const err = errors.get(error);
+    errorMessage.value = i18n.t(err.message);
+    // A reschedule onto an occupied slot names the trips in the way.
+    conflictDescription.value = errors.conflictLines(err).length
+      ? i18n.t("trips.conflictsWith", { trips: errors.conflictLines(err).join("; ") })
+      : "";
   } finally {
     saving.value = false;
   }
@@ -221,7 +227,12 @@ onMounted(load);
     :action-definitions="actionDefinitions"
     @action-click="onAction"
   >
-    <LxInfoBox v-if="errorMessage" variant="error" :label="errorMessage" />
+    <LxInfoBox
+      v-if="errorMessage"
+      variant="error"
+      :label="errorMessage"
+      :description="conflictDescription || null"
+    />
     <LxInfoBox v-if="!isNew && seriesId" variant="info" :label="i18n.t('trips.partOfSeries')" />
 
     <LxSection :label="i18n.t('trips.form.route')" :description="i18n.t('trips.form.routeDescription')">

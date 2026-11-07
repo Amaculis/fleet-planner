@@ -131,7 +131,7 @@ test("cancelling a series trip with this-and-future leaves earlier occurrences p
   // Cancel from the second occurrence: the first should stay planned, the rest cancelled.
   await page.goto(`/app/trips/${created[1].id}`);
   await page.waitForTimeout(500);
-  await page.getByRole("button", { name: "Cancelled" }).click();
+  await page.getByRole("button", { name: "Cancel trip" }).click();
   await page.waitForTimeout(400);
   await page.getByRole("button", { name: "This and future trips" }).click();
   await page.waitForTimeout(600);

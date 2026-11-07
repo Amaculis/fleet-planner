@@ -46,7 +46,8 @@
     "error": {
       "invalid": "Nepareizs e-pasts vai parole.",
       "generic": "Kaut kas nogāja greizi. Lūdzu, mēģiniet vēlreiz."
-    }
+    },
+    "expired": "Jūsu sesija ir beigusies. Lūdzu, piesakieties vēlreiz."
   },
   "nav": {
     "dashboard": "Panelis",
@@ -187,12 +188,18 @@
     "finish": "Pabeigt reisu",
     "cancelTrip": "Atcelt reisu",
     "complete": "Pabeigt reisu",
-    "reopen": "Atvērt atkārtoti"
+    "reopen": "Atvērt atkārtoti",
+    "restoreTrip": "Atjaunot reisu",
+    "changeAssignment": "Mainīt autobusu vai vadītāju"
   },
   "confirm": {
     "delete": "Dzēst šo?",
-    "anonymize": "Šī darbība neatgriezeniski dzēš vadītāja personas datus. To nevar atsaukt.",
-    "anonymizeClient": "Šī darbība neatgriezeniski dzēš šī klienta personas datus. To nevar atsaukt."
+    "anonymize": "Tiks neatgriezeniski dzēsti šī vadītāja personas dati — vārds, tālrunis, apliecība un konta e-pasts —, arī no audita žurnāla. Konts tiks atslēgts. Reisi un nostrādātais laiks paliek. To nevarēs atsaukt.",
+    "anonymizeClient": "Tiks neatgriezeniski dzēsti šī klienta personas dati, arī no audita žurnāla. Reisi paliek. To nevarēs atsaukt.",
+    "cancelTrip": "Atcelt šo reisu? Autobuss un vadītājs kļūs brīvi citiem reisiem.",
+    "reopenTrip": "Atvērt no jauna šo pabeigto reisu? Beigu laiks tiks notīrīts, un reiss būs jāpabeidz vēlreiz.",
+    "unassign": "Noņemt autobusu un vadītāju no šī reisa?",
+    "deactivateUser": "Deaktivizēt {email}? Lietotājs tiks nekavējoties izrakstīts."
   },
   "trips": {
     "assignment": "Autobuss un vadītājs",
@@ -236,7 +243,18 @@
       "seriesCancelMessage": "Šis reiss ir daļa no atkārtota reisu cikla. Atcelt tikai šo reisu, vai arī šo un visus vēlākos plānotos cikla reisus?",
       "applyThisOnly": "Tikai šo reisu",
       "applyFuture": "Šo un vēlākos reisus"
-    }
+    },
+    "list": {
+      "from": "No",
+      "to": "Līdz",
+      "period": "Periods: {from} – {to}",
+      "rangeCapped": "Tiek rādītas tikai izvēlētā perioda pirmās {days} dienas. Izvēlieties īsāku periodu, lai redzētu pārējo."
+    },
+    "statusChanged": "Statuss mainīts: {status}",
+    "pickBusAndDriver": "Izvēlieties gan autobusu, gan vadītāju.",
+    "assigned": "Autobuss un vadītājs norīkoti.",
+    "unassignedDone": "Autobuss un vadītājs noņemti no reisa.",
+    "conflictsWith": "Jau aizņemts reisā: {trips}"
   },
   "validation": {
     "required": "Šis lauks ir obligāts.",
@@ -264,7 +282,17 @@
     "tabSelected": "Tika izvēlēta cilne"
   },
   "myTrips": {
-    "empty": "Jums vēl nav piešķirtu reisu."
+    "empty": "Jums vēl nav piešķirtu reisu.",
+    "actual": "Faktiskais laiks",
+    "cancelledNotice": "Dispečers šo reisu ir atcēlis.",
+    "confirm": {
+      "start": "Sākt reisu {route} tagad?",
+      "finish": "Pabeigt reisu {route} tagad?"
+    },
+    "done": {
+      "start": "Reiss sākts.",
+      "finish": "Reiss pabeigts."
+    }
   },
   "common": {
     "yes": "Jā",
@@ -533,5 +561,16 @@
       "touchModeOn": "Jā",
       "touchModeOff": "Nē"
     }
+  },
+  "version": {
+    "available": "Pieejama jauna lietotnes versija. Lūdzu, pārlādējiet lapu.",
+    "reloaded": "Lapa tika pārlādēta, lai atjauninātu lietotni uz jaunāko versiju."
+  },
+  "users": {
+    "activated": "{email} aktivizēts.",
+    "deactivated": "{email} deaktivizēts un izrakstīts.",
+    "passwordSet": "Jauna parole iestatīta lietotājam {email}. Visas sesijas tika pārtrauktas.",
+    "setPasswordTitle": "Iestatīt paroli: {email}",
+    "setPasswordHint": "Vismaz 12 rakstzīmes. Lietotājs tiks izrakstīts no visām ierīcēm."
   }
 }

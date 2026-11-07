@@ -31,7 +31,8 @@ set -a
 source .env
 set +a
 
-PLAYWRIGHT_IMAGE="mcr.microsoft.com/playwright:v1.49.1-jammy"
+# Must match @playwright/test in portal/package.json (pinned by digest, like the other images).
+PLAYWRIGHT_IMAGE="mcr.microsoft.com/playwright:v1.64.1-jammy@sha256:a3966b653e8d48a30901889081b616307fca73e0d843a117fadf6609397dac38"
 
 # node_modules is shadowed by a named volume, not the bind mount: `npm install`
 # inside this Linux container would otherwise write Linux-symlinked node_modules
