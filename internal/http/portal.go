@@ -35,7 +35,12 @@ func (s *Server) portalHandler() http.Handler {
 		if rel != "index.html" {
 			if f, err := dir.Open("/" + rel); err == nil {
 				_ = f.Close() // only opened to test existence
-				w.Header().Set("Cache-Control", "public, max-age=3600")
+				cache := "public, max-age=3600"
+				if rel == "version.json" {
+					// Polled by lxVersionCheckUtils to spot a new deploy: never cached.
+					cache = "no-store"
+				}
+				w.Header().Set("Cache-Control", cache)
 				assets.ServeHTTP(w, r)
 				return
 			}

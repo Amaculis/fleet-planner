@@ -1,6 +1,7 @@
 import axios from "axios";
 import { APP_CONFIG } from "@/constants";
 import useAuthStore from "@/stores/auth";
+import i18n from "@/i18n";
 
 // Deliberate deviation from the skill's default Axios pattern (Authorization: Bearer
 // <token> read from sessionStorage): this backend's session credential is an httpOnly,
@@ -36,7 +37,32 @@ export default () => {
       if (auth.csrfToken) {
         config.headers["X-CSRF-Token"] = auth.csrfToken;
       }
+      // Server-side error messages come back already translated; this makes them
+      // follow the language picked in the SPA (see internal/http/auth_middleware.go).
+      config.headers["X-App-Locale"] = i18n.global.locale.value;
       return config;
+    });
+
+    // A session that expired (idle or absolute timeout) or was revoked answers 401.
+    // Instead of every screen showing "failed to load", send the user to the login
+    // page once, remembering where they were. The auth endpoints themselves are left
+    // alone: a wrong password is also a 401 and the login form handles it.
+    http.interceptors.response.use(undefined, async (error) => {
+      const url = error?.config?.url ?? "";
+      if (error?.response?.status === 401 && !url.startsWith("/auth/")) {
+        const auth = useAuthStore();
+        if (auth.isAuthorized) {
+          auth.user = null;
+          // Dynamic import: the router imports views that import services that import
+          // this module.
+          const { default: router } = await import("@/router");
+          const current = router.currentRoute.value;
+          if (current.name !== "login") {
+            router.replace({ name: "login", query: { redirect: current.fullPath, expired: "1" } });
+          }
+        }
+      }
+      return Promise.reject(error);
     });
   }
 

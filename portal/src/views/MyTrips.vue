@@ -1,15 +1,28 @@
 <script setup>
 import { ref, onMounted, computed } from "vue";
 import { useI18n } from "vue-i18n";
-import { LxButton, LxEmptyState, LxLoaderView, LxRow, LxSection, LxStack, LxStateDisplay, LxTextInput } from "@dativa-lv/lx-ui";
+import {
+  LxButton,
+  LxEmptyState,
+  LxInfoBox,
+  LxLoaderView,
+  LxRichTextDisplay,
+  LxRow,
+  LxSection,
+  LxStack,
+  LxStateDisplay,
+  LxTextInput,
+} from "@dativa-lv/lx-ui";
 import { getMyTrips, startMyTrip, finishMyTrip } from "@/services/myTrips";
 import { parseServerTimestamp, formatDateTime, formatTime } from "@/utils/dates";
 import useNotifyStore from "@/stores/notify";
+import useConfirmStore from "@/stores/confirm";
 import useErrors from "@/hooks/errors";
 import useStateDictionaries from "@/hooks/stateDictionaries";
 
 const i18n = useI18n();
 const notify = useNotifyStore();
+const confirmStore = useConfirmStore();
 const errors = useErrors();
 const { tripStatusDictionary } = useStateDictionaries();
 
@@ -37,9 +50,18 @@ function actionFor(trip) {
   return null;
 }
 
-async function act(trip) {
+// A mistaken tap records worked time only a dispatcher can correct, so it is confirmed.
+function act(trip) {
   const action = actionFor(trip);
   if (!action) return;
+  confirmStore.pushSimple(
+    i18n.t(`actions.${action}`),
+    i18n.t(`myTrips.confirm.${action}`, { route: `${trip.origin} → ${trip.destination}` }),
+    () => run(trip, action)
+  );
+}
+
+async function run(trip, action) {
   busy.value = trip.id;
   try {
     if (action === "start") {
@@ -48,11 +70,28 @@ async function act(trip) {
       await finishMyTrip(trip.id);
     }
     await load();
+    notify.pushSuccess(i18n.t(`myTrips.done.${action}`));
   } catch (error) {
     notify.pushError(i18n.t(errors.get(error).message));
+    // The trip may have changed meanwhile (cancelled, already started): show it as it is.
+    await load();
   } finally {
     busy.value = null;
   }
+}
+
+function actualLabel(trip) {
+  if (!trip.actualStart) return "";
+  const start = formatDateTime(parseServerTimestamp(trip.actualStart), i18n.locale.value);
+  if (!trip.actualEnd) return start;
+  return `${start} → ${formatTime(parseServerTimestamp(trip.actualEnd), i18n.locale.value)}`;
+}
+
+// Notes keep their line breaks (see TripDetail.vue): escaped, then the component
+// sanitizes again regardless.
+function multiline(text) {
+  const escaped = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return escaped.replace(/\r?\n/g, "<br>");
 }
 
 const sorted = computed(() =>
@@ -87,6 +126,15 @@ onMounted(load);
           </LxRow>
           <LxRow :label="i18n.t('fields.status')">
             <LxStateDisplay :value="trip.status" :dictionary="tripStatusDictionary" />
+          </LxRow>
+          <LxRow v-if="trip.actualStart" :label="i18n.t('myTrips.actual')" :column-span="2">
+            <LxTextInput :model-value="actualLabel(trip)" read-only />
+          </LxRow>
+          <LxRow v-if="trip.notes" :label="i18n.t('fields.notes')" :column-span="2">
+            <LxRichTextDisplay :value="multiline(trip.notes)" />
+          </LxRow>
+          <LxRow v-if="trip.status === 'cancelled'" :label="i18n.t('fields.status')" hide-label :column-span="2">
+            <LxInfoBox variant="warning" :label="i18n.t('myTrips.cancelledNotice')" />
           </LxRow>
           <LxRow v-if="actionFor(trip)" :label="i18n.t(`actions.${actionFor(trip)}`)" hide-label :column-span="2">
             <LxButton

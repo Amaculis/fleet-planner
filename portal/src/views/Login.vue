@@ -16,6 +16,8 @@ const email = ref("");
 const password = ref("");
 const submitting = ref(false);
 const errorMessage = ref("");
+// Set by api.js when a request found the session expired.
+const expired = computed(() => route.query.expired === "1");
 
 const actionDefinitions = computed(() => [
   { id: "submit", name: i18n.t("login.submit"), kind: "primary", loading: submitting.value },
@@ -47,6 +49,7 @@ async function submit() {
       @action-click="submit"
     >
       <LxInfoBox v-if="errorMessage" variant="error" :label="errorMessage" />
+      <LxInfoBox v-else-if="expired" variant="warning" :label="i18n.t('login.expired')" />
       <LxSection :label="i18n.t('login.title')">
         <LxRow :label="i18n.t('login.email')" required>
           <LxTextInput v-model="email" mask="email" autocomplete="username" @keyup.enter="submit" />

@@ -1,14 +1,16 @@
 <script setup>
-import { computed } from "vue";
+import { computed, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
-import { LxShell } from "@dativa-lv/lx-ui";
+import { LxShell, lxVersionCheckUtils } from "@dativa-lv/lx-ui";
 import useAuthStore from "@/stores/auth";
 import useAppStore from "@/stores/app";
 import useNotifyStore from "@/stores/notify";
 import useConfirmStore from "@/stores/confirm";
 import { useLanguageSwitcher } from "@/hooks/language";
 import useShellTexts from "@/hooks/shellTexts";
+import useRights from "@/hooks/rights";
+import { APP_CONFIG } from "@/constants";
 
 const route = useRoute();
 const router = useRouter();
@@ -22,10 +24,10 @@ const languageSwitcher = useLanguageSwitcher();
 // Every page a signed-in user can reach. RBAC on each of these is enforced server-side
 // (see internal/http/server.go's RequireRole groups) — this list only decides what a
 // link shows, never what a request is allowed to do.
-const role = computed(() => authStore.session?.role);
-const isAdmin = computed(() => role.value === "admin");
-const isPlanner = computed(() => role.value === "admin" || role.value === "dispatcher");
-const isDriver = computed(() => role.value === "driver");
+const rights = useRights();
+const isAdmin = computed(() => rights.isAdmin());
+const isPlanner = computed(() => rights.isPlanner());
+const isDriver = computed(() => rights.isDriver());
 
 const nav = computed(() => {
   const items = [
@@ -100,7 +102,7 @@ const userInfo = computed(() => {
 });
 
 const languages = computed(() =>
-  ["en", "lv", "ru"].map((id) => ({ id, name: i18n.t(`languages.${id}`) }))
+  APP_CONFIG.supportedLocales.map((id) => ({ id, name: i18n.t(`languages.${id}`) }))
 );
 const selectedLanguage = computed({
   get: () => languages.value.find((l) => l.id === i18n.locale.value) ?? languages.value[0],
@@ -115,6 +117,16 @@ function goBack(path) {
 function goHome() {
   router.push({ name: "dashboard" });
 }
+// New-deploy detection: every 10 minutes, compare this build's id with
+// /app/version.json and warn when they differ (lxVitePortalVersionPlugin writes it).
+// Skipped in the static GitHub Pages demo, which has no deploys to detect.
+onMounted(() => {
+  if (APP_CONFIG.demo) return;
+  const basePath = APP_CONFIG.publicUrl.replace(/\/$/, "");
+  lxVersionCheckUtils.restoreRouteAndNotify(router, notify, () => i18n.t("version.reloaded"));
+  lxVersionCheckUtils.isAppVersionChanged(notify, () => i18n.t("version.available"), true, 10 * 60 * 1000, basePath);
+});
+
 async function logout() {
   await authStore.logout();
   router.push({ name: "login" });

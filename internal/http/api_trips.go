@@ -102,8 +102,7 @@ func (s *Server) handleAPITripList(w http.ResponseWriter, r *http.Request) {
 	s.writeJSON(w, r, http.StatusOK, out)
 }
 
-// apiTripDetail gathers the trip plus its assignment (bus plate, driver name resolved
-// from the assignable lists) — the same shape tripDetail() builds for the HTML page.
+// apiTripDetail gathers the trip plus its assignment (bus plate, driver name) — the same shape tripDetail() builds for the HTML page.
 func (s *Server) apiTripDetail(r *http.Request, id int64) (apiTrip, error) {
 	ctx := r.Context()
 	identity := MustIdentity(ctx)
@@ -117,24 +116,19 @@ func (s *Server) apiTripDetail(r *http.Request, id int64) (apiTrip, error) {
 	assignment, err := s.assignments.GetForTrip(ctx, identity, id)
 	switch {
 	case err == nil:
-		buses, err := s.fleet.ListAssignableBuses(ctx, identity)
+		// Looked up by id, not from the assignable (active-only) lists: a bus sent to
+		// maintenance or a deactivated driver must still show on the trips they drove.
+		bus, err := s.fleet.GetBus(ctx, identity, assignment.BusID)
 		if err != nil {
 			return apiTrip{}, err
 		}
-		drivers, err := s.fleet.ListAssignableDrivers(ctx, identity)
+		driver, err := s.fleet.GetDriver(ctx, identity, assignment.DriverID)
 		if err != nil {
 			return apiTrip{}, err
 		}
-		a := &apiAssignment{BusID: assignment.BusID, DriverID: assignment.DriverID}
-		for _, b := range buses {
-			if b.ID == assignment.BusID {
-				a.BusPlate = b.Plate
-			}
-		}
-		for _, d := range drivers {
-			if d.ID == assignment.DriverID {
-				a.DriverName = d.FullName
-			}
+		a := &apiAssignment{
+			BusID: assignment.BusID, BusPlate: bus.Plate,
+			DriverID: assignment.DriverID, DriverName: driver.FullName,
 		}
 		out.Assignment = a
 	case errors.Is(err, domain.ErrNotFound):

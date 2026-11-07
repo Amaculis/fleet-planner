@@ -17,10 +17,15 @@ type apiDriverTrip struct {
 	ScheduledEnd   string `json:"scheduledEnd"`
 	Status         string `json:"status"`
 	BusPlate       string `json:"busPlate"`
+	// The dispatcher's instructions for this trip and the driver's own recorded times —
+	// the same the server-rendered driver page shows.
+	Notes       *string `json:"notes,omitempty"`
+	ActualStart string  `json:"actualStart,omitempty"`
+	ActualEnd   string  `json:"actualEnd,omitempty"`
 }
 
 func (s *Server) apiDriverTripFrom(t domain.DriverTrip) apiDriverTrip {
-	return apiDriverTrip{
+	out := apiDriverTrip{
 		ID:             t.ID,
 		Origin:         t.Origin,
 		Destination:    t.Destination,
@@ -28,7 +33,15 @@ func (s *Server) apiDriverTripFrom(t domain.DriverTrip) apiDriverTrip {
 		ScheduledEnd:   formatTimestamp(t.ScheduledEnd, s.cfg.Location),
 		Status:         string(t.Status),
 		BusPlate:       t.BusPlate,
+		Notes:          t.Notes,
 	}
+	if t.ActualStart != nil {
+		out.ActualStart = formatTimestamp(*t.ActualStart, s.cfg.Location)
+	}
+	if t.ActualEnd != nil {
+		out.ActualEnd = formatTimestamp(*t.ActualEnd, s.cfg.Location)
+	}
+	return out
 }
 
 // handleAPIMyTrips mirrors handleMyTrips (see handlers_driver.go): yesterday onwards,

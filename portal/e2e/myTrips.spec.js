@@ -119,10 +119,13 @@ test("driver: start and finish a trip from my trips", async ({ page }) => {
   await page.waitForTimeout(500);
 
   await expect(page.getByText(`StartFinishOrigin${suffix}`)).toBeVisible();
+  // Each tap is confirmed: a mistaken one records worked time.
   await page.getByRole("button", { name: /^start trip$/i }).click();
+  await page.getByRole("button", { name: /^yes$/i }).click();
   await expect(page.getByText(/^in progress$/i)).toBeVisible();
 
   await page.getByRole("button", { name: /^finish trip$/i }).click();
+  await page.getByRole("button", { name: /^yes$/i }).click();
   await expect(page.getByText(/^completed$/i)).toBeVisible();
   await expect(page.getByRole("button", { name: /^start trip$/i })).not.toBeVisible();
   await expect(page.getByRole("button", { name: /^finish trip$/i })).not.toBeVisible();

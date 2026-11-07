@@ -1,6 +1,13 @@
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
 import { fileURLToPath, URL } from "url";
+import { lxVitePortalVersionPlugin } from "@dativa-lv/lx-ui/vite";
+
+// One id per build. lxVitePortalVersionPlugin writes it into dist/version.json (it
+// reads CUSTOM_VERSION) and the app gets the same value as __APP_VERSION__, so a tab
+// still running an older build notices the deploy (see layouts/MainLayout.vue).
+const BUILD_ID = process.env.CUSTOM_VERSION || new Date().toISOString().replace(/[-:.TZ]/g, "");
+process.env.CUSTOM_VERSION = BUILD_ID;
 
 // Rewrites the lx-ui carbon theme's hardcoded-absolute font URLs
 // (url(/lx-fonts/IBMPlexMono-Regular.ttf), see lx-fonts-carbon.css) to be
@@ -29,7 +36,14 @@ function rewriteFontPathsForSubpath(base) {
 // there is nothing to substitute per environment.
 export default defineConfig(({ mode }) => ({
   base: "/app/",
-  plugins: [vue(), ...(mode === "demo" ? [rewriteFontPathsForSubpath("/fleet-planner/")] : [])],
+  plugins: [
+    vue(),
+    // version.json only. lxViteSecureHeadersPlugin is deliberately not used: the CSP
+    // and other security headers come from the Go server (internal/http/middleware.go)
+    // with a per-request nonce, which a build-time header plugin cannot produce.
+    lxVitePortalVersionPlugin(),
+    ...(mode === "demo" ? [rewriteFontPathsForSubpath("/fleet-planner/")] : []),
+  ],
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
@@ -49,6 +63,7 @@ export default defineConfig(({ mode }) => ({
   // message compiler take the AST-interpreter path instead of just returning
   // unformatted strings with a console warning.
   define: {
+    __APP_VERSION__: JSON.stringify(BUILD_ID),
     __INTLIFY_JIT_COMPILATION__: true,
   },
   build: {

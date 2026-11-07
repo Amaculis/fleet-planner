@@ -88,6 +88,7 @@ test("unassign a trip", async ({ page }) => {
   await page.goto(`/app/trips/${trip.id}`);
   await page.waitForTimeout(500);
   await page.getByRole("button", { name: /unassign/i }).click();
+  await page.getByRole("button", { name: /^yes$/i }).click();
 
   await expect(page.getByText("No bus or driver assigned yet.")).toBeVisible();
   await expect(page.getByRole("combobox", { name: "Bus" })).toBeVisible();
@@ -102,12 +103,13 @@ test("trip status transitions: planned -> in progress -> completed", async ({ pa
   await page.waitForTimeout(500);
   await expect(page.getByText("Planned")).toBeVisible();
 
-  await page.getByRole("button", { name: /^in progress$/i }).click();
-  await expect(page.getByText("In progress")).toBeVisible();
-  await expect(page.getByRole("button", { name: /^completed$/i })).toBeVisible();
+  // Buttons name the action, not the target status.
+  await page.getByRole("button", { name: /^start trip$/i }).click();
+  await expect(page.getByText("In progress").first()).toBeVisible();
+  await expect(page.getByRole("button", { name: /^complete trip$/i })).toBeVisible();
 
-  await page.getByRole("button", { name: /^completed$/i }).click();
-  await expect(page.getByText("Completed")).toBeVisible();
+  await page.getByRole("button", { name: /^complete trip$/i }).click();
+  await expect(page.getByText("Completed").first()).toBeVisible();
 });
 
 test("assigning an already-booked bus is rejected with a conflict, not a silent double-booking", async ({ page }) => {
@@ -136,7 +138,9 @@ test("assigning an already-booked bus is rejected with a conflict, not a silent 
   await page.getByRole("option", { name: driver.fullName }).click();
   await page.getByRole("button", { name: /^assign$/i }).click();
 
-  await expect(page.getByText(/already booked/i)).toBeVisible();
+  await expect(page.getByText(/is already booked/i)).toBeVisible();
+  // ...and names the trip in the way.
+  await expect(page.getByText(new RegExp(`Already booked on: ConflictA${suffix}`))).toBeVisible();
   // Trip B must still show as unassigned — the conflict must not have gone through.
   await expect(page.getByText("No bus or driver assigned yet.")).toBeVisible();
 });

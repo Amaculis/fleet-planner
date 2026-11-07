@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import {
+  LxButton,
   LxForm,
   LxInfoBox,
   LxListItem,
@@ -22,6 +23,7 @@ import useNotifyStore from "@/stores/notify";
 import useConfirmStore from "@/stores/confirm";
 import useErrors from "@/hooks/errors";
 import useStateDictionaries from "@/hooks/stateDictionaries";
+import useRights from "@/hooks/rights";
 
 // Mirrors domain.CanTransitionTrip (internal/domain/entities.go) — presentation only;
 // the server re-checks every transition regardless of what this shows.
@@ -39,6 +41,7 @@ const router = useRouter();
 const notify = useNotifyStore();
 const confirmStore = useConfirmStore();
 const errors = useErrors();
+const rights = useRights();
 
 const id = computed(() => route.params.id);
 const trip = ref(null);
@@ -49,6 +52,10 @@ const selectedDriverId = ref(null);
 const loading = ref(false);
 const busy = ref(false);
 const errorMessage = ref("");
+// A refused assignment or status change that names the bookings in the way.
+const conflict = ref(null); // { message, lines } | null
+// Assigned trips show the booking read-only until the planner asks to change it.
+const changingAssignment = ref(false);
 
 const busItems = computed(() => buses.value.map((b) => ({ id: b.id, name: b.plate })));
 const driverItems = computed(() => drivers.value.map((d) => ({ id: d.id, name: d.fullName })));
@@ -107,12 +114,26 @@ const clientFields = computed(() => {
   ].filter((f) => f.value);
 });
 
+// Shows a failure: as a conflict box when the server named the trips in the way,
+// otherwise as a notification.
+function showError(error) {
+  const err = errors.get(error);
+  const lines = errors.conflictLines(err);
+  if (lines.length) {
+    conflict.value = { message: i18n.t(err.message), lines };
+  } else {
+    notify.pushError(i18n.t(err.message));
+  }
+}
+
 async function changeStatus(status, scope) {
   busy.value = true;
+  conflict.value = null;
   try {
     trip.value = (await setTripStatus(id.value, status, scope)).data;
+    notify.pushSuccess(i18n.t("trips.statusChanged", { status: i18n.t(`tripStatus.${status}`) }));
   } catch (error) {
-    notify.pushError(i18n.t(errors.get(error).message));
+    showError(error);
   } finally {
     busy.value = false;
   }
@@ -133,32 +154,66 @@ function markAs(status) {
     });
     return;
   }
+  // Ask before the moves that are hard to take back.
+  const confirmKey =
+    status === "cancelled"
+      ? "confirm.cancelTrip"
+      : trip.value?.status === "completed" && status === "in_progress"
+        ? "confirm.reopenTrip"
+        : null;
+  if (confirmKey) {
+    confirmStore.pushSimple(i18n.t(statusActionLabel(status)), i18n.t(confirmKey), () => changeStatus(status));
+    return;
+  }
   changeStatus(status);
 }
 
+// Buttons say what they do ("Start trip", "Reopen"), not the status they lead to.
+function statusActionLabel(status) {
+  const from = trip.value?.status;
+  if (status === "in_progress") return from === "completed" ? "actions.reopen" : "actions.start";
+  if (status === "completed") return "actions.complete";
+  if (status === "cancelled") return "actions.cancelTrip";
+  return "actions.restoreTrip"; // cancelled -> planned
+}
+
 async function assign() {
-  if (!selectedBusId.value || !selectedDriverId.value) return;
+  if (!selectedBusId.value || !selectedDriverId.value) {
+    notify.pushWarning(i18n.t("trips.pickBusAndDriver"));
+    return;
+  }
   busy.value = true;
+  conflict.value = null;
   try {
     trip.value = (await assignTrip(id.value, selectedBusId.value, selectedDriverId.value)).data;
-    notify.pushSuccess(i18n.t("actions.assign"));
+    changingAssignment.value = false;
+    notify.pushSuccess(i18n.t("trips.assigned"));
   } catch (error) {
-    const err = errors.get(error);
-    notify.pushError(i18n.t(err.message));
+    showError(error);
   } finally {
     busy.value = false;
   }
 }
 
-async function unassign() {
-  busy.value = true;
-  try {
-    trip.value = (await unassignTrip(id.value)).data;
-  } catch (error) {
-    notify.pushError(i18n.t(errors.get(error).message));
-  } finally {
-    busy.value = false;
-  }
+function startChangingAssignment() {
+  selectedBusId.value = trip.value.assignment ? String(trip.value.assignment.busId) : null;
+  selectedDriverId.value = trip.value.assignment ? String(trip.value.assignment.driverId) : null;
+  conflict.value = null;
+  changingAssignment.value = true;
+}
+
+function unassign() {
+  confirmStore.pushSimple(i18n.t("actions.unassign"), i18n.t("confirm.unassign"), async () => {
+    busy.value = true;
+    try {
+      trip.value = (await unassignTrip(id.value)).data;
+      notify.pushSuccess(i18n.t("trips.unassignedDone"));
+    } catch (error) {
+      showError(error);
+    } finally {
+      busy.value = false;
+    }
+  });
 }
 
 function confirmDelete() {
@@ -172,12 +227,17 @@ function confirmDelete() {
   });
 }
 
-// The assigned bus/driver's own id, for the "open bus"/"open driver" links — the
-// trip's assignment only carries plate/name (what the read-only display needs), not
-// the id, so it's looked up from the assignable-buses/drivers lists already fetched
-// for the picker.
-const assignedBus = computed(() => buses.value.find((b) => b.plate === trip.value?.assignment?.busPlate));
-const assignedDriver = computed(() => drivers.value.find((d) => d.fullName === trip.value?.assignment?.driverName));
+// The links use the ids the assignment carries, so they keep working for a bus in
+// maintenance or a deactivated driver (neither is in the picker lists). The edit pages
+// are admin-only, so a dispatcher gets plain text instead of a link to a 403.
+const assignedBusLink = computed(() =>
+  trip.value?.assignment && rights.isAdmin() ? { name: "busEdit", params: { id: trip.value.assignment.busId } } : null
+);
+const assignedDriverLink = computed(() =>
+  trip.value?.assignment && rights.isAdmin()
+    ? { name: "driverEdit", params: { id: trip.value.assignment.driverId } }
+    : null
+);
 
 const startDate = computed(() => (trip.value ? parseServerTimestamp(trip.value.scheduledStart) : null));
 const endDate = computed(() => (trip.value ? parseServerTimestamp(trip.value.scheduledEnd) : null));
@@ -210,7 +270,7 @@ const footerActions = computed(() => [
   { id: "edit", name: i18n.t("actions.edit"), kind: "primary", icon: "edit" },
   ...nextStatuses.value.map((status) => ({
     id: `status:${status}`,
-    name: i18n.t(`tripStatus.${status}`),
+    name: i18n.t(statusActionLabel(status)),
     kind: "secondary",
     loading: busy.value,
   })),
@@ -223,9 +283,11 @@ function onFooterAction(actionId) {
   else if (actionId.startsWith("status:")) markAs(actionId.slice("status:".length));
 }
 
+// One header action per state: LxSection folds two or more into a "more" menu, which
+// hid Unassign. The secondary step (change / cancel) is a plain button in the section.
 const assignmentActions = computed(() =>
-  trip.value?.assignment
-    ? [{ id: "unassign", name: i18n.t("actions.unassign"), icon: "remove", loading: busy.value }]
+  trip.value?.assignment && !changingAssignment.value
+    ? [{ id: "unassign", name: i18n.t("actions.unassign"), icon: "remove", loading: busy.value, destructive: true }]
     : [{ id: "assign", name: i18n.t("actions.assign"), icon: "link", loading: busy.value }]
 );
 
@@ -270,6 +332,13 @@ onMounted(load);
       @action-click="onFooterAction"
     >
       <LxInfoBox v-if="trip.seriesId" variant="info" :label="i18n.t('trips.partOfSeries')" />
+      <LxInfoBox
+        v-if="conflict"
+        variant="warning"
+        :label="conflict.message"
+        :description="i18n.t('trips.conflictsWith', { trips: conflict.lines.join('; ') })"
+        data-testid="trip-conflict"
+      />
 
       <LxSection :label="`${trip.origin} → ${trip.destination}`">
         <LxRow :label="i18n.t('fields.status')">
@@ -302,21 +371,20 @@ onMounted(load);
         :action-definitions="assignmentActions"
         @action-click="onAssignmentAction"
       >
-        <template v-if="trip.assignment">
-          <!-- href is null when the bus/driver isn't in the assignable lists — LxListItem
-               then renders non-interactive instead of a dead link. -->
+        <template v-if="trip.assignment && !changingAssignment">
           <LxRow :label="i18n.t('fields.bus')">
-            <LxListItem
-              :label="trip.assignment.busPlate"
-              icon="driving-license"
-              :href="assignedBus ? { name: 'busEdit', params: { id: assignedBus.id } } : null"
-            />
+            <LxListItem :label="trip.assignment.busPlate" icon="driving-license" :href="assignedBusLink" />
           </LxRow>
           <LxRow :label="i18n.t('fields.driver')">
-            <LxListItem
-              :label="trip.assignment.driverName"
-              icon="user-profile"
-              :href="assignedDriver ? { name: 'driverEdit', params: { id: assignedDriver.id } } : null"
+            <LxListItem :label="trip.assignment.driverName" icon="user-profile" :href="assignedDriverLink" />
+          </LxRow>
+          <LxRow :label="i18n.t('actions.changeAssignment')" hide-label :column-span="2">
+            <LxButton
+              :label="i18n.t('actions.changeAssignment')"
+              icon="edit"
+              kind="tertiary"
+              :disabled="busy"
+              @click="startChangingAssignment"
             />
           </LxRow>
         </template>
@@ -326,6 +394,9 @@ onMounted(load);
           </LxRow>
           <LxRow :label="i18n.t('fields.driver')">
             <LxValuePicker v-model="selectedDriverId" :items="driverItems" variant="dropdown" selection-kind="single" />
+          </LxRow>
+          <LxRow v-if="changingAssignment" :label="i18n.t('actions.cancel')" hide-label :column-span="2">
+            <LxButton :label="i18n.t('actions.cancel')" icon="close" kind="tertiary" @click="changingAssignment = false" />
           </LxRow>
         </template>
       </LxSection>

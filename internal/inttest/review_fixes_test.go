@@ -1,9 +1,12 @@
 package inttest
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -424,4 +427,98 @@ func TestLoginThrottledPerAccount(t *testing.T) {
 	e.newDispatcher("dispatcher@example.lv", testPassword)
 	other := &apiClient{newClient(t, base)}
 	other.apiLogin("dispatcher@example.lv")
+}
+
+// TestAPIConflictsNameTheBlockingTrip: the SPA gets route and local times in camelCase.
+func TestAPIConflictsNameTheBlockingTrip(t *testing.T) {
+	ctx := context.Background()
+	e := newEnv(t)
+	admin := e.newAdmin("admin@example.lv", testPassword)
+	bus, driver := e.newBus("AA-1111"), e.newDriver("Driver A")
+	booked := e.newTrip("Riga", "Liepaja", 8, 12)
+	clash := e.newTrip("Riga", "Cesis", 10, 14)
+	if _, err := e.assignments.Assign(ctx, e.identityFor(admin, nil), booked.ID, bus.ID, driver.ID, service.Meta{}); err != nil {
+		t.Fatalf("assigning: %v", err)
+	}
+
+	base := e.serve(t)
+	c := &apiClient{newClient(t, base)}
+	csrf := c.apiLogin("admin@example.lv")
+	resp := c.postJSON("/api/trips/"+strconv.FormatInt(clash.ID, 10)+"/assign", csrf, map[string]any{"busId": bus.ID, "driverId": driver.ID})
+	body := decodeJSON[struct {
+		Error     string `json:"error"`
+		Conflicts []struct {
+			TripID      int64  `json:"tripId"`
+			Origin      string `json:"origin"`
+			Destination string `json:"destination"`
+			Start       string `json:"start"`
+		} `json:"conflicts"`
+	}](t, resp)
+	if resp.StatusCode != http.StatusConflict || len(body.Conflicts) != 1 {
+		t.Fatalf("status %d, conflicts %+v", resp.StatusCode, body.Conflicts)
+	}
+	got := body.Conflicts[0]
+	if got.TripID != booked.ID || got.Destination != "Liepaja" || !strings.HasSuffix(got.Start, "T08:00") {
+		t.Errorf("conflict does not name the booked trip in local time: %+v", got)
+	}
+}
+
+// TestAPIErrorsFollowTheSPALanguage: X-App-Locale picks the language of server messages.
+func TestAPIErrorsFollowTheSPALanguage(t *testing.T) {
+	e := newEnv(t)
+	e.newAdmin("admin@example.lv", testPassword)
+	e.newBus("AA-1111")
+	base := e.serve(t)
+	c := &apiClient{newClient(t, base)}
+	csrf := c.apiLogin("admin@example.lv")
+
+	buf, _ := json.Marshal(map[string]any{"plate": "AA-1111", "model": "Setra", "seats": 50, "status": "active", "type": "tourist"})
+	req, _ := http.NewRequest(http.MethodPost, base+"/api/buses", bytes.NewReader(buf))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-CSRF-Token", csrf)
+	req.Header.Set("X-App-Locale", "ru")
+	resp, err := c.http.Do(req)
+	if err != nil {
+		t.Fatalf("posting: %v", err)
+	}
+	if body := readBody(t, resp); !strings.Contains(body, "Автобус с таким номером") {
+		t.Errorf("error not in the SPA's language: %s", body)
+	}
+}
+
+// TestDriverAPIShowsNotesAndTripDetailKeepsInactiveBus: the driver
+// sees the dispatcher's notes; a bus sent to maintenance still shows on its trips.
+func TestDriverAPIShowsNotesAndTripDetailKeepsInactiveBus(t *testing.T) {
+	ctx := context.Background()
+	e := newEnv(t)
+	admin := e.newAdmin("admin@example.lv", testPassword)
+	actor := e.identityFor(admin, nil)
+	driver, _ := e.newDriverWithLogin("Driver A", "driver@example.lv", testPassword)
+	bus := e.newBus("AA-1111")
+	trip := e.newTrip("Riga", "Liepaja", 8, 12)
+	notes := "Pick up at gate 3"
+	trip.Notes = &notes
+	if _, err := e.trips.Update(ctx, actor, trip, service.Meta{}); err != nil {
+		t.Fatalf("adding notes: %v", err)
+	}
+	if _, err := e.assignments.Assign(ctx, actor, trip.ID, bus.ID, driver.ID, service.Meta{}); err != nil {
+		t.Fatalf("assigning: %v", err)
+	}
+	bus.Status = domain.BusMaintenance
+	if _, err := e.fleet.UpdateBus(ctx, actor, bus, service.Meta{}); err != nil {
+		t.Fatalf("sending bus to maintenance: %v", err)
+	}
+
+	base := e.serve(t)
+	d := &apiClient{newClient(t, base)}
+	d.apiLogin("driver@example.lv")
+	if body := readBody(t, d.get("/api/my/trips")); !strings.Contains(body, notes) {
+		t.Errorf("driver API misses the trip notes: %s", body)
+	}
+
+	a := &apiClient{newClient(t, base)}
+	a.apiLogin("admin@example.lv")
+	if body := readBody(t, a.get("/api/trips/"+strconv.FormatInt(trip.ID, 10))); !strings.Contains(body, `"busPlate":"AA-1111"`) {
+		t.Errorf("trip detail lost the plate of a bus in maintenance: %s", body)
+	}
 }
