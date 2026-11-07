@@ -194,7 +194,7 @@ func (s *TripSeriesService) CancelFuture(ctx context.Context, actor domain.Ident
 			return err
 		}
 		for _, t := range future {
-			after, err := tx.SetTripStatus(ctx, t.ID, domain.TripCancelled)
+			after, err := tx.SetTripStatus(ctx, t.ID, domain.TripCancelled, t.ActualStart, t.ActualEnd)
 			if err != nil {
 				return err
 			}

@@ -146,14 +146,39 @@ func (s *FleetService) ListDrivers(ctx context.Context, actor domain.Identity) (
 	if err := requireRole(actor, domain.RoleAdmin, domain.RoleDispatcher); err != nil {
 		return nil, err
 	}
-	return s.repo.ListDrivers(ctx)
+	drivers, err := s.repo.ListDrivers(ctx)
+	return minimizeDrivers(actor, drivers), err
 }
 
 func (s *FleetService) ListAssignableDrivers(ctx context.Context, actor domain.Identity) ([]domain.Driver, error) {
 	if err := requireRole(actor, domain.RoleAdmin, domain.RoleDispatcher); err != nil {
 		return nil, err
 	}
-	return s.repo.ListActiveDrivers(ctx)
+	drivers, err := s.repo.ListActiveDrivers(ctx)
+	return minimizeDrivers(actor, drivers), err
+}
+
+// minimizeDriver applies data minimization (GDPR) for a dispatcher: planning needs a
+// driver's name, phone and licence expiry, not their pay (payroll-seam) or licence
+// number. Done here, in the service, so no handler or template can leak them by accident.
+func minimizeDriver(actor domain.Identity, d domain.Driver) domain.Driver {
+	if actor.Role == domain.RoleAdmin {
+		return d
+	}
+	if actor.Role == domain.RoleDriver && actor.DriverID != nil && *actor.DriverID == d.ID {
+		return d // a driver may see their own record in full (right of access)
+	}
+	d.HourlyRate = nil
+	d.PayType = nil
+	d.LicenseNumber = nil
+	return d
+}
+
+func minimizeDrivers(actor domain.Identity, drivers []domain.Driver) []domain.Driver {
+	for i := range drivers {
+		drivers[i] = minimizeDriver(actor, drivers[i])
+	}
+	return drivers
 }
 
 // GetDriver lets admins and dispatchers read any driver, and a driver read only their
@@ -162,7 +187,8 @@ func (s *FleetService) GetDriver(ctx context.Context, actor domain.Identity, id 
 	if !actor.OwnsDriver(id) {
 		return domain.Driver{}, domain.ErrForbidden
 	}
-	return s.repo.GetDriver(ctx, id)
+	driver, err := s.repo.GetDriver(ctx, id)
+	return minimizeDriver(actor, driver), err
 }
 
 func (s *FleetService) CreateDriver(ctx context.Context, actor domain.Identity, input domain.Driver, meta Meta) (domain.Driver, error) {
@@ -198,7 +224,10 @@ func (s *FleetService) UpdateDriver(ctx context.Context, actor domain.Identity, 
 		return domain.Driver{}, err
 	}
 
-	var updated domain.Driver
+	var (
+		updated     domain.Driver
+		loginUserID *int64
+	)
 	err = s.repo.InTx(ctx, func(tx *repo.Repo) error {
 		before, err := tx.GetDriver(ctx, input.ID)
 		if err != nil {
@@ -212,11 +241,29 @@ func (s *FleetService) UpdateDriver(ctx context.Context, actor domain.Identity, 
 			return err
 		}
 		updated = after
-		return NewAuditor(tx).Record(ctx, &actor.UserID, "update", "driver", &after.ID,
-			snapshotDriver(before), snapshotDriver(after), meta)
+		if err := NewAuditor(tx).Record(ctx, &actor.UserID, "update", "driver", &after.ID,
+			snapshotDriver(before), snapshotDriver(after), meta); err != nil {
+			return err
+		}
+		// A deactivated driver must not keep signing in and starting trips: their
+		// login goes with them. Reactivating the driver leaves the login for the admin
+		// to re-enable deliberately.
+		if before.IsActive && !after.IsActive {
+			id, err := deactivateDriverLogin(ctx, tx, actor, after.ID, meta)
+			if err != nil {
+				return err
+			}
+			loginUserID = id
+		}
+		return nil
 	})
 	if err != nil {
 		return domain.Driver{}, fmt.Errorf("updating driver: %w", err)
+	}
+	if loginUserID != nil {
+		if err := s.sessions.DestroyAllForUser(ctx, *loginUserID); err != nil {
+			s.log.Error("revoking sessions after driver deactivation", "user_id", *loginUserID, "error", err)
+		}
 	}
 	return updated, nil
 }
@@ -250,23 +297,33 @@ func (s *FleetService) AnonymizeDriver(ctx context.Context, actor domain.Identit
 		}
 		erased = after
 
-		// Deactivate the linked login, if there is one.
+		// Erase and deactivate the linked login, if there is one: its email is
+		// personal data too.
 		if userID, err := tx.GetDriverLoginUserID(ctx, id); err == nil {
-			user, err := tx.SetUserActive(ctx, userID, false)
+			user, err := tx.AnonymizeUserEmail(ctx, userID)
 			if err != nil {
 				return err
 			}
 			loginUserID = &userID
-			if err := NewAuditor(tx).Record(ctx, &actor.UserID, "deactivate", "user", &userID,
+			if err := NewAuditor(tx).Record(ctx, &actor.UserID, "anonymize", "user", &userID,
 				nil, snapshotUser(user), meta); err != nil {
+				return err
+			}
+			if _, err := tx.RedactAuditPII(ctx, "user", userID); err != nil {
 				return err
 			}
 		} else if !errors.Is(err, domain.ErrNotFound) {
 			return err
 		}
 
-		return NewAuditor(tx).Record(ctx, &actor.UserID, "anonymize", "driver", &id,
-			snapshotDriver(before), snapshotDriver(after), meta)
+		if err := NewAuditor(tx).Record(ctx, &actor.UserID, "anonymize", "driver", &id,
+			snapshotDriver(before), snapshotDriver(after), meta); err != nil {
+			return err
+		}
+		// Last, so the entry just written is redacted too: the trail keeps who erased
+		// whom and when, but no longer the driver's name, phone or licence.
+		_, err = tx.RedactAuditPII(ctx, "driver", id)
+		return err
 	})
 	if err != nil {
 		return domain.Driver{}, fmt.Errorf("anonymizing driver: %w", err)
@@ -279,4 +336,32 @@ func (s *FleetService) AnonymizeDriver(ctx context.Context, actor domain.Identit
 		}
 	}
 	return erased, nil
+}
+
+// deactivateDriverLogin switches off the login linked to a driver, if there is one, and
+// returns its id so the caller can revoke sessions after the transaction commits.
+func deactivateDriverLogin(ctx context.Context, tx *repo.Repo, actor domain.Identity, driverID int64, meta Meta) (*int64, error) {
+	userID, err := tx.GetDriverLoginUserID(ctx, driverID)
+	if errors.Is(err, domain.ErrNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	before, err := tx.GetUserByID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	if !before.IsActive {
+		return nil, nil
+	}
+	after, err := tx.SetUserActive(ctx, userID, false)
+	if err != nil {
+		return nil, err
+	}
+	if err := NewAuditor(tx).Record(ctx, &actor.UserID, "deactivate", "user", &userID,
+		snapshotUser(before), snapshotUser(after), meta); err != nil {
+		return nil, err
+	}
+	return &userID, nil
 }

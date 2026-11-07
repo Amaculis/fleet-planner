@@ -38,3 +38,23 @@ func (r *Repo) InsertAuditEntry(ctx context.Context, e domain.AuditEntry) error 
 	}
 	return nil
 }
+
+// RedactAuditPII strips personal-data keys from every snapshot of one entity row. It
+// goes through a SECURITY DEFINER function (0011) because the app role cannot UPDATE
+// audit_log; the function only accepts driver, client and user.
+func (r *Repo) RedactAuditPII(ctx context.Context, entity string, entityID int64) (int64, error) {
+	n, err := r.q.RedactAuditPII(ctx, sqlcgen.RedactAuditPIIParams{Entity: entity, EntityID: entityID})
+	if err != nil {
+		return 0, fmt.Errorf("redacting audit snapshots: %w", translate(err))
+	}
+	return n, nil
+}
+
+// PurgeOldAuditLog applies the fixed retention period (0012) and returns rows deleted.
+func (r *Repo) PurgeOldAuditLog(ctx context.Context) (int64, error) {
+	n, err := r.q.PurgeOldAuditLog(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("purging old audit entries: %w", translate(err))
+	}
+	return n, nil
+}

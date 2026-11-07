@@ -10,6 +10,31 @@ import (
 	"time"
 )
 
+const anonymizeUserEmail = `-- name: AnonymizeUserEmail :one
+UPDATE users SET email = 'erased-' || id || '@erased.invalid', is_active = false
+WHERE id = $1
+RETURNING id, email, password_hash, role, driver_id, locale, is_active, created_at, updated_at
+`
+
+// GDPR erasure of a driver's login: the address is replaced by a unique, non-routable
+// placeholder (.invalid is reserved by RFC 2606). The row stays: audit_log references it.
+func (q *Queries) AnonymizeUserEmail(ctx context.Context, id int64) (User, error) {
+	row := q.db.QueryRow(ctx, anonymizeUserEmail, id)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.PasswordHash,
+		&i.Role,
+		&i.DriverID,
+		&i.Locale,
+		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const countUsers = `-- name: CountUsers :one
 SELECT count(*) FROM users
 `

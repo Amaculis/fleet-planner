@@ -39,7 +39,7 @@ templ BusesPage(v View, buses []domain.Bus) {
 									<a href={ templ.SafeURL("/buses/" + strconv.FormatInt(bus.ID, 10) + "/edit") } class={ linkButton }>
 										{ v.T("common.edit") }
 									</a>
-									@PostButton(v, "/buses/"+strconv.FormatInt(bus.ID, 10)+"/delete", "common.delete", dangerButton)
+									@ConfirmPostButton(v, "/buses/"+strconv.FormatInt(bus.ID, 10)+"/delete", "common.delete", dangerButton, "confirm.delete_bus")
 								</td>
 							}
 						</tr>

@@ -34,8 +34,14 @@ func (s *Server) handleLoginSubmit(w http.ResponseWriter, r *http.Request) {
 
 	meta := service.Meta{IP: s.clientIP(r), RequestID: RequestIDFrom(ctx)}
 
-	token, _, identity, err := s.auth.Login(ctx, email, password, meta)
+	token, identity, err := s.attemptLogin(ctx, email, password, meta)
 	if err != nil {
+		if errors.Is(err, errAccountThrottled) {
+			s.log.Warn("login throttled for account", "request_id", RequestIDFrom(ctx))
+			w.Header().Set("Retry-After", "180")
+			s.renderLogin(w, r, http.StatusTooManyRequests, "error.rate_limited", "")
+			return
+		}
 		if errors.Is(err, domain.ErrUnauthorized) {
 			// One message for every failure mode: unknown email, wrong password and
 			// deactivated account are indistinguishable to the client.

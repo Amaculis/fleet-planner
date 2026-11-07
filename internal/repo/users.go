@@ -82,6 +82,16 @@ func (r *Repo) SetUserActive(ctx context.Context, id int64, active bool) (domain
 	return userFromRow(row)
 }
 
+// AnonymizeUserEmail replaces a login's email with a placeholder and deactivates it
+// (GDPR erasure of a driver's account).
+func (r *Repo) AnonymizeUserEmail(ctx context.Context, id int64) (domain.User, error) {
+	row, err := r.q.AnonymizeUserEmail(ctx, id)
+	if err != nil {
+		return domain.User{}, fmt.Errorf("anonymizing user email: %w", translate(err))
+	}
+	return userFromRow(row)
+}
+
 // SetUserPassword stores an already-hashed password (argon2id, DB CHECK enforced).
 func (r *Repo) SetUserPassword(ctx context.Context, id int64, passwordHash string) (domain.User, error) {
 	row, err := r.q.SetUserPassword(ctx, sqlcgen.SetUserPasswordParams{ID: id, PasswordHash: passwordHash})

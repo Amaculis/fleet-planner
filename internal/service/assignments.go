@@ -117,6 +117,13 @@ func (s *AssignmentService) Assign(ctx context.Context, actor domain.Identity, t
 		// completed trip, which the status check above has already excluded.
 		var before any
 		if existing, err := tx.GetAssignmentForTrip(ctx, tripID); err == nil {
+			// payroll-seam: once a driver has started, the recorded start time is theirs.
+			// Swapping the bus (a breakdown) is fine; swapping the driver would hand
+			// their worked time to someone else — so only an admin may, as an audited
+			// correction (typically after reopening a completed trip).
+			if trip.Status == domain.TripInProgress && existing.DriverID != driverID && actor.Role != domain.RoleAdmin {
+				return Message(domain.ErrConflict, "error.trip_in_progress_keeps_driver")
+			}
 			before = snapshotAssignment(existing)
 			if err := tx.DeleteAssignmentForTrip(ctx, tripID); err != nil {
 				return err
@@ -147,8 +154,9 @@ func (s *AssignmentService) Assign(ctx context.Context, actor domain.Identity, t
 	return created, nil
 }
 
-// Unassign frees the bus and driver. Refused for a completed trip by the
-// assignments_lock_completed trigger: payroll must keep knowing who drove it.
+// Unassign frees the bus and driver. Refused for a completed trip (also by the
+// assignments_lock_completed trigger) and for one in progress: payroll must keep knowing
+// who drove it.
 func (s *AssignmentService) Unassign(ctx context.Context, actor domain.Identity, tripID int64, meta Meta) error {
 	if err := requireRole(actor, domain.RoleAdmin, domain.RoleDispatcher); err != nil {
 		return err
@@ -158,8 +166,13 @@ func (s *AssignmentService) Unassign(ctx context.Context, actor domain.Identity,
 		if err != nil {
 			return err
 		}
-		if before.TripStatus == domain.TripCompleted {
+		switch before.TripStatus {
+		case domain.TripCompleted:
 			return Message(domain.ErrConflict, "error.completed_keeps_driver")
+		case domain.TripInProgress:
+			// payroll-seam: unassigning would orphan the recorded start time and hide
+			// the trip from the driver, who could then never finish it.
+			return Message(domain.ErrConflict, "error.trip_in_progress_keeps_driver")
 		}
 		if err := tx.DeleteAssignmentForTrip(ctx, tripID); err != nil {
 			return err

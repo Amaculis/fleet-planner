@@ -12,6 +12,15 @@
     }
   }
 
+  // Forms marked data-confirm ask before submitting (deletes, erasure, cancelling a
+  // trip, a driver's start/finish tap). An empty value means "no question".
+  document.addEventListener("submit", function (event) {
+    var message = event.target && event.target.getAttribute && event.target.getAttribute("data-confirm");
+    if (message && !window.confirm(message)) {
+      event.preventDefault();
+    }
+  }, true);
+
   // Register the service worker that backs the driver PWA. Browsers only allow this
   // over HTTPS (or localhost), which is exactly where the app runs.
   if ("serviceWorker" in navigator) {

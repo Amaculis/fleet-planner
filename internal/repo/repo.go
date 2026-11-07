@@ -73,7 +73,7 @@ func translate(err error) error {
 		case "23P01": // exclusion_violation
 			return fmt.Errorf("%w (%s)", domain.ErrTimeConflict, pgErr.ConstraintName)
 		case "23505": // unique_violation
-			return fmt.Errorf("%w (%s)", domain.ErrConflict, pgErr.ConstraintName)
+			return &domain.UniqueViolation{Constraint: pgErr.ConstraintName}
 		case "23503", "23514": // foreign_key_violation, check_violation
 			return fmt.Errorf("%w (%s)", domain.ErrValidation, pgErr.ConstraintName)
 		}

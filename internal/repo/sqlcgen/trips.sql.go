@@ -266,8 +266,7 @@ FROM trips t
 JOIN assignments a ON a.trip_id = t.id
 JOIN buses b ON b.id = a.bus_id
 WHERE a.driver_id = $1
-  AND t.status <> 'cancelled'
-  AND t.scheduled_end >= $2
+  AND (t.scheduled_end >= $2 OR t.status = 'in_progress')
 ORDER BY t.scheduled_start
 `
 
@@ -293,6 +292,8 @@ type ListTripsForDriverRow struct {
 
 // A driver's own trips. Ownership lives in the WHERE clause: the driver id comes from
 // the session, never from the request, and no query returns another driver's trips.
+// A trip still in progress is always listed, however old, so it can be finished.
+// Cancelled trips stay visible (marked in the UI) so a driver learns of the cancellation.
 func (q *Queries) ListTripsForDriver(ctx context.Context, arg ListTripsForDriverParams) ([]ListTripsForDriverRow, error) {
 	rows, err := q.db.Query(ctx, listTripsForDriver, arg.DriverID, arg.Since)
 	if err != nil {
@@ -384,19 +385,28 @@ func (q *Queries) ListTripsInRange(ctx context.Context, arg ListTripsInRangePara
 
 const setTripStatus = `-- name: SetTripStatus :one
 UPDATE trips
-SET status = $2
-WHERE id = $1
+SET status = $1, actual_start = $2, actual_end = $3
+WHERE id = $4
 RETURNING id, origin, destination, scheduled_start, scheduled_end, actual_start, actual_end,
           status, notes, created_at, updated_at, payment_status, series_id, client_id, invoice_number
 `
 
 type SetTripStatusParams struct {
-	ID     int64
-	Status TripStatus
+	Status      TripStatus
+	ActualStart *time.Time
+	ActualEnd   *time.Time
+	ID          int64
 }
 
+// payroll-seam: the service decides actual_start/actual_end for every transition (see
+// TripService.SetStatus), so the worked-time window always matches the status.
 func (q *Queries) SetTripStatus(ctx context.Context, arg SetTripStatusParams) (Trip, error) {
-	row := q.db.QueryRow(ctx, setTripStatus, arg.ID, arg.Status)
+	row := q.db.QueryRow(ctx, setTripStatus,
+		arg.Status,
+		arg.ActualStart,
+		arg.ActualEnd,
+		arg.ID,
+	)
 	var i Trip
 	err := row.Scan(
 		&i.ID,

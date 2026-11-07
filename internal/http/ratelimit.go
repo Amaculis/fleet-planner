@@ -2,6 +2,7 @@ package http
 
 import (
 	"context"
+	"net"
 	"net/http"
 	"sync"
 	"time"
@@ -35,6 +36,26 @@ func NewLimiter(every time.Duration, burst int) *Limiter {
 		idleTTL: 10 * time.Minute,
 		nowFunc: time.Now,
 	}
+}
+
+// WithIdleTTL keeps a quiet bucket for at least d before cleanup forgets it. A bucket
+// that refills slowly must outlive its refill time, or forgetting it would hand an
+// attacker a fresh, full bucket early.
+func (l *Limiter) WithIdleTTL(d time.Duration) *Limiter {
+	l.idleTTL = d
+	return l
+}
+
+// HasToken reports whether key could pass right now, without consuming anything. Used
+// by the per-account login throttle, which only spends tokens on failed attempts.
+func (l *Limiter) HasToken(key string) bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	b, ok := l.buckets[key]
+	if !ok {
+		return true
+	}
+	return b.lim.TokensAt(l.nowFunc()) >= 1
 }
 
 // Allow consumes one token for key. An empty key (unresolvable IP) is refused rather
@@ -83,7 +104,7 @@ func (l *Limiter) StartCleanup(ctx context.Context) {
 func (s *Server) rateLimit(l *Limiter) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if !l.Allow(s.clientIP(r)) {
+			if !l.Allow(limiterKey(s.clientIP(r))) {
 				s.log.Warn("rate limited",
 					"request_id", RequestIDFrom(r.Context()),
 					"path", r.URL.Path)
@@ -94,4 +115,18 @@ func (s *Server) rateLimit(l *Limiter) func(http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 		})
 	}
+}
+
+// limiterKey groups IPv6 clients by /64: one subscriber usually holds a whole /64, so
+// keying on the full address would give a single attacker billions of fresh buckets.
+// IPv4 addresses are used as they are.
+func limiterKey(ip string) string {
+	parsed := net.ParseIP(ip)
+	if parsed == nil {
+		return ip // "" stays "", which Allow refuses
+	}
+	if parsed.To4() != nil {
+		return parsed.String()
+	}
+	return parsed.Mask(net.CIDRMask(64, 128)).String() + "/64"
 }
