@@ -9,7 +9,6 @@
 set -eu
 set -o pipefail
 
-: "${BACKUP_AGE_RECIPIENT:?BACKUP_AGE_RECIPIENT (age public key) is required}"
 INTERVAL="${BACKUP_INTERVAL_SECONDS:-86400}"
 KEEP_DAYS="${BACKUP_KEEP_DAYS:-30}"
 DIR=/backups
@@ -38,6 +37,14 @@ run_once() {
 
   /usr/local/bin/upload.sh "$final"
 }
+
+# Never write an unencrypted dump. Without a key, say so loudly and keep saying it.
+if [ -z "${BACKUP_AGE_RECIPIENT:-}" ]; then
+  while true; do
+    log "NOT CONFIGURED: set BACKUP_AGE_RECIPIENT (age public key) - no backups are being taken"
+    sleep 3600
+  done
+fi
 
 log "starting: every ${INTERVAL}s, keep ${KEEP_DAYS} days"
 while true; do

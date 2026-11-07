@@ -123,7 +123,9 @@ services:
       PGUSER: fleet_owner
       PGPASSWORD: ${FLEET_OWNER_PASSWORD}
       # age *public* key: the server can encrypt but never decrypt its own backups.
-      BACKUP_AGE_RECIPIENT: ${BACKUP_AGE_RECIPIENT:?BACKUP_AGE_RECIPIENT is required}
+      # Optional for now so the stack still starts; until it is set, the service only
+      # logs "NOT CONFIGURED" and takes no backups (see deploy/backup/README.md).
+      BACKUP_AGE_RECIPIENT: ${BACKUP_AGE_RECIPIENT:-}
       BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-86400}
       # Short on purpose (GDPR): erased personal data must age out of backups too.
       BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-30}
