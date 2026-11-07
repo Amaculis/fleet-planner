@@ -17,8 +17,8 @@ hostpath() {
 
 NET="bus-fleet-test-$$"
 PG="bus-fleet-testdb-$$"
-PGIMAGE="postgres:17.6-alpine"
-GOIMAGE="golang:1.26-alpine"
+PGIMAGE="postgres:17.11-alpine@sha256:3540c0362c809df084ffac0ae69fe794515f9de92692f02178bcdce0ef0302ac"
+GOIMAGE="golang:1.26-alpine@sha256:87c65a688975c0b1d4585d204874c45ca78354670e3a5f11368c5a492303d696"
 OWNER_PW="verify-owner"
 APP_PW="verify-app"
 

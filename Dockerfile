@@ -7,10 +7,14 @@
 # changing db/queries/*.sql or a .templ file.
 
 # --- assets: Tailwind stylesheet, vendored htmx, the lx-ui calendar island ---------
-FROM node:26-alpine AS assets
+# Base images are pinned by digest (tag kept for readability): a re-pushed tag cannot
+# change what gets built. Bump tag and digest together.
+FROM node:26-alpine@sha256:8996bb5821d62a8fd9bb27c1cb07462f3fdce6e47d640c6a881ead0b064ce216 AS assets
 WORKDIR /src
-COPY package.json vite.calendar.config.mjs ./
-RUN npm install --no-audit --no-fund
+COPY package.json package-lock.json vite.calendar.config.mjs ./
+# npm ci: installs exactly what the lockfile says and fails if it disagrees with
+# package.json — no silently floating transitive dependencies.
+RUN npm ci --no-audit --no-fund
 COPY web ./web
 RUN mkdir -p web/static/css web/static/js web/static/lx-fonts \
  && cp node_modules/htmx.org/dist/htmx.min.js web/static/js/htmx.min.js \
@@ -34,23 +38,17 @@ RUN mkdir -p web/static/css web/static/js web/static/lx-fonts \
 # (portal/package.json), not a handful of files copied into web/static, and its
 # output is NOT go:embed'd into the binary (see config.PortalDir) — it is copied
 # straight into the runtime image below and served from disk.
-FROM node:26-alpine AS portal
+FROM node:26-alpine@sha256:8996bb5821d62a8fd9bb27c1cb07462f3fdce6e47d640c6a881ead0b064ce216 AS portal
 WORKDIR /src/portal
 COPY portal/package.json portal/package-lock.json ./
-# npm install, not ci: `npm ci` repeatedly failed here with "Missing: @esbuild/...
-# from lock file" for optional per-platform esbuild binaries — reproducible even
-# starting from a lockfile just generated fresh inside this exact image, so it isn't
-# the earlier Windows-vs-Linux mismatch this comment used to describe. package.json
-# pins vite (and now @playwright/test) to exact versions, which is what actually
-# stops the different-rolldown-version problem `npm ci` was originally reached for;
-# `npm install` self-heals a lockfile npm's own optional-dependency bookkeeping
-# didn't fully write out, the same way the `assets` stage above already does.
-RUN npm install --no-audit --no-fund
+# npm ci (see the assets stage). The lockfile carries the optional per-platform
+# binaries (esbuild, rolldown) for linux-musl, so this works inside alpine.
+RUN npm ci --no-audit --no-fund
 COPY portal ./
 RUN npm run build
 
 # --- binary -------------------------------------------------------------------------
-FROM golang:1.26-alpine AS build
+FROM golang:1.26-alpine@sha256:87c65a688975c0b1d4585d204874c45ca78354670e3a5f11368c5a492303d696 AS build
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download && go mod verify
@@ -63,7 +61,7 @@ COPY --from=assets /src/web/static ./web/static
 RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/server ./cmd/server
 
 # --- runtime: distroless, no shell, no package manager, nonroot ---------------------
-FROM gcr.io/distroless/static-debian12:nonroot
+FROM gcr.io/distroless/static-debian12:nonroot@sha256:afa5c872c891853ca7fcf1f12c3edb23f7eeef36189728842dd51042ff57f7ab
 COPY --from=build /out/server /app/server
 # PORTAL_DIR defaults to "portal/dist", read relative to the working directory the
 # binary runs in — set it to match wherever this lands if that ever changes.
