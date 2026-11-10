@@ -7,14 +7,14 @@
     "build:calendar": "vite build --config vite.calendar.config.mjs"
   },
   "devDependencies": {
-    "@tailwindcss/cli": "4.3.3",
+    "@tailwindcss/cli": "4.3.5",
     "@vitejs/plugin-vue": "6.0.10",
-    "tailwindcss": "4.3.3",
-    "vite": "8.3.5"
+    "tailwindcss": "4.3.5",
+    "vite": "8.3.6"
   },
   "dependencies": {
     "@dativa-lv/lx-ui": "2.3.12",
     "htmx.org": "2.0.11",
-    "vue": "3.5.44"
+    "vue": "3.5.45"
   }
 }
