@@ -33,6 +33,9 @@ schema rewrite. Handles personal data of drivers → GDPR applies.
 - **PostgreSQL** via `pgx`. Migrations via `golang-migrate` (see `db-migrations` skill).
 - **Frontend:** server-rendered `templ` + `htmx` + Tailwind. Minimal client JS. Driver
   view is a PWA. (A small SPA is allowed only after explicit approval.)
+- **Package manager: npm** (root and `portal/`), with committed `package-lock.json` and
+  `npm ci` in Docker/CI. This is a deliberate exception to the `lx-ui-frontend` skill's
+  "bun for new projects" rule — do not switch to bun or pnpm.
 - **Auth:** opaque server-side sessions, `HttpOnly; Secure; SameSite=Lax` cookies,
   session rotation on login, idle + absolute expiry, CSRF tokens on all state-changing
   requests. Passwords hashed with **argon2id**.
@@ -96,6 +99,7 @@ Minimum before merge:
 - Migrate: `migrate -path db/migrations -database "$DATABASE_URL" up`
 - Generate queries: `sqlc generate`
 - Test: `go test ./...`
+- E2E (stack running): `bash scripts/verify-e2e.sh` — also runs in CI
 - Vuln scan: `govulncheck ./...`
 
 ## Git
