@@ -30,3 +30,13 @@ const i18n = createI18n({
 });
 
 export default i18n;
+
+// Texts LX UI shows by itself, outside any component's `texts` prop: the error when a
+// page can't be loaded (offline or a failed chunk). LX UI only knows Latvian, so these
+// are passed to createLx (main.js) and again on every language switch (hooks/language.js).
+export function lxComponentTexts() {
+  const { t } = i18n.global;
+  return {
+    LxDynamicImport: { offline: t("lxDynamicImport.offline"), loadFailed: t("lxDynamicImport.loadFailed") },
+  };
+}

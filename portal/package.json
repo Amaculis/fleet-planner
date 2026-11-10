@@ -14,7 +14,7 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
-    "@dativa-lv/lx-ui": "2.3.10",
+    "@dativa-lv/lx-ui": "2.3.12",
     "axios": "^1.7.9",
     "axios-mock-adapter": "^2.1.0",
     "pinia": "^4.1.0",

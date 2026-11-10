@@ -60,7 +60,7 @@ import "@dativa-lv/lx-ui/dist/styles/lx-modals.css"; // LxModalForm (user passwo
 import App from "@/App.vue";
 import router from "@/router";
 import events from "@/router/events";
-import i18n from "@/i18n";
+import i18n, { lxComponentTexts } from "@/i18n";
 import { APP_CONFIG, APP_VERSION } from "@/constants";
 
 // lxVersionCheckUtils compares globalThis.config.version with /app/version.json (see
@@ -105,6 +105,7 @@ const app = createApp(App);
     // i18n/index.js). LX UI fixes this at install time; switching language later
     // does not re-localize date pickers.
     locale: { locale: i18n.global.locale.value, firstDayOfTheWeek: 1 },
+    texts: lxComponentTexts(),
     preload: {
       components: [
         LxShell, LxButton, LxTextInput, LxErrorPage, LxAccessibilitySettings, LxLoaderView, LxInfoBox,

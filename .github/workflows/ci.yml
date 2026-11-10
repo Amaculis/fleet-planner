@@ -1,6 +1,6 @@
 name: CI
 
-# Check-only: tests, security scans and an image build. Deploys nothing.
+# Check-only: tests (Go and end-to-end), security scans and an image build. Deploys nothing.
 # The weekly run catches newly published vulnerabilities in weeks with no commits.
 on:
   push:
@@ -39,6 +39,46 @@ jobs:
           docker rm "$id"
       - name: Run test suite
         run: bash scripts/verify-tests.sh
+
+  e2e:
+    name: End-to-end (Playwright, full stack through Caddy)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      # Throwaway credentials, generated per run; the stack is destroyed at the end.
+      # No BACKUP_AGE_RECIPIENT: the backup service only logs that it is not configured.
+      - name: Write a throwaway .env
+        run: |
+          {
+            echo "APP_DOMAIN=localhost"
+            echo "ACME_EMAIL=ci@example.invalid"
+            echo "POSTGRES_SUPERUSER_PASSWORD=$(openssl rand -hex 24)"
+            echo "FLEET_OWNER_PASSWORD=$(openssl rand -hex 24)"
+            echo "FLEET_APP_PASSWORD=$(openssl rand -hex 24)"
+            echo "APP_SECRET=$(openssl rand -hex 32)"
+            echo "ADMIN_EMAIL=e2e-admin@example.com"
+            echo "ADMIN_PASSWORD=$(openssl rand -hex 24)"
+          } > .env
+      - name: Start the stack
+        run: docker compose up -d --build --wait
+      - name: Create the admin account
+        run: bash scripts/create-admin.sh
+      - name: Run e2e suite
+        run: bash scripts/verify-e2e.sh
+      - name: Upload Playwright traces and screenshots
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-results
+          path: portal/test-results/
+          retention-days: 7
+      - name: App logs on failure
+        if: failure()
+        run: docker compose logs app --tail 200
+      - name: Tear down
+        if: always()
+        run: docker compose down -v
 
   go-security:
     name: Go security (gosec + govulncheck)

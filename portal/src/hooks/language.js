@@ -1,4 +1,6 @@
 import { useI18n } from "vue-i18n";
+import { setLxComponentTexts } from "@dativa-lv/lx-ui";
+import { lxComponentTexts } from "@/i18n";
 import { LOCALE_STORAGE_KEY } from "@/constants";
 
 // Switches vue-i18n's active locale. LxShell's language picker only emits which
@@ -9,6 +11,7 @@ export function useLanguageSwitcher() {
   function switchLocale(locale) {
     i18n.locale.value = locale;
     document.documentElement.lang = locale;
+    setLxComponentTexts(lxComponentTexts());
     try {
       localStorage.setItem(LOCALE_STORAGE_KEY, locale);
     } catch {

@@ -572,5 +572,9 @@
     "passwordSet": "Jauna parole iestatīta lietotājam {email}. Visas sesijas tika pārtrauktas.",
     "setPasswordTitle": "Iestatīt paroli: {email}",
     "setPasswordHint": "Vismaz 12 rakstzīmes. Lietotājs tiks izrakstīts no visām ierīcēm."
+  },
+  "lxDynamicImport": {
+    "offline": "Nav interneta savienojuma. Pārbaudiet savienojumu un mēģiniet vēlreiz!",
+    "loadFailed": "Neizdevās ielādēt lapas saturu. Mēģiniet vēlreiz!"
   }
 }

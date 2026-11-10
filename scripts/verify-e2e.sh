@@ -18,8 +18,12 @@ hostpath() {
   if command -v cygpath >/dev/null 2>&1; then cygpath -m "$1"; else printf '%s' "$1"; fi
 }
 
-if ! docker ps --filter "name=bus-fleet-app-1" --filter "status=running" -q | grep -q .; then
-  echo "bus-fleet-app-1 is not running. Start the stack first: docker compose up -d" >&2
+# The compose project (docker-compose.yml's `name:`, or COMPOSE_PROJECT_NAME) decides
+# the network name the test container joins.
+PROJECT="${COMPOSE_PROJECT_NAME:-bus-fleet}"
+
+if [ -z "$(docker compose ps --status running -q app)" ]; then
+  echo "the app is not running. Start the stack first: docker compose up -d" >&2
   exit 1
 fi
 
@@ -72,7 +76,7 @@ restore_app() {
 trap restore_app EXIT
 
 echo "==> running e2e suite against https://$APP_DOMAIN (via caddy)"
-docker run --rm --network bus-fleet_frontend \
+docker run --rm --network "${PROJECT}_frontend" \
   -e "E2E_LOGIN_BURST=$E2E_LOGIN_BURST" \
   -v "$(hostpath "$ROOT/portal"):/work" \
   -v bus-fleet-e2e-node-modules:/work/node_modules \

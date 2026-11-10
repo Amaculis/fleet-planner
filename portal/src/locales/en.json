@@ -572,5 +572,9 @@
     "passwordSet": "New password set for {email}. They were signed out everywhere.",
     "setPasswordTitle": "Set password: {email}",
     "setPasswordHint": "At least 12 characters. The user is signed out everywhere."
+  },
+  "lxDynamicImport": {
+    "offline": "No internet connection. Check your connection and try again.",
+    "loadFailed": "Failed to load page content. Please try again."
   }
 }
