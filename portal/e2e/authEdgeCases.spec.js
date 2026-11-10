@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import { login, ADMIN_EMAIL, ADMIN_PASSWORD } from "./support.js";
 
 // The remaining CLAUDE.md auth minimums smoke.spec.js doesn't cover: logout, session
-// expiry, CSRF rejection, and the login rate limiter actually triggering.
+// expiry and CSRF rejection. The login rate limiter has its own file, rateLimit.spec.js.
 test.skip(!process.env.E2E_ADMIN_EMAIL, "E2E_ADMIN_EMAIL not set");
 
 // Every other test in this suite reuses one shared admin session (playwright.config.mjs's
@@ -76,31 +76,4 @@ test("a state-changing request without a valid CSRF token is rejected", async ({
 
   expect(results.noToken, "POST with no X-CSRF-Token header").toBe(403);
   expect(results.wrongToken, "POST with a garbage X-CSRF-Token").toBe(403);
-});
-
-// The per-IP login limit (internal/http/server.go's loginLimiter). Sends three times
-// the burst at once, so the bucket must run dry however fast it refills. Every attempt
-// uses a different email, so the per-account limit can't be what answers 429.
-// E2E_LOGIN_BURST matches docker-compose.e2e.yml (scripts/verify-e2e.sh sets it); the
-// fallback is the production default. The e2e overlay refills in about 3 seconds, so
-// this no longer starves the other specs' logins.
-const LOGIN_BURST = Number(process.env.E2E_LOGIN_BURST || 5);
-
-test("the login rate limiter trips after repeated attempts from the same client", async ({ page }) => {
-  await page.goto("/app/");
-
-  const statuses = await page.evaluate(async (attempts) => {
-    const me = await fetch("/api/auth/me").then((r) => r.json());
-    const run = Date.now();
-    const requests = Array.from({ length: attempts }, (_, i) =>
-      fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-CSRF-Token": me.csrfToken },
-        body: JSON.stringify({ email: `nobody-${run}-${i}@example.com`, password: "wrong-password" }),
-      }).then((r) => r.status)
-    );
-    return Promise.all(requests);
-  }, LOGIN_BURST * 3);
-
-  expect(statuses, "login attempts should eventually hit 429").toContain(429);
 });

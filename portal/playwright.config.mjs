@@ -48,6 +48,7 @@ export default defineConfig({
     {
       name: "chromium",
       dependencies: ["setup"],
+      testIgnore: /rateLimit\.spec\.js/,
       use: {
         ...devices["Desktop Chrome"],
         launchOptions: domain
@@ -56,6 +57,19 @@ export default defineConfig({
         // All tests but the login flow itself reuse one real login (see
         // e2e/auth.setup.js) instead of each logging in independently — avoids
         // hitting the login rate limiter under parallel execution, and is faster.
+        storageState: "e2e/.auth/admin.json",
+      },
+    },
+    {
+      // Empties the login bucket on purpose, so it runs alone, after everything else.
+      name: "rate-limit",
+      dependencies: ["chromium"],
+      testMatch: /rateLimit\.spec\.js/,
+      use: {
+        ...devices["Desktop Chrome"],
+        launchOptions: domain
+          ? { args: [`--host-resolver-rules=MAP ${domain} caddy`] }
+          : {},
         storageState: "e2e/.auth/admin.json",
       },
     },
