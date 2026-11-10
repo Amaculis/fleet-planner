@@ -18,14 +18,13 @@ export default defineStore("authStore", () => {
   // Called once, at app bootstrap, before the router's first navigation — see
   // router/events.js. Works whether or not a session cookie is present: an anonymous
   // caller still gets back a CSRF token, needed to submit the login form.
+  // Throws when the server can't be reached (offline); `ready` then stays false, so
+  // the next navigation tries again instead of treating the user as signed out.
   async function bootstrap() {
-    try {
-      const resp = await api().get("/auth/me");
-      user.value = resp.data.authenticated ? resp.data.user : null;
-      csrfToken.value = resp.data.csrfToken;
-    } finally {
-      ready.value = true;
-    }
+    const resp = await api().get("/auth/me");
+    user.value = resp.data.authenticated ? resp.data.user : null;
+    csrfToken.value = resp.data.csrfToken;
+    ready.value = true;
   }
 
   async function login(email, password) {

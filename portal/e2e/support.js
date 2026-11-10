@@ -32,3 +32,11 @@ export const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD;
 export function gridSearch(page) {
   return page.locator("input.lx-search-input");
 }
+
+// A number for test data that must not clash with earlier runs on the same database
+// (emails and plates are unique). Date.now() % 100000 repeated every 100 seconds, so a
+// local database that keeps old test data hit 409s; this repeats every ~11.5 days.
+// Still a number: some specs derive time offsets from it.
+export function uniqueSuffix() {
+  return Date.now() % 1_000_000_000;
+}

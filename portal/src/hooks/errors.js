@@ -13,7 +13,9 @@ export default function useErrors() {
     const body = error?.response?.data;
     return {
       status,
-      message: body?.error ?? "errors.loadFailed",
+      // No response at all: offline, or the server can't be reached. Saying so tells a
+      // driver on the road why nothing loads (the installed app still opens offline).
+      message: body?.error ?? (error?.response ? "errors.loadFailed" : "errors.noConnection"),
       conflicts: body?.conflicts ?? [],
     };
   }

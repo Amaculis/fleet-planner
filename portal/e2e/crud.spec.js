@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { gridSearch } from "./support.js";
+import { gridSearch, uniqueSuffix } from "./support.js";
 
 // Exercises every add/edit/delete action in the SPA. Each test picks a unique
 // identifier (Date.now()) so repeated runs never collide on a unique-field
@@ -7,7 +7,7 @@ import { gridSearch } from "./support.js";
 test.skip(!process.env.E2E_ADMIN_EMAIL, "E2E_ADMIN_EMAIL not set");
 
 test("bus: add, edit, delete", async ({ page }) => {
-  const plate = `QQ-${Date.now() % 100000}`;
+  const plate = `QQ-${uniqueSuffix()}`;
 
   await page.goto("/app/buses");
   await page.getByRole("button", { name: /add bus/i }).click();
@@ -46,7 +46,7 @@ test("bus: add, edit, delete", async ({ page }) => {
 });
 
 test("driver: add, edit, anonymize", async ({ page }) => {
-  const name = `Test Driver ${Date.now() % 100000}`;
+  const name = `Test Driver ${uniqueSuffix()}`;
 
   await page.goto("/app/drivers");
   await page.getByRole("button", { name: /add driver/i }).click();
@@ -81,7 +81,7 @@ test("driver: add, edit, anonymize", async ({ page }) => {
 });
 
 test("trip: add, view detail, edit, delete", async ({ page }) => {
-  const origin = `TestOrigin${Date.now() % 100000}`;
+  const origin = `TestOrigin${uniqueSuffix()}`;
 
   await page.goto("/app/trips");
   await page.getByRole("button", { name: /add trip/i }).click();
@@ -129,7 +129,7 @@ test("trip: add, view detail, edit, delete", async ({ page }) => {
 });
 
 test("user: add, activate/deactivate", async ({ page }) => {
-  const email = `test-${Date.now() % 100000}@example.com`;
+  const email = `test-${uniqueSuffix()}@example.com`;
 
   await page.goto("/app/users");
   await page.getByRole("button", { name: /add user/i }).click();

@@ -157,6 +157,15 @@ const routes = [
     ],
   },
   {
+    // The app loaded but the server didn't answer the session check (router/events.js).
+    // Outside MainLayout: without a session there is no shell to build. (Fully
+    // offline, the service worker shows offline.html instead; see src/pwa/sw.js.)
+    path: "/offline",
+    name: "offline",
+    meta: { title: "pages.offline.title", anonymous: true },
+    component: () => import("@/views/Offline.vue"),
+  },
+  {
     path: "/login",
     name: "login",
     meta: { title: "login.title", anonymous: true, onlyAnonymous: true },

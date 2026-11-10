@@ -23,6 +23,14 @@ import { defineConfig, devices } from "@playwright/test";
 // exactly this reason.
 const domain = process.env.E2E_DOMAIN;
 
+// --ignore-certificate-errors: Caddy serves the test domain with its own local CA.
+// ignoreHTTPSErrors below covers page loads, but Chromium still refuses to register a
+// service worker over an untrusted certificate (SecurityError), so the PWA specs need
+// the browser itself to accept it. Test browser only; production has a real certificate.
+const launchOptions = {
+  args: [...(domain ? [`--host-resolver-rules=MAP ${domain} caddy`] : []), "--ignore-certificate-errors"],
+};
+
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
@@ -40,9 +48,7 @@ export default defineConfig({
       name: "setup",
       testMatch: /auth\.setup\.js/,
       use: {
-        launchOptions: domain
-          ? { args: [`--host-resolver-rules=MAP ${domain} caddy`] }
-          : {},
+        launchOptions,
       },
     },
     {
@@ -51,9 +57,7 @@ export default defineConfig({
       testIgnore: /rateLimit\.spec\.js/,
       use: {
         ...devices["Desktop Chrome"],
-        launchOptions: domain
-          ? { args: [`--host-resolver-rules=MAP ${domain} caddy`] }
-          : {},
+        launchOptions,
         // All tests but the login flow itself reuse one real login (see
         // e2e/auth.setup.js) instead of each logging in independently — avoids
         // hitting the login rate limiter under parallel execution, and is faster.
@@ -67,9 +71,7 @@ export default defineConfig({
       testMatch: /rateLimit\.spec\.js/,
       use: {
         ...devices["Desktop Chrome"],
-        launchOptions: domain
-          ? { args: [`--host-resolver-rules=MAP ${domain} caddy`] }
-          : {},
+        launchOptions,
         storageState: "e2e/.auth/admin.json",
       },
     },

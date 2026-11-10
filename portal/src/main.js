@@ -62,6 +62,7 @@ import router from "@/router";
 import events from "@/router/events";
 import i18n, { lxComponentTexts } from "@/i18n";
 import { APP_CONFIG, APP_VERSION } from "@/constants";
+import registerServiceWorker from "@/pwa/register";
 
 // lxVersionCheckUtils compares globalThis.config.version with /app/version.json (see
 // layouts/MainLayout.vue). This app has no window.config <script> (the CSP forbids
@@ -117,4 +118,5 @@ const app = createApp(App);
   });
 
   app.mount("#app");
+  registerServiceWorker(APP_CONFIG);
 })();

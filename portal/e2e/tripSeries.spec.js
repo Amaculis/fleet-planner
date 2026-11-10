@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { trackConsoleErrors } from "./support.js";
+import { trackConsoleErrors, uniqueSuffix } from "./support.js";
 
 test.skip(!process.env.E2E_ADMIN_EMAIL, "E2E_ADMIN_EMAIL not set");
 
@@ -28,7 +28,7 @@ test("creating a repeating trip generates one occurrence per matching weekday, w
   await page.goto("/app/trips/new");
   await page.waitForTimeout(500);
 
-  const suffix = Date.now() % 100000;
+  const suffix = uniqueSuffix();
   await page.getByLabel(/^origin/i).fill(`SeriesOrigin${suffix}`);
   await page.getByLabel(/^destination/i).fill(`SeriesDest${suffix}`);
 
@@ -96,7 +96,7 @@ async function createSeriesViaAPI(page, suffix) {
 
 test("editing a series trip offers this-only vs this-and-future, and future applies to every later planned trip", async ({ page }) => {
   await page.goto("/app/");
-  const suffix = Date.now() % 100000;
+  const suffix = uniqueSuffix();
   const created = await createSeriesViaAPI(page, suffix);
   expect(created.length).toBe(3);
 
@@ -124,7 +124,7 @@ test("editing a series trip offers this-only vs this-and-future, and future appl
 
 test("cancelling a series trip with this-and-future leaves earlier occurrences planned", async ({ page }) => {
   await page.goto("/app/");
-  const suffix = Date.now() % 100000;
+  const suffix = uniqueSuffix();
   const created = await createSeriesViaAPI(page, suffix);
   expect(created.length).toBe(3);
 

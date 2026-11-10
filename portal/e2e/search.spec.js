@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { gridSearch } from "./support.js";
+import { gridSearch, uniqueSuffix } from "./support.js";
 
 // crud.spec.js uses the driver/user search boxes incidentally (to find a freshly
 // created row past LxDataGrid's virtualization window), but never checks that
@@ -13,7 +13,7 @@ import { gridSearch } from "./support.js";
 test.skip(!process.env.E2E_ADMIN_EMAIL, "E2E_ADMIN_EMAIL not set");
 
 test("driver list search filters by name, and a shared substring matches both", async ({ page }) => {
-  const suffix = Date.now() % 100000;
+  const suffix = uniqueSuffix();
   const shared = `SearchDrv${suffix}`;
   const nameA = `${shared}Alpha`;
   const nameB = `${shared}Bravo`;
@@ -46,7 +46,7 @@ test("driver list search filters by name, and a shared substring matches both", 
 });
 
 test("user list search filters by email, and a shared substring matches both", async ({ page }) => {
-  const suffix = Date.now() % 100000;
+  const suffix = uniqueSuffix();
   const shared = `search-usr-${suffix}`;
   const emailA = `${shared}-charlie@example.com`;
   const emailB = `${shared}-delta@example.com`;

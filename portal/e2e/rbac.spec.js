@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { uniqueSuffix } from "./support.js";
 
 // CLAUDE.md's testing minimums require role-boundary coverage: "driver cannot
 // read/write another driver's or admin's data". Enforcement is server-side only
@@ -8,7 +9,7 @@ import { test, expect } from "@playwright/test";
 test.skip(!process.env.E2E_ADMIN_EMAIL, "E2E_ADMIN_EMAIL not set");
 
 async function createDriverSession(page) {
-  const suffix = Date.now() % 100000;
+  const suffix = uniqueSuffix();
   const email = `e2e-rbac-driver-${suffix}@example.com`;
   const password = "correct-horse-battery-staple";
 

@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { trackConsoleErrors } from "./support.js";
+import { trackConsoleErrors, uniqueSuffix } from "./support.js";
 
 test.skip(!process.env.E2E_ADMIN_EMAIL, "E2E_ADMIN_EMAIL not set");
 
@@ -14,7 +14,7 @@ test.skip(!process.env.E2E_ADMIN_EMAIL, "E2E_ADMIN_EMAIL not set");
 // host-resolver-rules maps to the caddy container (only Chromium's own network stack
 // benefits from that mapping). Found the same way in smoke.spec.js's CSP test.
 test("driver: my trips loads with no console errors", async ({ page }) => {
-  const suffix = Date.now() % 100000;
+  const suffix = uniqueSuffix();
   const driverName = `E2E Driver ${suffix}`;
   const email = `e2e-driver-${suffix}@example.com`;
   const password = "correct-horse-battery-staple";
@@ -56,7 +56,7 @@ test("driver: my trips loads with no console errors", async ({ page }) => {
 });
 
 test("driver: start and finish a trip from my trips", async ({ page }) => {
-  const suffix = Date.now() % 100000;
+  const suffix = uniqueSuffix();
   const driverName = `E2E Driver ${suffix}`;
   const email = `e2e-driver-${suffix}@example.com`;
   const password = "correct-horse-battery-staple";

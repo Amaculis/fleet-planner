@@ -4,6 +4,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -74,4 +75,43 @@ func TestPortalHandler(t *testing.T) {
 			t.Errorf("Cache-Control = %q, want no-store", cc)
 		}
 	})
+}
+
+// The PWA's worker and manifest have fixed names, so a cached copy would keep an
+// installed app on an old build: both must be revalidated on every load.
+func TestPortalHandlerPWAFiles(t *testing.T) {
+	dir := t.TempDir()
+	for name, body := range map[string]string{
+		"index.html":           "<html>shell</html>",
+		"pwa-sw.js":            "self.addEventListener('fetch', () => {});",
+		"manifest.webmanifest": `{"name":"Bus Fleet"}`,
+	} {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o644); err != nil {
+			t.Fatalf("writing %s: %v", name, err)
+		}
+	}
+
+	s := testServer(t)
+	s.cfg.PortalDir = dir
+	h := s.portalHandler()
+
+	for _, tc := range []struct{ path, contentType string }{
+		// text/ or application/javascript, depending on the OS MIME table; browsers accept both.
+		{"/app/pwa-sw.js", "javascript"},
+		{"/app/manifest.webmanifest", "application/manifest+json"},
+	} {
+		t.Run(tc.path, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			h.ServeHTTP(w, httptest.NewRequest("GET", tc.path, nil))
+			if w.Code != 200 {
+				t.Fatalf("status %d, want 200", w.Code)
+			}
+			if cc := w.Header().Get("Cache-Control"); cc != "no-cache" {
+				t.Errorf("Cache-Control = %q, want no-cache", cc)
+			}
+			if ct := w.Header().Get("Content-Type"); !strings.Contains(ct, tc.contentType) {
+				t.Errorf("Content-Type = %q, want %s", ct, tc.contentType)
+			}
+		})
+	}
 }

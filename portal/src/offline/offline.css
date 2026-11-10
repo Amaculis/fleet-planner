@@ -1,0 +1,40 @@
+/* Only for offline.html (see there): it cannot use lx-ui components, so these few
+   rules lay it out with the lx-ui theme's own tokens. No new colors. */
+.fleet-offline {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 3rem 1rem;
+  font-family: var(--font-family);
+  color: var(--color-data);
+}
+
+.fleet-offline h1 {
+  margin: 0 0 1rem;
+  font-size: 2rem;
+  font-weight: 600;
+  color: var(--color-error);
+}
+
+.fleet-offline p {
+  margin: 0 0 2rem;
+  line-height: 1.5;
+}
+
+.fleet-offline button {
+  min-height: 3rem;
+  padding: 0 1.5rem;
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+  color: var(--color-button-primary-text);
+  background: var(--color-button-primary-background);
+}
+
+.fleet-offline button:hover {
+  background: var(--color-button-primary-background-hover);
+}
+
+.fleet-offline button:focus-visible {
+  outline: 2px solid var(--color-button-primary-border-focus);
+  outline-offset: 2px;
+}

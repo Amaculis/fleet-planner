@@ -36,9 +36,18 @@ func (s *Server) portalHandler() http.Handler {
 			if f, err := dir.Open("/" + rel); err == nil {
 				_ = f.Close() // only opened to test existence
 				cache := "public, max-age=3600"
-				if rel == "version.json" {
+				switch rel {
+				case "version.json":
 					// Polled by lxVersionCheckUtils to spot a new deploy: never cached.
 					cache = "no-store"
+				case "pwa-sw.js", "manifest.webmanifest":
+					// Revalidated every time: a stale worker or manifest would pin the
+					// installed app to an old build.
+					cache = "no-cache"
+				}
+				if rel == "manifest.webmanifest" {
+					// Go's built-in MIME table has no entry for .webmanifest.
+					w.Header().Set("Content-Type", "application/manifest+json")
 				}
 				w.Header().Set("Cache-Control", cache)
 				assets.ServeHTTP(w, r)

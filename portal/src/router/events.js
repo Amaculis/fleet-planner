@@ -18,8 +18,15 @@ export default (router) => {
     // Drives LxShell's :navigating progress indicator (lazy route chunks + bootstrap).
     useAppStore().startNavigating();
     const auth = useAuthStore();
+    if (to.name === "offline") return true;
     if (!auth.ready) {
-      await auth.bootstrap();
+      try {
+        await auth.bootstrap();
+      } catch {
+        // No answer from the server (offline, or it is down): without this the app
+        // stays a blank page. views/Offline.vue retries once the connection is back.
+        return { name: "offline", query: { redirect: to.fullPath }, replace: true };
+      }
     }
 
     const requiresAuth = !to.matched.some((r) => r.meta.anonymous);

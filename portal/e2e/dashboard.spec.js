@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { trackConsoleErrors } from "./support.js";
+import { trackConsoleErrors, uniqueSuffix } from "./support.js";
 
 test.skip(!process.env.E2E_ADMIN_EMAIL, "E2E_ADMIN_EMAIL not set");
 
@@ -43,7 +43,7 @@ test("the Timeline tile navigates to the timeline", async ({ page }) => {
 // counts) is already covered indirectly by seeing real numbers above zero here; a
 // driver-specific pass is in a separate test below since it needs its own session.
 test("dashboard shows driver tiles and next trip for a driver, with no console errors", async ({ page }) => {
-  const suffix = Date.now() % 100000;
+  const suffix = uniqueSuffix();
   const driverName = `E2E Driver ${suffix}`;
   const email = `e2e-driver-${suffix}@example.com`;
   const password = "correct-horse-battery-staple";

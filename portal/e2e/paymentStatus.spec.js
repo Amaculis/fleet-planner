@@ -1,10 +1,10 @@
 import { test, expect } from "@playwright/test";
-import { trackConsoleErrors } from "./support.js";
+import { trackConsoleErrors, uniqueSuffix } from "./support.js";
 
 test.skip(!process.env.E2E_ADMIN_EMAIL, "E2E_ADMIN_EMAIL not set");
 
 test("trip payment status is settable and shown on the list/detail views", async ({ page }) => {
-  const suffix = Date.now() % 100000;
+  const suffix = uniqueSuffix();
   const origin = `PaymentOrigin${suffix}`;
 
   const errors = trackConsoleErrors(page);
@@ -41,7 +41,7 @@ test("trip payment status is settable and shown on the list/detail views", async
 });
 
 test("a driver's my-trips view never shows a payment status", async ({ page }) => {
-  const suffix = Date.now() % 100000;
+  const suffix = uniqueSuffix();
   const email = `e2e-payment-driver-${suffix}@example.com`;
   const password = "correct-horse-battery-staple";
 

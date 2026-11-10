@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { trackConsoleErrors } from "./support.js";
+import { trackConsoleErrors, uniqueSuffix } from "./support.js";
 
 test.skip(!process.env.E2E_ADMIN_EMAIL, "E2E_ADMIN_EMAIL not set");
 
@@ -45,7 +45,7 @@ test("the statistics nav link is visible for admin", async ({ page }) => {
 });
 
 test("a dispatcher has no statistics nav link", async ({ page }) => {
-  const suffix = Date.now() % 100000;
+  const suffix = uniqueSuffix();
   const email = `e2e-stats-dispatcher-${suffix}@example.com`;
   const password = "correct-horse-battery-staple";
 

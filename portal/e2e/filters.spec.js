@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { trackConsoleErrors, gridSearch } from "./support.js";
+import { trackConsoleErrors, gridSearch, uniqueSuffix } from "./support.js";
 
 test.skip(!process.env.E2E_ADMIN_EMAIL, "E2E_ADMIN_EMAIL not set");
 
@@ -21,7 +21,7 @@ async function createBus(page, plate, status) {
 // The lists' filters are LxFilters panels (collapsible, labelled fields, the component's
 // own Apply/Clear buttons) sitting above the grid — not dropdowns in the grid toolbar.
 test("bus list filters: collapsed by default, Apply narrows the grid, Clear restores it", async ({ page }) => {
-  const suffix = Date.now() % 100000;
+  const suffix = uniqueSuffix();
   const maintenancePlate = `FM${suffix}`;
   const activePlate = `FA${suffix}`;
 
