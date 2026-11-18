@@ -46,7 +46,7 @@ const loading = ref(false);
 
 // The visible range fetched from the server, derived from anchor+viewMode. Month view
 // still only spans a single calendar month (well under the server's 90-day range cap
-// in internal/http/forms.go's rangeParams), so no extra paging is needed.
+// in internal/httpapi/forms.go's rangeParams), so no extra paging is needed.
 const rangeStart = computed(() => {
   if (viewMode.value === "week") return startOfWeek(anchor.value);
   if (viewMode.value === "month") return startOfMonth(anchor.value);

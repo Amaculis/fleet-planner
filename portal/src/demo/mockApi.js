@@ -27,7 +27,7 @@ function overlaps(aStart, aEnd, bStart, bEnd) {
 }
 
 // "YYYY-MM-DDTHH:MM" local wall-clock, matching what the real API's scheduledStart/
-// scheduledEnd look like (see internal/http/api.go's formatTimestamp) — trip-series
+// scheduledEnd look like (see internal/httpapi/api.go's formatTimestamp) — trip-series
 // occurrence generation below builds plain Date objects and needs to hand them back in
 // this same string shape.
 function toLocalString(d) {
@@ -35,7 +35,7 @@ function toLocalString(d) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-// Mirrors internal/http/forms.go's rangeParams: when the caller omits from/to
+// Mirrors internal/httpapi/forms.go's rangeParams: when the caller omits from/to
 // (TripList.vue's bare getTrips(), with no args, is exactly this case) the real
 // server defaults to "today through the next 7 days," not an empty/unbounded
 // range — without this, a mocked bare /trips call always returned [] (comparing

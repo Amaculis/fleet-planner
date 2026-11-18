@@ -136,7 +136,7 @@ func TestAPIDriverAnonymize(t *testing.T) {
 }
 
 type apiTripDTO struct {
-	ID         int64 `json:"id"`
+	ID         int64  `json:"id"`
 	Status     string `json:"status"`
 	Assignment *struct {
 		BusPlate   string `json:"busPlate"`

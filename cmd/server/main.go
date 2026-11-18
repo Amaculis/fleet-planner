@@ -20,7 +20,7 @@ import (
 
 	"github.com/buscompany/bus_fleet/internal/auth"
 	"github.com/buscompany/bus_fleet/internal/config"
-	apphttp "github.com/buscompany/bus_fleet/internal/http"
+	"github.com/buscompany/bus_fleet/internal/httpapi"
 	"github.com/buscompany/bus_fleet/internal/i18n"
 	"github.com/buscompany/bus_fleet/internal/repo"
 	"github.com/buscompany/bus_fleet/internal/service"
@@ -82,7 +82,7 @@ func run() error {
 	sessions := auth.NewManager(repository, cfg.SessionIdleTimeout, cfg.SessionAbsoluteTimeout)
 	auditor := service.NewAuditor(repository)
 
-	services := apphttp.Services{
+	services := httpapi.Services{
 		Auth:        service.NewAuthService(repository, sessions, auditor, log, hashParams, dummyHash),
 		Fleet:       service.NewFleetService(repository, sessions, log),
 		Trips:       service.NewTripService(repository, log),
@@ -92,7 +92,7 @@ func run() error {
 		Users:       service.NewUserService(repository, sessions, log, hashParams),
 	}
 
-	srv := apphttp.NewServer(cfg, log, services, bundle, repository)
+	srv := httpapi.NewServer(cfg, log, services, bundle, repository)
 	srv.StartBackground(ctx)
 	go purgeSessions(ctx, sessions, log)
 	go purgeOldAuditLog(ctx, repository, log)

@@ -29,7 +29,7 @@ const nowPct = computed(() => {
   return ((now - dayStart.value) / (dayEnd.value - dayStart.value)) * 100;
 });
 
-// Mirrors internal/http/timeline.go's blockGeometry: clamps a trip to the visible day
+// Mirrors internal/httpapi/timeline.go's blockGeometry: clamps a trip to the visible day
 // and returns its position as percentages of the day.
 function blockGeometry(start, end) {
   const span = dayEnd.value - dayStart.value;

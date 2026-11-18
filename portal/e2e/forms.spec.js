@@ -9,7 +9,7 @@ test("the bus, driver and user forms all render Save and Cancel, in English, wit
   const errors = trackConsoleErrors(page);
   for (const path of ["/app/buses/new", "/app/drivers/new", "/app/users/new"]) {
     await page.goto(path);
-    await page.waitForTimeout(500);
+    await page.waitForLoadState("networkidle");
     await expect(page.getByRole("button", { name: /^save/i }), `${path}: Save`).toBeVisible();
     // LxForm silently drops footer actions of an unrecognised kind, and ships Latvian
     // defaults for its required markers — both regressions this guards.
@@ -21,7 +21,7 @@ test("the bus, driver and user forms all render Save and Cancel, in English, wit
 
 test("bus form: an invalid plate and a missing model are flagged inline; Cancel returns to the list", async ({ page }) => {
   await page.goto("/app/buses/new");
-  await page.waitForTimeout(500);
+  await page.waitForLoadState("networkidle");
   await page.getByLabel(/^plate/i).fill("A");
   await page.getByRole("button", { name: /^save/i }).click();
 
@@ -35,7 +35,7 @@ test("bus form: an invalid plate and a missing model are flagged inline; Cancel 
 
 test("driver form: a missing name, a bad phone and a bad hourly rate are each flagged inline", async ({ page }) => {
   await page.goto("/app/drivers/new");
-  await page.waitForTimeout(500);
+  await page.waitForLoadState("networkidle");
   await page.getByLabel(/phone/i).fill("abc");
   await page.getByLabel(/hourly rate/i).fill("1.234");
   await page.getByRole("button", { name: /^save/i }).click();
@@ -51,7 +51,7 @@ test("driver form: a missing name, a bad phone and a bad hourly rate are each fl
 
 test("user form: a bad email, a short password and a missing driver are each flagged inline", async ({ page }) => {
   await page.goto("/app/users/new");
-  await page.waitForTimeout(500);
+  await page.waitForLoadState("networkidle");
   await page.getByLabel(/^email/i).fill("not-an-email");
   await page.locator('input[type="password"]').fill("short");
   await page.getByRole("combobox", { name: /^role/i }).click();

@@ -19,7 +19,7 @@ const buses = ref([]);
 const drivers = ref([]);
 const trips = ref([]);
 
-// Server caps a single range at 90 days (internal/http/forms.go's rangeParams) — these
+// Server caps a single range at 90 days (internal/httpapi/forms.go's rangeParams) — these
 // three presets all fit under that, so no paging is needed.
 const period = ref("30");
 const periodItems = computed(() => [

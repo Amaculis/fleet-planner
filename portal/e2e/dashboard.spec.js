@@ -1,12 +1,12 @@
 import { test, expect } from "@playwright/test";
-import { trackConsoleErrors } from "./support.js";
+import { trackConsoleErrors, uniqueSuffix } from "./support.js";
 
 test.skip(!process.env.E2E_ADMIN_EMAIL, "E2E_ADMIN_EMAIL not set");
 
 test("dashboard shows planner tiles and info panels with no console errors", async ({ page }) => {
   const errors = trackConsoleErrors(page);
   await page.goto("/app/");
-  await page.waitForTimeout(500);
+  await page.waitForLoadState("networkidle");
 
   // LxTile's accessible name is just the count (its first paragraph) — filtering by
   // full text content, not accessible name, is what actually matches "10 / Active
@@ -27,14 +27,14 @@ test("dashboard shows planner tiles and info panels with no console errors", asy
 
 test("clicking a planner tile navigates to its target page", async ({ page }) => {
   await page.goto("/app/");
-  await page.waitForTimeout(500);
+  await page.waitForLoadState("networkidle");
   await page.getByRole("link").filter({ hasText: "Active buses" }).click();
   await expect(page).toHaveURL(/\/app\/buses$/);
 });
 
 test("the Timeline tile navigates to the timeline", async ({ page }) => {
   await page.goto("/app/");
-  await page.waitForTimeout(500);
+  await page.waitForLoadState("networkidle");
   await page.getByRole("link").filter({ hasText: "View the schedule" }).click();
   await expect(page).toHaveURL(/\/app\/timeline/);
 });
@@ -43,7 +43,7 @@ test("the Timeline tile navigates to the timeline", async ({ page }) => {
 // counts) is already covered indirectly by seeing real numbers above zero here; a
 // driver-specific pass is in a separate test below since it needs its own session.
 test("dashboard shows driver tiles and next trip for a driver, with no console errors", async ({ page }) => {
-  const suffix = Date.now() % 100000;
+  const suffix = uniqueSuffix();
   const driverName = `E2E Driver ${suffix}`;
   const email = `e2e-driver-${suffix}@example.com`;
   const password = "correct-horse-battery-staple";
@@ -99,7 +99,7 @@ test("dashboard shows driver tiles and next trip for a driver, with no console e
   await page.locator('input[type="password"]').fill(password);
   await page.getByRole("button", { name: /sign in/i }).click();
   await page.waitForURL(/\/app\/(dashboard)?$/);
-  await page.waitForTimeout(500);
+  await page.waitForLoadState("networkidle");
 
   await expect(page.getByRole("link").filter({ hasText: "My trips today" })).toBeVisible();
   await expect(page.getByRole("link").filter({ hasText: "My trips this week" })).toBeVisible();

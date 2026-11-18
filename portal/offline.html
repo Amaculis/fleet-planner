@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+  <meta name="theme-color" content="#222222" />
+  <title>Bus Fleet</title>
+  <!-- The page the service worker (src/pwa/sw.js) shows when the network is gone.
+       Plain HTML on purpose: offline, lx-ui refuses to load any of its lazily loaded
+       components, so the SPA itself cannot render. Texts come from src/locales. -->
+</head>
+<body class="lx">
+  <main class="fleet-offline">
+    <h1 id="offline-title">No connection</h1>
+    <p id="offline-description">The server can't be reached. Check the internet connection.</p>
+    <button type="button" id="offline-retry">Try again</button>
+  </main>
+  <script type="module" src="/src/offline/main.js"></script>
+</body>
+</html>

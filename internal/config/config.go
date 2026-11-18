@@ -60,6 +60,22 @@ type Config struct {
 // details must stay out of responses.
 func (c Config) IsProduction() bool { return c.Env == "production" }
 
+// minSecretDistinctBytes: 32 random bytes contain ~28 distinct values; a secret with
+// fewer than 8 is a placeholder ("0000…", "abab…"), never the output of a generator.
+const minSecretDistinctBytes = 8
+
+func distinctBytes(b []byte) int {
+	var seen [256]bool
+	n := 0
+	for _, v := range b {
+		if !seen[v] {
+			seen[v] = true
+			n++
+		}
+	}
+	return n
+}
+
 func Load() (Config, error) {
 	var errs []error
 	fail := func(format string, args ...any) { errs = append(errs, fmt.Errorf(format, args...)) }
@@ -95,9 +111,13 @@ func Load() (Config, error) {
 		fail("APP_SECRET is required (generate with: openssl rand -hex 32)")
 	default:
 		raw, err := hex.DecodeString(secret)
-		if err != nil || len(raw) < 32 {
+		switch {
+		case err != nil || len(raw) < 32:
 			fail("APP_SECRET must be at least 32 bytes, hex-encoded")
-		} else {
+		case distinctBytes(raw) < minSecretDistinctBytes:
+			// Rejects the all-zero placeholder and other hand-typed values.
+			fail("APP_SECRET looks like a placeholder, not random; generate one with: openssl rand -hex 32")
+		default:
 			cfg.AppSecret = raw
 		}
 	}

@@ -1,0 +1,339 @@
+package httpapi
+
+import (
+	"errors"
+	"net/http"
+
+	"github.com/buscompany/bus_fleet/internal/domain"
+	"github.com/buscompany/bus_fleet/internal/service"
+)
+
+type apiAssignment struct {
+	BusID      int64  `json:"busId"`
+	BusPlate   string `json:"busPlate"`
+	DriverID   int64  `json:"driverId"`
+	DriverName string `json:"driverName"`
+}
+
+type apiTrip struct {
+	ID             int64          `json:"id"`
+	Origin         string         `json:"origin"`
+	Destination    string         `json:"destination"`
+	ScheduledStart string         `json:"scheduledStart"`
+	ScheduledEnd   string         `json:"scheduledEnd"`
+	ActualStart    string         `json:"actualStart,omitempty"`
+	ActualEnd      string         `json:"actualEnd,omitempty"`
+	Status         string         `json:"status"`
+	PaymentStatus  string         `json:"paymentStatus"`
+	Notes          *string        `json:"notes,omitempty"`
+	Assignment     *apiAssignment `json:"assignment,omitempty"`
+	SeriesID       *int64         `json:"seriesId,omitempty"`
+	ClientID       *int64         `json:"clientId,omitempty"`
+	InvoiceNumber  *string        `json:"invoiceNumber,omitempty"`
+}
+
+// apiTripFrom is used only by the planner-facing endpoints (list/detail/create/update —
+// all RequireRole(admin, dispatcher), see server.go), so including PaymentStatus here is
+// safe; the separate driver-facing apiDriverTrip in api_driver.go has no such field.
+func (s *Server) apiTripFrom(t domain.Trip) apiTrip {
+	out := apiTrip{
+		ID:             t.ID,
+		Origin:         t.Origin,
+		Destination:    t.Destination,
+		ScheduledStart: formatTimestamp(t.ScheduledStart, s.cfg.Location),
+		ScheduledEnd:   formatTimestamp(t.ScheduledEnd, s.cfg.Location),
+		Status:         string(t.Status),
+		PaymentStatus:  string(t.PaymentStatus),
+		Notes:          t.Notes,
+		SeriesID:       t.SeriesID,
+		ClientID:       t.ClientID,
+		InvoiceNumber:  t.InvoiceNumber,
+	}
+	if t.ActualStart != nil {
+		out.ActualStart = formatTimestamp(*t.ActualStart, s.cfg.Location)
+	}
+	if t.ActualEnd != nil {
+		out.ActualEnd = formatTimestamp(*t.ActualEnd, s.cfg.Location)
+	}
+	return out
+}
+
+type apiTripRequest struct {
+	Origin         string  `json:"origin"`
+	Destination    string  `json:"destination"`
+	ScheduledStart string  `json:"scheduledStart"`
+	ScheduledEnd   string  `json:"scheduledEnd"`
+	PaymentStatus  string  `json:"paymentStatus"`
+	Notes          *string `json:"notes"`
+	ClientID       *int64  `json:"clientId"`
+	InvoiceNumber  *string `json:"invoiceNumber"`
+}
+
+func (s *Server) handleAPITripList(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	identity := MustIdentity(ctx)
+	from, to := rangeParams(r, s.cfg.Location)
+
+	trips, err := s.trips.ListInRange(ctx, identity, from, to)
+	if err != nil {
+		s.writeAPIError(w, r, err)
+		return
+	}
+	assignments, err := s.assignments.ListInRange(ctx, identity, from, to)
+	if err != nil {
+		s.writeAPIError(w, r, err)
+		return
+	}
+	byTrip := make(map[int64]domain.AssignmentDetail, len(assignments))
+	for _, a := range assignments {
+		byTrip[a.TripID] = a
+	}
+
+	out := make([]apiTrip, len(trips))
+	for i, t := range trips {
+		out[i] = s.apiTripFrom(t)
+		if a, ok := byTrip[t.ID]; ok {
+			out[i].Assignment = &apiAssignment{
+				BusID: a.BusID, BusPlate: a.BusPlate,
+				DriverID: a.DriverID, DriverName: a.DriverName,
+			}
+		}
+	}
+	s.writeJSON(w, r, http.StatusOK, out)
+}
+
+// apiTripDetail gathers the trip plus its assignment (bus plate, driver name) — the same shape tripDetail() builds for the HTML page.
+func (s *Server) apiTripDetail(r *http.Request, id int64) (apiTrip, error) {
+	ctx := r.Context()
+	identity := MustIdentity(ctx)
+
+	trip, err := s.trips.Get(ctx, identity, id)
+	if err != nil {
+		return apiTrip{}, err
+	}
+	out := s.apiTripFrom(trip)
+
+	assignment, err := s.assignments.GetForTrip(ctx, identity, id)
+	switch {
+	case err == nil:
+		// Looked up by id, not from the assignable (active-only) lists: a bus sent to
+		// maintenance or a deactivated driver must still show on the trips they drove.
+		bus, err := s.fleet.GetBus(ctx, identity, assignment.BusID)
+		if err != nil {
+			return apiTrip{}, err
+		}
+		driver, err := s.fleet.GetDriver(ctx, identity, assignment.DriverID)
+		if err != nil {
+			return apiTrip{}, err
+		}
+		a := &apiAssignment{
+			BusID: assignment.BusID, BusPlate: bus.Plate,
+			DriverID: assignment.DriverID, DriverName: driver.FullName,
+		}
+		out.Assignment = a
+	case errors.Is(err, domain.ErrNotFound):
+		// No assignment yet — fine, out.Assignment stays nil.
+	default:
+		return apiTrip{}, err
+	}
+	return out, nil
+}
+
+func (s *Server) handleAPITripGet(w http.ResponseWriter, r *http.Request) {
+	id, err := idParam(r, "id")
+	if err != nil {
+		s.writeAPIError(w, r, err)
+		return
+	}
+	detail, err := s.apiTripDetail(r, id)
+	if err != nil {
+		s.writeAPIError(w, r, err)
+		return
+	}
+	s.writeJSON(w, r, http.StatusOK, detail)
+}
+
+func (s *Server) tripFromJSON(req apiTripRequest, id int64) (domain.Trip, error) {
+	// Defaults to "unpaid" when omitted — validateTrip still rejects anything else that
+	// isn't one of the four known values, this just keeps an absent field from being
+	// treated as an invalid one.
+	paymentStatus := domain.PaymentStatus(req.PaymentStatus)
+	if paymentStatus == "" {
+		paymentStatus = domain.PaymentUnpaid
+	}
+	trip := domain.Trip{
+		ID: id, Origin: req.Origin, Destination: req.Destination,
+		PaymentStatus: paymentStatus, Notes: req.Notes,
+		ClientID: req.ClientID, InvoiceNumber: req.InvoiceNumber,
+	}
+	var err error
+	if trip.ScheduledStart, err = jsonTimestamp(req.ScheduledStart, "field.scheduled_start", s.cfg.Location); err != nil {
+		return trip, err
+	}
+	if trip.ScheduledEnd, err = jsonTimestamp(req.ScheduledEnd, "field.scheduled_end", s.cfg.Location); err != nil {
+		return trip, err
+	}
+	return trip, nil
+}
+
+func (s *Server) handleAPITripCreate(w http.ResponseWriter, r *http.Request) {
+	var req apiTripRequest
+	if err := readJSON(r, &req); err != nil {
+		s.writeAPIError(w, r, domain.ErrValidation)
+		return
+	}
+	input, err := s.tripFromJSON(req, 0)
+	if err == nil {
+		input, err = s.trips.Create(r.Context(), MustIdentity(r.Context()), input, s.meta(r))
+	}
+	if err != nil {
+		s.writeAPIError(w, r, err)
+		return
+	}
+	s.writeJSON(w, r, http.StatusCreated, s.apiTripFrom(input))
+}
+
+func (s *Server) handleAPITripUpdate(w http.ResponseWriter, r *http.Request) {
+	id, err := idParam(r, "id")
+	if err != nil {
+		s.writeAPIError(w, r, err)
+		return
+	}
+	var req apiTripRequest
+	if err := readJSON(r, &req); err != nil {
+		s.writeAPIError(w, r, domain.ErrValidation)
+		return
+	}
+	input, err := s.tripFromJSON(req, id)
+	if err != nil {
+		s.writeAPIError(w, r, err)
+		return
+	}
+
+	identity := MustIdentity(r.Context())
+	var result domain.Trip
+	// scope=future applies the edit to this trip and every later still-planned trip in
+	// its series (see TripSeriesService.UpdateFuture) — the default, no query param,
+	// touches only this one trip, same as before series existed.
+	if r.URL.Query().Get("scope") == "future" {
+		trips, err := s.tripSeries.UpdateFuture(r.Context(), identity, input, s.cfg.Location, s.meta(r))
+		if err != nil {
+			s.writeAPIError(w, r, err)
+			return
+		}
+		result = trips[0]
+	} else {
+		result, err = s.trips.Update(r.Context(), identity, input, s.meta(r))
+		if err != nil {
+			s.writeAPIError(w, r, err)
+			return
+		}
+	}
+	s.writeJSON(w, r, http.StatusOK, s.apiTripFrom(result))
+}
+
+func (s *Server) handleAPITripDelete(w http.ResponseWriter, r *http.Request) {
+	id, err := idParam(r, "id")
+	if err != nil {
+		s.writeAPIError(w, r, err)
+		return
+	}
+	if err := s.trips.Delete(r.Context(), MustIdentity(r.Context()), id, s.meta(r)); err != nil {
+		s.writeAPIError(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+type apiTripStatusRequest struct {
+	Status string `json:"status"`
+}
+
+func (s *Server) handleAPITripStatus(w http.ResponseWriter, r *http.Request) {
+	id, err := idParam(r, "id")
+	if err != nil {
+		s.writeAPIError(w, r, err)
+		return
+	}
+	var req apiTripStatusRequest
+	if err := readJSON(r, &req); err != nil {
+		s.writeAPIError(w, r, domain.ErrValidation)
+		return
+	}
+
+	identity := MustIdentity(r.Context())
+	var trip domain.Trip
+	// scope=future only means something for cancelling (the one bulk operation that
+	// makes sense for a status change) — any other target status ignores it and applies
+	// to just this trip, same as before series existed.
+	if r.URL.Query().Get("scope") == "future" && req.Status == string(domain.TripCancelled) {
+		trips, err := s.tripSeries.CancelFuture(r.Context(), identity, id, s.meta(r))
+		if err != nil {
+			s.writeAPIError(w, r, err)
+			return
+		}
+		trip = trips[0]
+	} else {
+		var err error
+		trip, err = s.trips.SetStatus(r.Context(), identity, id, domain.TripStatus(req.Status), s.meta(r))
+		if err != nil {
+			s.writeAPIError(w, r, err)
+			return
+		}
+	}
+	s.writeJSON(w, r, http.StatusOK, s.apiTripFrom(trip))
+}
+
+type apiAssignRequest struct {
+	BusID    int64 `json:"busId"`
+	DriverID int64 `json:"driverId"`
+}
+
+func (s *Server) handleAPITripAssign(w http.ResponseWriter, r *http.Request) {
+	id, err := idParam(r, "id")
+	if err != nil {
+		s.writeAPIError(w, r, err)
+		return
+	}
+	var req apiAssignRequest
+	if err := readJSON(r, &req); err != nil {
+		s.writeAPIError(w, r, domain.ErrValidation)
+		return
+	}
+	if req.BusID <= 0 {
+		s.writeAPIError(w, r, service.FieldMessage(domain.ErrValidation, "validation.required", "field.bus"))
+		return
+	}
+	if req.DriverID <= 0 {
+		s.writeAPIError(w, r, service.FieldMessage(domain.ErrValidation, "validation.required", "field.driver"))
+		return
+	}
+	if _, err := s.assignments.Assign(r.Context(), MustIdentity(r.Context()), id, req.BusID, req.DriverID, s.meta(r)); err != nil {
+		s.writeAPIError(w, r, err)
+		return
+	}
+	detail, err := s.apiTripDetail(r, id)
+	if err != nil {
+		s.writeAPIError(w, r, err)
+		return
+	}
+	s.writeJSON(w, r, http.StatusOK, detail)
+}
+
+func (s *Server) handleAPITripUnassign(w http.ResponseWriter, r *http.Request) {
+	id, err := idParam(r, "id")
+	if err != nil {
+		s.writeAPIError(w, r, err)
+		return
+	}
+	if err := s.assignments.Unassign(r.Context(), MustIdentity(r.Context()), id, s.meta(r)); err != nil {
+		s.writeAPIError(w, r, err)
+		return
+	}
+	detail, err := s.apiTripDetail(r, id)
+	if err != nil {
+		s.writeAPIError(w, r, err)
+		return
+	}
+	s.writeJSON(w, r, http.StatusOK, detail)
+}

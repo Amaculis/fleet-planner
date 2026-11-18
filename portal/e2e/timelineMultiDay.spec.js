@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { trackConsoleErrors } from "./support.js";
+import { trackConsoleErrors, uniqueSuffix } from "./support.js";
 
 // TimelineWeekView.vue renders a multi-day trip as a single ".tl-span-bar" spanning
 // every day column it touches, instead of repeating a chip per day (see that
@@ -9,7 +9,7 @@ import { trackConsoleErrors } from "./support.js";
 test.skip(!process.env.E2E_ADMIN_EMAIL, "E2E_ADMIN_EMAIL not set");
 
 test("a multi-day trip renders as one spanning bar in the week timeline", async ({ page }) => {
-  const suffix = Date.now() % 100000;
+  const suffix = uniqueSuffix();
   const destination = `MultiDayDest${suffix}`;
 
   await page.goto("/app/");
@@ -60,7 +60,7 @@ test("a multi-day trip renders as one spanning bar in the week timeline", async 
   const errors = trackConsoleErrors(page);
   await page.goto("/app/timeline");
   await page.getByRole("tab", { name: /^week$/i }).click();
-  await page.waitForTimeout(500);
+  await page.waitForLoadState("networkidle");
 
   const spanBar = page.locator(".tl-span-bar", { hasText: destination });
   await expect(spanBar).toBeVisible();

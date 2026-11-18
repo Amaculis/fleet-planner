@@ -1,7 +1,7 @@
 <script setup>
 // A date+time field wrapping LxDateTimePicker (kind="date-time"), converting to/from
 // the "YYYY-MM-DDTHH:MM" local wall-clock string the JSON API expects (see
-// internal/http/api.go's jsonTimestamp).
+// internal/httpapi/api.go's jsonTimestamp).
 //
 // kind="date-time" emits a STRING on update:modelValue (an ISO instant, e.g.
 // "2026-09-24T17:31:00Z"), not a Date object — confirmed by logging the raw value a

@@ -2,7 +2,7 @@ import { useI18n } from "vue-i18n";
 import { parseServerTimestamp, formatDateTime, formatTime } from "@/utils/dates";
 
 // Normalizes an Axios error into { status, message, conflicts }, matching the shape
-// internal/http/api.go's apiError encodes on every failed API call. `message` is
+// internal/httpapi/api.go's apiError encodes on every failed API call. `message` is
 // either the server's already-translated text or an i18n key, so callers pass it
 // through i18n.t() — a key resolves, a sentence comes back unchanged.
 export default function useErrors() {
@@ -13,7 +13,9 @@ export default function useErrors() {
     const body = error?.response?.data;
     return {
       status,
-      message: body?.error ?? "errors.loadFailed",
+      // No response at all: offline, or the server can't be reached. Saying so tells a
+      // driver on the road why nothing loads (the installed app still opens offline).
+      message: body?.error ?? (error?.response ? "errors.loadFailed" : "errors.noConnection"),
       conflicts: body?.conflicts ?? [],
     };
   }

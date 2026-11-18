@@ -1,6 +1,6 @@
 <script setup>
 // A date-only field wrapping LxDateTimePicker, converting to/from the "YYYY-MM-DD"
-// string the JSON API expects (see internal/http/api.go's jsonDate) — the same
+// string the JSON API expects (see internal/httpapi/api.go's jsonDate) — the same
 // Date<->string boundary CalendarIsland.vue already crossed the same way, confirmed
 // against source there: LxDateTimePicker's v-model is a native Date, never parsed via
 // `new Date("YYYY-MM-DD")` (which Date reads as UTC midnight and can silently shift a

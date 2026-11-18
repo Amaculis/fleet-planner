@@ -39,7 +39,7 @@ test.describe("logout", () => {
 // this is the closest e2e-reachable proxy for "the session is no longer valid".
 test("a session with an invalid/expired cookie is treated as signed out, not as a crash", async ({ page }) => {
   await page.goto("/app/");
-  await page.waitForTimeout(500);
+  await page.waitForLoadState("networkidle");
 
   const cookies = await page.context().cookies();
   const sessionCookie = cookies.find((c) => /session/i.test(c.name));
@@ -58,7 +58,7 @@ test("a session with an invalid/expired cookie is treated as signed out, not as 
 
 test("a state-changing request without a valid CSRF token is rejected", async ({ page }) => {
   await page.goto("/app/");
-  await page.waitForTimeout(500);
+  await page.waitForLoadState("networkidle");
 
   const results = await page.evaluate(async () => {
     const noToken = await fetch("/api/buses", {

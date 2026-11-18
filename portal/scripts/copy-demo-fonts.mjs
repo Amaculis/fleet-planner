@@ -1,5 +1,5 @@
 // Prebuild step for `npm run build:demo` only. The real build doesn't need this —
-// internal/http/server.go serves these same files at /lx-fonts/* from
+// internal/httpapi/server.go serves these same files at /lx-fonts/* from
 // web/static/lx-fonts/ (see the Dockerfile's own copy step), which the CSS's
 // absolute url(/lx-fonts/...) references match exactly since the real app is
 // deployed at its domain's root. GitHub Pages serves this project under a

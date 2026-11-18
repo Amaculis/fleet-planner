@@ -1,4 +1,4 @@
-// meta.access mirrors the server's RequireRole groups (internal/http/server.go) — it
+// meta.access mirrors the server's RequireRole groups (internal/httpapi/server.go) — it
 // only decides whether the 403 page is shown instead of the view; the server enforces
 // it regardless. meta.breadcrumbs drives LxShell's back button: with a single crumb it
 // links there, with several it falls back to router.back().
@@ -155,6 +155,15 @@ const routes = [
         component: () => import("@/views/NotFound.vue"),
       },
     ],
+  },
+  {
+    // The app loaded but the server didn't answer the session check (router/events.js).
+    // Outside MainLayout: without a session there is no shell to build. (Fully
+    // offline, the service worker shows offline.html instead; see src/pwa/sw.js.)
+    path: "/offline",
+    name: "offline",
+    meta: { title: "pages.offline.title", anonymous: true },
+    component: () => import("@/views/Offline.vue"),
   },
   {
     path: "/login",

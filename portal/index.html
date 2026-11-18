@@ -4,13 +4,19 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+  <!-- Installable app (PWA): manifest + icons here, the worker is registered in main.js. -->
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="/imgs/apple-touch-icon.png" />
+  <meta name="theme-color" content="#222222" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Fleet" />
   <title>Bus Fleet</title>
   <!-- Theme CSS is imported from main.js instead (see there) and bundled/linked by
        Vite automatically — a manual <link> here would just load the same styles
        twice. -->
   <!-- The public/404.html decode counterpart lives in src/router/index.js, not here —
        this app's CSP is nonce-only on script-src with no 'unsafe-inline' (see
-       internal/http/middleware.go), and index.html is served as a static file with no
+       internal/httpapi/middleware.go), and index.html is served as a static file with no
        server-side nonce injection, so any inline <script> here is simply blocked
        outright. See router/index.js's own comment for the rest of the story. -->
 </head>

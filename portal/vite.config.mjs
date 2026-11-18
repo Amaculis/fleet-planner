@@ -1,6 +1,7 @@
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
 import { fileURLToPath, URL } from "url";
+import { readFileSync } from "fs";
 import { lxVitePortalVersionPlugin } from "@dativa-lv/lx-ui/vite";
 
 // One id per build. lxVitePortalVersionPlugin writes it into dist/version.json (it
@@ -12,7 +13,7 @@ process.env.CUSTOM_VERSION = BUILD_ID;
 // Rewrites the lx-ui carbon theme's hardcoded-absolute font URLs
 // (url(/lx-fonts/IBMPlexMono-Regular.ttf), see lx-fonts-carbon.css) to be
 // base-prefixed, for the GitHub Pages demo build only. The real build leaves
-// these untouched on purpose: internal/http/server.go serves the exact same
+// these untouched on purpose: internal/httpapi/server.go serves the exact same
 // files at literal /lx-fonts/* (see the Dockerfile's copy step), which only
 // works because the real app is deployed at its domain's root — rewriting them
 // there would break font loading, not fix it. GitHub Pages project sites are
@@ -31,6 +32,23 @@ function rewriteFontPathsForSubpath(base) {
   };
 }
 
+// Emits dist/pwa-sw.js from src/pwa/sw.js with this build's id, so every deploy ships
+// a changed worker: the browser installs it and the worker drops the old build's cache.
+function pwaServiceWorkerPlugin() {
+  const source = fileURLToPath(new URL("./src/pwa/sw.js", import.meta.url));
+  return {
+    name: "fleet-pwa-service-worker",
+    apply: "build",
+    buildStart() {
+      this.addWatchFile(source);
+    },
+    generateBundle() {
+      const code = readFileSync(source, "utf-8").replaceAll("__BUILD_ID__", BUILD_ID);
+      this.emitFile({ type: "asset", fileName: "pwa-sw.js", source: code });
+    },
+  };
+}
+
 // No env-driven backend URL / createHtmlPlugin templating here — see
 // src/constants.js for why: this app is always same-origin with its own API, so
 // there is nothing to substitute per environment.
@@ -39,9 +57,10 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     vue(),
     // version.json only. lxViteSecureHeadersPlugin is deliberately not used: the CSP
-    // and other security headers come from the Go server (internal/http/middleware.go)
+    // and other security headers come from the Go server (internal/httpapi/middleware.go)
     // with a per-request nonce, which a build-time header plugin cannot produce.
     lxVitePortalVersionPlugin(),
+    pwaServiceWorkerPlugin(),
     ...(mode === "demo" ? [rewriteFontPathsForSubpath("/fleet-planner/")] : []),
   ],
   resolve: {
@@ -51,7 +70,7 @@ export default defineConfig(({ mode }) => ({
       // as its default) compiles every message string via `new Function(...)` —
       // real JS-from-a-string evaluation, blocked outright by this app's CSP
       // (script-src has no 'unsafe-eval', deliberately — see
-      // internal/http/middleware.go). The runtime build registers a different
+      // internal/httpapi/middleware.go). The runtime build registers a different
       // compiler (`compile`, from @intlify/core-base) that, confirmed by reading
       // its source directly, never calls Function/eval: with
       // __INTLIFY_JIT_COMPILATION__ on (below) it interprets the parsed message AST
@@ -70,6 +89,13 @@ export default defineConfig(({ mode }) => ({
     target: "es2020",
     outDir: "dist",
     emptyOutDir: true,
+    rollupOptions: {
+      // offline.html: the page the PWA's service worker shows without a network.
+      input: {
+        main: fileURLToPath(new URL("./index.html", import.meta.url)),
+        offline: fileURLToPath(new URL("./offline.html", import.meta.url)),
+      },
+    },
   },
   server: {
     proxy: {

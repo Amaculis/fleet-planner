@@ -1,12 +1,12 @@
 import { test, expect } from "@playwright/test";
-import { trackConsoleErrors } from "./support.js";
+import { trackConsoleErrors, uniqueSuffix } from "./support.js";
 
 test.skip(!process.env.E2E_ADMIN_EMAIL, "E2E_ADMIN_EMAIL not set");
 
 test("statistics page renders trip volume, fleet utilization and fleet status with no console errors", async ({ page }) => {
   const errors = trackConsoleErrors(page);
   await page.goto("/app/statistics");
-  await page.waitForTimeout(800);
+  await page.waitForLoadState("networkidle");
 
   await expect(page.getByRole("heading", { name: "Statistics" })).toBeVisible();
   await expect(page.getByText("Trip volume", { exact: true })).toBeVisible();
@@ -26,11 +26,11 @@ test("statistics page renders trip volume, fleet utilization and fleet status wi
 
 test("the period switcher changes the displayed trip volume data", async ({ page }) => {
   await page.goto("/app/statistics");
-  await page.waitForTimeout(800);
+  await page.waitForLoadState("networkidle");
 
   const graphSwitcher = page.getByRole("tab", { name: "Last 90 days" });
   await graphSwitcher.click();
-  await page.waitForTimeout(500);
+  await page.waitForLoadState("networkidle");
 
   // A 90-day period buckets by week (Statistics.vue's bucketByWeek), so far fewer
   // than 90 bars/date labels appear — just confirm the switch didn't error and the
@@ -40,12 +40,12 @@ test("the period switcher changes the displayed trip volume data", async ({ page
 
 test("the statistics nav link is visible for admin", async ({ page }) => {
   await page.goto("/app/");
-  await page.waitForTimeout(500);
+  await page.waitForLoadState("networkidle");
   await expect(page.getByRole("link", { name: /^statistics$/i })).toBeVisible();
 });
 
 test("a dispatcher has no statistics nav link", async ({ page }) => {
-  const suffix = Date.now() % 100000;
+  const suffix = uniqueSuffix();
   const email = `e2e-stats-dispatcher-${suffix}@example.com`;
   const password = "correct-horse-battery-staple";
 
@@ -68,7 +68,7 @@ test("a dispatcher has no statistics nav link", async ({ page }) => {
   await page.locator('input[type="password"]').fill(password);
   await page.getByRole("button", { name: /sign in/i }).click();
   await page.waitForURL(/\/app\/(dashboard)?$/);
-  await page.waitForTimeout(500);
+  await page.waitForLoadState("networkidle");
 
   // Statistics is gated to admin only (unlike buses/drivers/trips/timeline, which
   // are admin+dispatcher "planner" pages) — MainLayout.vue's own isAdmin check.

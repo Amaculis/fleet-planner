@@ -23,6 +23,42 @@ env:
   GOVULNCHECK_VERSION: v1.9.0
 
 jobs:
+  go-lint:
+    name: Go lint (gofmt, vet, race)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - name: gofmt
+        run: make fmt-check
+      - name: go vet
+        run: go vet ./...
+      # Unit tests under the race detector. The database-backed tests are skipped here
+      # and run in the "tests" job below, where a missing database is a failure.
+      - name: go test -race (unit)
+        run: go test -race ./...
+
+  portal:
+    name: Portal (lint, unit tests, build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: npm ci --no-audit --no-fund
+        working-directory: portal
+      - run: npm run lint
+        working-directory: portal
+      - run: npm test
+        working-directory: portal
+      - run: npm run build
+        working-directory: portal
+
   tests:
     name: Tests (unit + integration, real Postgres)
     runs-on: ubuntu-latest

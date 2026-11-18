@@ -23,6 +23,11 @@
       "title": "Page not found",
       "description": "The page you are looking for does not exist."
     },
+    "offline": {
+      "title": "No connection",
+      "description": "The server can't be reached. Check the internet connection. The app retries by itself when the connection is back.",
+      "retry": "Try again"
+    },
     "forbidden": {
       "title": "Access denied",
       "description": "You don't have permission to open this page."
@@ -417,6 +422,7 @@
   },
   "errors": {
     "forbidden": "You do not have access to this resource.",
+    "noConnection": "No connection to the server. Check the internet connection and try again.",
     "loadFailed": "Failed to load data.",
     "saveFailed": "Failed to save. Please check the form and try again."
   },

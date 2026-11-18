@@ -51,14 +51,14 @@ PLAYWRIGHT_IMAGE="mcr.microsoft.com/playwright:v1.64.1-jammy@sha256:a3966b653e8d
 # `app` by its compose service name. No single network offers both, so install runs
 # on the default network first, and only the test run itself attaches to
 # bus-fleet_frontend, once node_modules already exists in the shared volume.
-echo "==> installing @playwright/test"
+echo "==> installing @playwright/test (npm ci: never rewrites package-lock.json)"
 docker run --rm \
   -v "$(hostpath "$ROOT/portal"):/work" \
   -v bus-fleet-e2e-node-modules:/work/node_modules \
   -v bus-fleet-e2e-npm-cache:/root/.npm \
   -w /work \
   "$PLAYWRIGHT_IMAGE" \
-  npm install --no-audit --no-fund
+  npm ci --no-audit --no-fund
 
 : "${APP_DOMAIN:?APP_DOMAIN must be set in .env — it's what Caddy's site block and TLS SNI match on}"
 

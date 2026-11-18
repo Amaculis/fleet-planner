@@ -1,11 +1,8 @@
 // Shared helpers for the e2e suite.
 //
-// trackConsoleErrors(page) is the one mechanism behind almost every assertion here:
-// every bug found in this app's SPA this session (missing CSS modules didn't error,
-// but the CSP eval violation, the CSP inline-style violations, and the invalid
-// dynamic icon imports all did) showed up as a console error in a real browser.
-// Collecting those and asserting the list is empty is what actually would have
-// caught them automatically, instead of needing a human to paste console output.
+// trackConsoleErrors(page) backs most assertions: CSP violations, invalid icon imports
+// and failed module loads all surface as console errors in a real browser, so asserting
+// that the list stays empty catches them without a human reading the console.
 export function trackConsoleErrors(page) {
   const errors = [];
   page.on("console", (msg) => {
@@ -31,4 +28,12 @@ export const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD;
 // disappears once it has text), so this relies on lx-ui's own search-input class.
 export function gridSearch(page) {
   return page.locator("input.lx-search-input");
+}
+
+// A number for test data that must not clash with earlier runs on the same database
+// (emails and plates are unique). Date.now() % 100000 repeated every 100 seconds, so a
+// local database that keeps old test data hit 409s; this repeats every ~11.5 days.
+// Still a number: some specs derive time offsets from it.
+export function uniqueSuffix() {
+  return Date.now() % 1_000_000_000;
 }

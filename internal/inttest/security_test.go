@@ -104,7 +104,7 @@ func TestEveryRouteRequiresAuth(t *testing.T) {
 }
 
 // TestEveryMutationRequiresCSRF: no state-changing route accepts a request without
-// this session's own CSRF token, including a valid token stolen from another session.
+// its own CSRF token, including a valid token stolen from another session.
 func TestEveryMutationRequiresCSRF(t *testing.T) {
 	e := newEnv(t)
 	e.newAdmin("admin@example.lv", testPassword)

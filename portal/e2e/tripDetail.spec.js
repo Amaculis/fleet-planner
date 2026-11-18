@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { trackConsoleErrors } from "./support.js";
+import { trackConsoleErrors, uniqueSuffix } from "./support.js";
 
 test.skip(!process.env.E2E_ADMIN_EMAIL, "E2E_ADMIN_EMAIL not set");
 
@@ -41,14 +41,21 @@ async function assignTrip(page, tripId, busId, driverId) {
   );
 }
 
-async function firstAssignableBusAndDriver(page) {
-  return page.evaluate(async () => {
-    const [buses, drivers] = await Promise.all([
-      fetch("/api/buses?assignable=1").then((r) => r.json()),
-      fetch("/api/drivers?assignable=1").then((r) => r.json()),
-    ]);
-    return { bus: buses[0], driver: drivers[0] };
-  });
+// A bus and driver of the test's own, so its bookings can't collide with any other
+// test's — or with this same test's bookings from earlier runs on the same database.
+async function freshBusAndDriver(page, suffix) {
+  return page.evaluate(async (suffix) => {
+    const me = await fetch("/api/auth/me").then((r) => r.json());
+    const post = (url, body) =>
+      fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": me.csrfToken },
+        body: JSON.stringify(body),
+      }).then((r) => r.json());
+    const bus = await post("/api/buses", { plate: `TD${suffix}`, model: "Trip Detail", seats: 50, status: "active" });
+    const driver = await post("/api/drivers", { fullName: `TripDetail Driver ${suffix}`, licenseExpiry: "", isActive: true });
+    return { bus, driver };
+  }, suffix);
 }
 
 test("assign a bus and driver to an unassigned trip", async ({ page }) => {
@@ -57,13 +64,13 @@ test("assign a bus and driver to an unassigned trip", async ({ page }) => {
   // reruns never land on the same bus+driver window a previous run already booked —
   // a fixed offset made "booking trip A" (and this test's own assign) spuriously fail
   // with a real conflict on the second run, not a bug in the app itself.
-  const suffix = Date.now() % 100000;
+  const suffix = uniqueSuffix();
   const trip = await createTrip(page, { origin: `AssignOrigin${suffix}`, destination: "Dest", startOffsetHours: 1000 + (suffix % 500), durationHours: 2 });
-  const { bus, driver } = await firstAssignableBusAndDriver(page);
+  const { bus, driver } = await freshBusAndDriver(page, suffix);
 
   const errors = trackConsoleErrors(page);
   await page.goto(`/app/trips/${trip.id}`);
-  await page.waitForTimeout(500);
+  await page.waitForLoadState("networkidle");
 
   await page.getByRole("combobox", { name: "Bus" }).click();
   await page.getByRole("option", { name: bus.plate }).click();
@@ -79,14 +86,14 @@ test("assign a bus and driver to an unassigned trip", async ({ page }) => {
 
 test("unassign a trip", async ({ page }) => {
   await page.goto("/app/");
-  const suffix = Date.now() % 100000;
+  const suffix = uniqueSuffix();
   const trip = await createTrip(page, { origin: `UnassignOrigin${suffix}`, destination: "Dest", startOffsetHours: 1500 + (suffix % 500), durationHours: 2 });
-  const { bus, driver } = await firstAssignableBusAndDriver(page);
+  const { bus, driver } = await freshBusAndDriver(page, suffix);
   const assign = await assignTrip(page, trip.id, bus.id, driver.id);
   expect(assign.status, "setting up the assignment to unassign").toBe(200);
 
   await page.goto(`/app/trips/${trip.id}`);
-  await page.waitForTimeout(500);
+  await page.waitForLoadState("networkidle");
   await page.getByRole("button", { name: /unassign/i }).click();
   await page.getByRole("button", { name: /^yes$/i }).click();
 
@@ -96,11 +103,11 @@ test("unassign a trip", async ({ page }) => {
 
 test("trip status transitions: planned -> in progress -> completed", async ({ page }) => {
   await page.goto("/app/");
-  const suffix = Date.now() % 100000;
+  const suffix = uniqueSuffix();
   const trip = await createTrip(page, { origin: `StatusOrigin${suffix}`, destination: "Dest", startOffsetHours: 2000 + (suffix % 500), durationHours: 2 });
 
   await page.goto(`/app/trips/${trip.id}`);
-  await page.waitForTimeout(500);
+  await page.waitForLoadState("networkidle");
   await expect(page.getByText("Planned")).toBeVisible();
 
   // Buttons name the action, not the target status.
@@ -114,8 +121,8 @@ test("trip status transitions: planned -> in progress -> completed", async ({ pa
 
 test("assigning an already-booked bus is rejected with a conflict, not a silent double-booking", async ({ page }) => {
   await page.goto("/app/");
-  const suffix = Date.now() % 100000;
-  const { bus, driver } = await firstAssignableBusAndDriver(page);
+  const suffix = uniqueSuffix();
+  const { bus, driver } = await freshBusAndDriver(page, suffix);
   // Offset varies per run (unlike the fixed offsets in the other tests above) so this
   // test's own trip A/B window never collides with leftover assignments a previous run
   // of this same test left on this bus+driver — that collision, not a real app bug,
@@ -131,7 +138,7 @@ test("assigning an already-booked bus is rejected with a conflict, not a silent 
   const tripB = await createTrip(page, { origin: `ConflictB${suffix}`, destination: "Dest", startOffsetHours: baseOffset + 2, durationHours: 3 });
 
   await page.goto(`/app/trips/${tripB.id}`);
-  await page.waitForTimeout(500);
+  await page.waitForLoadState("networkidle");
   await page.getByRole("combobox", { name: "Bus" }).click();
   await page.getByRole("option", { name: bus.plate }).click();
   await page.getByRole("combobox", { name: "Driver" }).click();

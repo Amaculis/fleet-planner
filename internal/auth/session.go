@@ -28,7 +28,7 @@ type SessionStore interface {
 }
 
 // Manager owns session lifecycle. It never touches net/http: the caller in
-// internal/http turns the returned token into a cookie.
+// internal/httpapi turns the returned token into a cookie.
 type Manager struct {
 	store    SessionStore
 	idle     time.Duration

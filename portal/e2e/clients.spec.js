@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { trackConsoleErrors, gridSearch } from "./support.js";
+import { trackConsoleErrors, gridSearch, uniqueSuffix } from "./support.js";
 
 test.skip(!process.env.E2E_ADMIN_EMAIL, "E2E_ADMIN_EMAIL not set");
 
@@ -37,10 +37,10 @@ function tripBody(suffix, extra = {}) {
 
 test("a planner can create a client from the Clients page, with no console errors", async ({ page }) => {
   const errors = trackConsoleErrors(page);
-  const suffix = Date.now() % 100000;
+  const suffix = uniqueSuffix();
 
   await page.goto("/app/clients");
-  await page.waitForTimeout(500);
+  await page.waitForLoadState("networkidle");
   await page.getByRole("button", { name: /add client/i }).click();
   await page.waitForURL(/\/app\/clients\/new$/);
 
@@ -66,7 +66,7 @@ test("a planner can create a client from the Clients page, with no console error
 
 test("client form rejects a missing name and a malformed email before sending", async ({ page }) => {
   await page.goto("/app/clients/new");
-  await page.waitForTimeout(500);
+  await page.waitForLoadState("networkidle");
   await page.getByLabel(/^email/i).fill("not-an-email");
   await page.getByRole("button", { name: /^save/i }).click();
   await expect(page.getByText("This field is required.")).toBeVisible();
@@ -77,7 +77,7 @@ test("client form rejects a missing name and a malformed email before sending", 
 test("trip view reveals client info inline on demand and shows the bill number", async ({ page }) => {
   const errors = trackConsoleErrors(page);
   await page.goto("/app/");
-  const suffix = Date.now() % 100000;
+  const suffix = uniqueSuffix();
 
   const client = await apiPost(page, "/clients", {
     name: `Reveal Client ${suffix}`,
@@ -93,7 +93,7 @@ test("trip view reveals client info inline on demand and shows the bill number",
   expect(trip.status).toBe(201);
 
   await page.goto(`/app/trips/${trip.body.id}`);
-  await page.waitForTimeout(500);
+  await page.waitForLoadState("networkidle");
 
   // Nothing about the client is on screen, nor fetched, until asked for.
   await expect(page.getByTestId("trip-client-info")).toHaveCount(0);
@@ -116,12 +116,12 @@ test("trip view reveals client info inline on demand and shows the bill number",
 
 test("a trip without a client says so and has no reveal button", async ({ page }) => {
   await page.goto("/app/");
-  const suffix = Date.now() % 100000;
+  const suffix = uniqueSuffix();
   const trip = await apiPost(page, "/trips", tripBody(suffix));
   expect(trip.status).toBe(201);
 
   await page.goto(`/app/trips/${trip.body.id}`);
-  await page.waitForTimeout(500);
+  await page.waitForLoadState("networkidle");
   await expect(page.getByText("No client.")).toBeVisible();
   await expect(page.getByRole("button", { name: "Show client info" })).toHaveCount(0);
 });
@@ -129,7 +129,7 @@ test("a trip without a client says so and has no reveal button", async ({ page }
 test("the trip form saves the chosen client and bill number", async ({ page }) => {
   const errors = trackConsoleErrors(page);
   await page.goto("/app/");
-  const suffix = Date.now() % 100000;
+  const suffix = uniqueSuffix();
 
   const client = await apiPost(page, "/clients", { name: `Form Client ${suffix}`, isActive: true });
   expect(client.status).toBe(201);
@@ -137,7 +137,7 @@ test("the trip form saves the chosen client and bill number", async ({ page }) =
   expect(trip.status).toBe(201);
 
   await page.goto(`/app/trips/${trip.body.id}/edit`);
-  await page.waitForTimeout(500);
+  await page.waitForLoadState("networkidle");
 
   await page.getByRole("combobox", { name: "Client" }).click();
   await page.getByRole("option", { name: `Form Client ${suffix}` }).click();
@@ -158,7 +158,7 @@ test("the trip form saves the chosen client and bill number", async ({ page }) =
 
 test("the API refuses a bill number over 50 characters and an unknown client", async ({ page }) => {
   await page.goto("/app/");
-  const suffix = Date.now() % 100000;
+  const suffix = uniqueSuffix();
   const tooLong = await apiPost(page, "/trips", tripBody(suffix, { invoiceNumber: "x".repeat(51) }));
   expect(tooLong.status).toBe(400);
   const unknown = await apiPost(page, "/trips", tripBody(suffix, { clientId: 999999999 }));
@@ -169,7 +169,7 @@ test("the API refuses a bill number over 50 characters and an unknown client", a
 // integration tests); this checks the list doesn't offer the action to a dispatcher.
 test("only an admin sees the Erase data action in the client list", async ({ page }) => {
   await page.goto("/app/");
-  const suffix = Date.now() % 100000;
+  const suffix = uniqueSuffix();
   const name = `EraseVis${suffix}`;
   const email = `e2e-clients-dispatcher-${suffix}@example.com`;
   const password = "correct-horse-battery-staple";

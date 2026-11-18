@@ -17,11 +17,11 @@ test("timeline day navigation works without erroring", async ({ page }) => {
   const errors = trackConsoleErrors(page);
   await page.goto("/app/timeline");
   await page.getByRole("button", { name: /next day/i }).click();
-  await page.waitForTimeout(500);
+  await page.waitForLoadState("networkidle");
   await page.getByRole("button", { name: /previous day/i }).click();
-  await page.waitForTimeout(500);
+  await page.waitForLoadState("networkidle");
   await page.getByRole("button", { name: /^today$/i }).click();
-  await page.waitForTimeout(500);
+  await page.waitForLoadState("networkidle");
   expect(errors, `console errors navigating the timeline:\n${errors.join("\n")}`).toEqual([]);
 });
 
@@ -30,19 +30,19 @@ test("timeline switches between day, week and month views without erroring", asy
   await page.goto("/app/timeline");
 
   await page.getByRole("tab", { name: /^week$/i }).click();
-  await page.waitForTimeout(500);
+  await page.waitForLoadState("networkidle");
   await expect(page.getByRole("button", { name: /previous week/i })).toBeVisible();
   await page.getByRole("button", { name: /next week/i }).click();
-  await page.waitForTimeout(500);
+  await page.waitForLoadState("networkidle");
 
   await page.getByRole("tab", { name: /^month$/i }).click();
-  await page.waitForTimeout(500);
+  await page.waitForLoadState("networkidle");
   await expect(page.getByRole("button", { name: /previous month/i })).toBeVisible();
   await page.getByRole("button", { name: /next month/i }).click();
-  await page.waitForTimeout(500);
+  await page.waitForLoadState("networkidle");
 
   await page.getByRole("tab", { name: /^day$/i }).click();
-  await page.waitForTimeout(500);
+  await page.waitForLoadState("networkidle");
   await expect(page.getByRole("button", { name: /previous day/i })).toBeVisible();
 
   expect(errors, `console errors switching timeline views:\n${errors.join("\n")}`).toEqual([]);
@@ -52,7 +52,7 @@ test("timeline switches between day, week and month views without erroring", asy
 // their label stays the accessible name and tooltip.
 test("the previous/next buttons are icon-only with an accessible name", async ({ page }) => {
   await page.goto("/app/timeline");
-  await page.waitForTimeout(500);
+  await page.waitForLoadState("networkidle");
   for (const name of [/previous day/i, /next day/i]) {
     const button = page.getByRole("button", { name });
     await expect(button).toBeVisible();
@@ -66,10 +66,10 @@ test("the timeline date picker jumps directly to a day, week or month", async ({
   const errors = trackConsoleErrors(page);
   const pick = async (view, typed) => {
     await page.goto(`/app/timeline?view=${view}`);
-    await page.waitForTimeout(500);
+    await page.waitForLoadState("networkidle");
     await page.locator(".timeline-date-field input").first().fill(typed);
     await page.keyboard.press("Tab");
-    await page.waitForTimeout(700);
+    await page.waitForLoadState("networkidle");
   };
 
   await pick("day", "15.10.2026.");

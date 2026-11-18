@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { trackConsoleErrors } from "./support.js";
+import { trackConsoleErrors, uniqueSuffix } from "./support.js";
 
 test.skip(!process.env.E2E_ADMIN_EMAIL, "E2E_ADMIN_EMAIL not set");
 
@@ -26,14 +26,14 @@ function nextMonday() {
 test("creating a repeating trip generates one occurrence per matching weekday, with no console errors", async ({ page }) => {
   const errors = trackConsoleErrors(page);
   await page.goto("/app/trips/new");
-  await page.waitForTimeout(500);
+  await page.waitForLoadState("networkidle");
 
-  const suffix = Date.now() % 100000;
+  const suffix = uniqueSuffix();
   await page.getByLabel(/^origin/i).fill(`SeriesOrigin${suffix}`);
   await page.getByLabel(/^destination/i).fill(`SeriesDest${suffix}`);
 
   await page.locator("input.lx-toggle").dispatchEvent("click");
-  await page.waitForTimeout(300);
+  await page.waitForLoadState("networkidle");
 
   const start = nextMonday();
   const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
@@ -96,22 +96,22 @@ async function createSeriesViaAPI(page, suffix) {
 
 test("editing a series trip offers this-only vs this-and-future, and future applies to every later planned trip", async ({ page }) => {
   await page.goto("/app/");
-  const suffix = Date.now() % 100000;
+  const suffix = uniqueSuffix();
   const created = await createSeriesViaAPI(page, suffix);
   expect(created.length).toBe(3);
 
   await page.goto(`/app/trips/${created[0].id}/edit`);
-  await page.waitForTimeout(500);
+  await page.waitForLoadState("networkidle");
   await expect(page.getByText("Part of a repeating series")).toBeVisible();
 
   await page.getByLabel(/^destination/i).fill(`ApiSeriesDestEdited${suffix}`);
   await page.getByRole("button", { name: /^save/i }).click();
-  await page.waitForTimeout(400);
+  await page.waitForLoadState("networkidle");
 
   await expect(page.getByRole("button", { name: "This and future trips" })).toBeVisible();
   await expect(page.getByRole("button", { name: "This trip only" })).toBeVisible();
   await page.getByRole("button", { name: "This and future trips" }).click();
-  await page.waitForTimeout(600);
+  await page.waitForLoadState("networkidle");
 
   const after = await page.evaluate(
     (ids) => Promise.all(ids.map((id) => fetch(`/api/trips/${id}`).then((r) => r.json()))),
@@ -124,17 +124,17 @@ test("editing a series trip offers this-only vs this-and-future, and future appl
 
 test("cancelling a series trip with this-and-future leaves earlier occurrences planned", async ({ page }) => {
   await page.goto("/app/");
-  const suffix = Date.now() % 100000;
+  const suffix = uniqueSuffix();
   const created = await createSeriesViaAPI(page, suffix);
   expect(created.length).toBe(3);
 
   // Cancel from the second occurrence: the first should stay planned, the rest cancelled.
   await page.goto(`/app/trips/${created[1].id}`);
-  await page.waitForTimeout(500);
+  await page.waitForLoadState("networkidle");
   await page.getByRole("button", { name: "Cancel trip" }).click();
-  await page.waitForTimeout(400);
+  await page.waitForLoadState("networkidle");
   await page.getByRole("button", { name: "This and future trips" }).click();
-  await page.waitForTimeout(600);
+  await page.waitForLoadState("networkidle");
 
   const after = await page.evaluate(
     (ids) => Promise.all(ids.map((id) => fetch(`/api/trips/${id}`).then((r) => r.json()))),

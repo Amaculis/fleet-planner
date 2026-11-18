@@ -23,6 +23,11 @@
       "title": "Lapa nav atrasta",
       "description": "Meklētā lapa neeksistē."
     },
+    "offline": {
+      "title": "Nav savienojuma",
+      "description": "Serveris nav sasniedzams. Pārbaudiet interneta savienojumu. Lietotne mēģinās vēlreiz, tiklīdz savienojums atjaunosies.",
+      "retry": "Mēģināt vēlreiz"
+    },
     "forbidden": {
       "title": "Piekļuve liegta",
       "description": "Jums nav tiesību atvērt šo lapu."
@@ -417,6 +422,7 @@
   },
   "errors": {
     "forbidden": "Jums nav piekļuves šim resursam.",
+    "noConnection": "Nav savienojuma ar serveri. Pārbaudiet interneta savienojumu un mēģiniet vēlreiz.",
     "loadFailed": "Neizdevās ielādēt datus.",
     "saveFailed": "Neizdevās saglabāt. Lūdzu, pārbaudiet formu un mēģiniet vēlreiz."
   },

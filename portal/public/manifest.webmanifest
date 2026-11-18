@@ -1,0 +1,16 @@
+{
+  "id": "./",
+  "name": "Bus Fleet",
+  "short_name": "Fleet",
+  "description": "Trip planning, assignments and drivers' trips.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "theme_color": "#222222",
+  "background_color": "#ffffff",
+  "icons": [
+    { "src": "imgs/pwa-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "imgs/pwa-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "imgs/pwa-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
