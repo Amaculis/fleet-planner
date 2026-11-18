@@ -1,7 +1,7 @@
 import useAuthStore from "@/stores/auth";
 
 // Role checks for route meta.access and navigation. Presentation only — the server
-// enforces RBAC on every request (internal/http/server.go's RequireRole groups); these
+// enforces RBAC on every request (internal/httpapi/server.go's RequireRole groups); these
 // mirror those groups so a user lands on the 403 page instead of a screen of API errors.
 export default function useRights() {
   const auth = useAuthStore();

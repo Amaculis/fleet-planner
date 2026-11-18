@@ -22,7 +22,7 @@ const confirmStore = useConfirmStore();
 const languageSwitcher = useLanguageSwitcher();
 
 // Every page a signed-in user can reach. RBAC on each of these is enforced server-side
-// (see internal/http/server.go's RequireRole groups) — this list only decides what a
+// (see internal/httpapi/server.go's RequireRole groups) — this list only decides what a
 // link shows, never what a request is allowed to do.
 const rights = useRights();
 const isAdmin = computed(() => rights.isAdmin());

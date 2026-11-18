@@ -6,13 +6,13 @@ import i18n from "@/i18n";
 // Deliberate deviation from the skill's default Axios pattern (Authorization: Bearer
 // <token> read from sessionStorage): this backend's session credential is an httpOnly,
 // __Host--prefixed cookie that JavaScript can never read, by design (see CLAUDE.md /
-// internal/http/cookies.go) — a bearer token in sessionStorage would be a strictly
+// internal/httpapi/cookies.go) — a bearer token in sessionStorage would be a strictly
 // weaker, XSS-stealable substitute for a security property the rest of the app already
 // has. The browser attaches the session cookie automatically; the only thing this
 // client must do itself is echo the CSRF token the backend hands it (see
 // stores/auth.js) back on every state-changing request, via the same X-CSRF-Token
 // header the server-rendered app's htmx forms already use
-// (internal/http/auth_middleware.go's CSRF middleware).
+// (internal/httpapi/auth_middleware.go's CSRF middleware).
 // A single shared instance, not one per call: harmless in the real app either way
 // (the interceptor reads the CSRF token fresh on every request regardless of when
 // the instance was created), but it's what lets demo mode (see src/demo/mockApi.js)
@@ -38,7 +38,7 @@ export default () => {
         config.headers["X-CSRF-Token"] = auth.csrfToken;
       }
       // Server-side error messages come back already translated; this makes them
-      // follow the language picked in the SPA (see internal/http/auth_middleware.go).
+      // follow the language picked in the SPA (see internal/httpapi/auth_middleware.go).
       config.headers["X-App-Locale"] = i18n.global.locale.value;
       return config;
     });

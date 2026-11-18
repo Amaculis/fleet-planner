@@ -4,7 +4,7 @@ import api from "@/api";
 
 // Deliberate deviation from the skill's default `LxAuthStore(LxAuthService, ...)` —
 // see api.js for why. This store wraps the app's own JSON auth endpoints
-// (internal/http/api_auth.go) instead of an OAuth/OIDC provider, but keeps the same
+// (internal/httpapi/api_auth.go) instead of an OAuth/OIDC provider, but keeps the same
 // external shape (`isAuthorized`, `session`, `logout()`) that MainLayout.vue and the
 // route guard expect, so nothing downstream needs to know the difference.
 export default defineStore("authStore", () => {

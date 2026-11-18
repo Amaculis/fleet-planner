@@ -13,7 +13,7 @@ process.env.CUSTOM_VERSION = BUILD_ID;
 // Rewrites the lx-ui carbon theme's hardcoded-absolute font URLs
 // (url(/lx-fonts/IBMPlexMono-Regular.ttf), see lx-fonts-carbon.css) to be
 // base-prefixed, for the GitHub Pages demo build only. The real build leaves
-// these untouched on purpose: internal/http/server.go serves the exact same
+// these untouched on purpose: internal/httpapi/server.go serves the exact same
 // files at literal /lx-fonts/* (see the Dockerfile's copy step), which only
 // works because the real app is deployed at its domain's root — rewriting them
 // there would break font loading, not fix it. GitHub Pages project sites are
@@ -57,7 +57,7 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     vue(),
     // version.json only. lxViteSecureHeadersPlugin is deliberately not used: the CSP
-    // and other security headers come from the Go server (internal/http/middleware.go)
+    // and other security headers come from the Go server (internal/httpapi/middleware.go)
     // with a per-request nonce, which a build-time header plugin cannot produce.
     lxVitePortalVersionPlugin(),
     pwaServiceWorkerPlugin(),
@@ -70,7 +70,7 @@ export default defineConfig(({ mode }) => ({
       // as its default) compiles every message string via `new Function(...)` —
       // real JS-from-a-string evaluation, blocked outright by this app's CSP
       // (script-src has no 'unsafe-eval', deliberately — see
-      // internal/http/middleware.go). The runtime build registers a different
+      // internal/httpapi/middleware.go). The runtime build registers a different
       // compiler (`compile`, from @intlify/core-base) that, confirmed by reading
       // its source directly, never calls Function/eval: with
       // __INTLIFY_JIT_COMPILATION__ on (below) it interprets the parsed message AST

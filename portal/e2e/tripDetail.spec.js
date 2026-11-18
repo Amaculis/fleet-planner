@@ -70,7 +70,7 @@ test("assign a bus and driver to an unassigned trip", async ({ page }) => {
 
   const errors = trackConsoleErrors(page);
   await page.goto(`/app/trips/${trip.id}`);
-  await page.waitForTimeout(500);
+  await page.waitForLoadState("networkidle");
 
   await page.getByRole("combobox", { name: "Bus" }).click();
   await page.getByRole("option", { name: bus.plate }).click();
@@ -93,7 +93,7 @@ test("unassign a trip", async ({ page }) => {
   expect(assign.status, "setting up the assignment to unassign").toBe(200);
 
   await page.goto(`/app/trips/${trip.id}`);
-  await page.waitForTimeout(500);
+  await page.waitForLoadState("networkidle");
   await page.getByRole("button", { name: /unassign/i }).click();
   await page.getByRole("button", { name: /^yes$/i }).click();
 
@@ -107,7 +107,7 @@ test("trip status transitions: planned -> in progress -> completed", async ({ pa
   const trip = await createTrip(page, { origin: `StatusOrigin${suffix}`, destination: "Dest", startOffsetHours: 2000 + (suffix % 500), durationHours: 2 });
 
   await page.goto(`/app/trips/${trip.id}`);
-  await page.waitForTimeout(500);
+  await page.waitForLoadState("networkidle");
   await expect(page.getByText("Planned")).toBeVisible();
 
   // Buttons name the action, not the target status.
@@ -138,7 +138,7 @@ test("assigning an already-booked bus is rejected with a conflict, not a silent 
   const tripB = await createTrip(page, { origin: `ConflictB${suffix}`, destination: "Dest", startOffsetHours: baseOffset + 2, durationHours: 3 });
 
   await page.goto(`/app/trips/${tripB.id}`);
-  await page.waitForTimeout(500);
+  await page.waitForLoadState("networkidle");
   await page.getByRole("combobox", { name: "Bus" }).click();
   await page.getByRole("option", { name: bus.plate }).click();
   await page.getByRole("combobox", { name: "Driver" }).click();

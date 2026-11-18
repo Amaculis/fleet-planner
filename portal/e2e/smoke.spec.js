@@ -54,7 +54,7 @@ test("the users list shows an English item count, not LxDataGrid's Latvian defau
 
 // Locks in the CSP fix: script-src must never carry 'unsafe-eval' or 'unsafe-inline'
 // anywhere (that would defeat the nonce), while style-src is deliberately relaxed to
-// 'unsafe-inline' only under /app/ — see internal/http/middleware.go. Fetches from
+// 'unsafe-inline' only under /app/ — see internal/httpapi/middleware.go. Fetches from
 // inside the already-navigated page rather than via the standalone `request` fixture:
 // that fixture is a plain Node HTTP client with no route to the container network at
 // all (no Chromium, so the host-resolver-rules mapping the domain to caddy doesn't

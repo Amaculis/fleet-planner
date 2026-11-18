@@ -60,7 +60,7 @@ test("a multi-day trip renders as one spanning bar in the week timeline", async 
   const errors = trackConsoleErrors(page);
   await page.goto("/app/timeline");
   await page.getByRole("tab", { name: /^week$/i }).click();
-  await page.waitForTimeout(500);
+  await page.waitForLoadState("networkidle");
 
   const spanBar = page.locator(".tl-span-bar", { hasText: destination });
   await expect(spanBar).toBeVisible();

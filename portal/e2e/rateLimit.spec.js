@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-// The per-IP login limit (internal/http/server.go's loginLimiter). Sends three times
+// The per-IP login limit (internal/httpapi/server.go's loginLimiter). Sends three times
 // the burst at once, so the bucket must run dry however fast it refills. Every attempt
 // uses a different email, so the per-account limit can't be what answers 429.
 // E2E_LOGIN_BURST matches docker-compose.e2e.yml (scripts/verify-e2e.sh sets it); the

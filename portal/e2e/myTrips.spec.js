@@ -116,7 +116,7 @@ test("driver: start and finish a trip from my trips", async ({ page }) => {
   await page.waitForURL(/\/app\/(dashboard)?$/);
 
   await page.goto("/app/my/trips");
-  await page.waitForTimeout(500);
+  await page.waitForLoadState("networkidle");
 
   await expect(page.getByText(`StartFinishOrigin${suffix}`)).toBeVisible();
   // Each tap is confirmed: a mistaken one records worked time.

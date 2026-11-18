@@ -1,4 +1,4 @@
-// meta.access mirrors the server's RequireRole groups (internal/http/server.go) — it
+// meta.access mirrors the server's RequireRole groups (internal/httpapi/server.go) — it
 // only decides whether the 403 page is shown instead of the view; the server enforces
 // it regardless. meta.breadcrumbs drives LxShell's back button: with a single crumb it
 // links there, with several it falls back to router.back().

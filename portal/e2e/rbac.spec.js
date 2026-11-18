@@ -3,7 +3,7 @@ import { uniqueSuffix } from "./support.js";
 
 // CLAUDE.md's testing minimums require role-boundary coverage: "driver cannot
 // read/write another driver's or admin's data". Enforcement is server-side only
-// (internal/http/server.go's RequireRole groups) — the SPA has no client-side route
+// (internal/httpapi/server.go's RequireRole groups) — the SPA has no client-side route
 // guard by design (see routes.js), so a driver hitting a planner/admin page must be
 // blocked by the API responses themselves, not by the frontend hiding a link.
 test.skip(!process.env.E2E_ADMIN_EMAIL, "E2E_ADMIN_EMAIL not set");
@@ -76,7 +76,7 @@ test("driver role is rejected by planner and admin API endpoints", async ({ page
 
 test("driver's nav has no links to planner/admin pages, and visiting one directly yields no data", async ({ page }) => {
   await createDriverSession(page);
-  await page.waitForTimeout(500);
+  await page.waitForLoadState("networkidle");
 
   // MainLayout.vue gates its nav links by role (isPlanner/isAdmin) — a driver's menu
   // must not offer a way into pages whose data they can't load anyway.

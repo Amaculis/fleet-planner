@@ -111,6 +111,6 @@ test("a driver's my-trips view never shows a payment status", async ({ page }) =
   }
 
   await page.goto("/app/my/trips");
-  await page.waitForTimeout(500);
+  await page.waitForLoadState("networkidle");
   await expect(page.getByText(/paid|unpaid|reserved|advance/i)).toHaveCount(0);
 });

@@ -2,11 +2,11 @@
 // so one build can be deployed against different backend URLs by substituting a
 // placeholder in the already-built static files at container start, without a
 // rebuild. This SPA has no such scenario — it is embedded in, and always served by,
-// the same Go binary as its own API (see internal/http/portal.go), so "the backend" is
+// the same Go binary as its own API (see internal/httpapi/portal.go), so "the backend" is
 // always same-origin. A build-time constant is simpler and, since it needs no inline
 // <script> in index.html to set window.config before main.js runs, avoids that inline
 // script being blocked by the app's CSP (script-src has no 'unsafe-inline' — see
-// internal/http/middleware.go's SecurityHeaders).
+// internal/httpapi/middleware.go's SecurityHeaders).
 export const APP_CONFIG = {
   apiUrl: "/api",
   publicUrl: import.meta.env.BASE_URL,
@@ -25,5 +25,4 @@ export const LOCALE_STORAGE_KEY = "bus-fleet-locale";
 
 // Build id baked in by vite.config.mjs. lxVitePortalVersionPlugin writes the same value
 // into dist/version.json, and lxVersionCheckUtils compares the two to spot a new deploy.
-// eslint-disable-next-line no-undef
 export const APP_VERSION = typeof __APP_VERSION__ === "string" ? __APP_VERSION__ : "dev";

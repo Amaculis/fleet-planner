@@ -20,7 +20,7 @@ const dataGridTexts = useDataGridTexts();
 const filterTexts = useFilterTexts();
 const errors = useErrors();
 
-// The server returns at most 90 days per request (internal/http/forms.go rangeParams).
+// The server returns at most 90 days per request (internal/httpapi/forms.go rangeParams).
 const MAX_RANGE_DAYS = 90;
 const PAGE_SIZE = 20;
 

@@ -31,7 +31,7 @@ test("bus list filters: collapsed by default, Apply narrows the grid, Clear rest
 
   const errors = trackConsoleErrors(page);
   await page.goto("/app/buses");
-  await page.waitForTimeout(500);
+  await page.waitForLoadState("networkidle");
 
   // English UI must not show LxFilters' built-in Latvian defaults.
   await expect(page.getByText(/Atlasīt|Notīrīt|Filtri/)).toHaveCount(0);
@@ -74,7 +74,7 @@ test("every list has a labelled, collapsed filter panel", async ({ page }) => {
   };
   for (const [list, labels] of Object.entries(expected)) {
     await page.goto(`/app/${list}`);
-    await page.waitForTimeout(500);
+    await page.waitForLoadState("networkidle");
     for (const label of labels) {
       await expect(page.getByRole("combobox", { name: label, exact: true }), `${list}: ${label} hidden`).toBeHidden();
     }

@@ -15,7 +15,7 @@ async function fillDate(page, label, date) {
 test("the trip form shows both footer actions, English required markers, and no console errors", async ({ page }) => {
   const errors = trackConsoleErrors(page);
   await page.goto("/app/trips/new");
-  await page.waitForTimeout(500);
+  await page.waitForLoadState("networkidle");
 
   await expect(page.getByRole("button", { name: /^save/i })).toBeVisible();
   // Cancel must render: LxForm silently drops footer actions whose kind isn't
@@ -29,7 +29,7 @@ test("the trip form shows both footer actions, English required markers, and no 
 
 test("saving an empty trip form flags each required field inline and stays on the form", async ({ page }) => {
   await page.goto("/app/trips/new");
-  await page.waitForTimeout(500);
+  await page.waitForLoadState("networkidle");
   await expect(page.getByText("This field is required.")).toHaveCount(0); // nothing shown before Save
 
   await page.getByRole("button", { name: /^save/i }).click();
@@ -43,7 +43,7 @@ test("saving an empty trip form flags each required field inline and stays on th
 
 test("an end before the start is rejected next to the end field, and clears once fixed", async ({ page }) => {
   await page.goto("/app/trips/new");
-  await page.waitForTimeout(500);
+  await page.waitForLoadState("networkidle");
   await page.getByLabel(/^origin/i).fill("Rīga");
   await page.getByLabel(/^destination/i).fill("Cēsis");
 

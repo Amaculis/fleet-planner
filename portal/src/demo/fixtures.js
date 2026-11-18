@@ -1,6 +1,6 @@
 // Demo-mode seed data (GitHub Pages build only — see mockApi.js). Generated relative
 // to "today" at load time, not hardcoded dates, so the demo never looks stale no
-// matter when someone opens the page. Mirrors the shapes internal/http/api_*.go
+// matter when someone opens the page. Mirrors the shapes internal/httpapi/api_*.go
 // actually serve (see those files) and roughly the same variety used to
 // stress-test the real timeline during development: a full month of trips, some
 // unassigned, some cancelled, a couple of multi-day tours.

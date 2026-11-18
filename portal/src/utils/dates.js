@@ -39,7 +39,7 @@ export function startOfWeek(iso) {
 }
 
 // Server timestamps come back as "YYYY-MM-DDTHH:MM" local wall-clock strings (see
-// internal/service/service.go's FormTimeLayout via internal/http/api.go's
+// internal/service/service.go's FormTimeLayout via internal/httpapi/api.go's
 // formatTimestamp) — not space-separated, and not UTC.
 export function parseServerTimestamp(s) {
   const [datePart, timePart] = s.split("T");

@@ -40,7 +40,7 @@ test("a planner can create a client from the Clients page, with no console error
   const suffix = uniqueSuffix();
 
   await page.goto("/app/clients");
-  await page.waitForTimeout(500);
+  await page.waitForLoadState("networkidle");
   await page.getByRole("button", { name: /add client/i }).click();
   await page.waitForURL(/\/app\/clients\/new$/);
 
@@ -66,7 +66,7 @@ test("a planner can create a client from the Clients page, with no console error
 
 test("client form rejects a missing name and a malformed email before sending", async ({ page }) => {
   await page.goto("/app/clients/new");
-  await page.waitForTimeout(500);
+  await page.waitForLoadState("networkidle");
   await page.getByLabel(/^email/i).fill("not-an-email");
   await page.getByRole("button", { name: /^save/i }).click();
   await expect(page.getByText("This field is required.")).toBeVisible();
@@ -93,7 +93,7 @@ test("trip view reveals client info inline on demand and shows the bill number",
   expect(trip.status).toBe(201);
 
   await page.goto(`/app/trips/${trip.body.id}`);
-  await page.waitForTimeout(500);
+  await page.waitForLoadState("networkidle");
 
   // Nothing about the client is on screen, nor fetched, until asked for.
   await expect(page.getByTestId("trip-client-info")).toHaveCount(0);
@@ -121,7 +121,7 @@ test("a trip without a client says so and has no reveal button", async ({ page }
   expect(trip.status).toBe(201);
 
   await page.goto(`/app/trips/${trip.body.id}`);
-  await page.waitForTimeout(500);
+  await page.waitForLoadState("networkidle");
   await expect(page.getByText("No client.")).toBeVisible();
   await expect(page.getByRole("button", { name: "Show client info" })).toHaveCount(0);
 });
@@ -137,7 +137,7 @@ test("the trip form saves the chosen client and bill number", async ({ page }) =
   expect(trip.status).toBe(201);
 
   await page.goto(`/app/trips/${trip.body.id}/edit`);
-  await page.waitForTimeout(500);
+  await page.waitForLoadState("networkidle");
 
   await page.getByRole("combobox", { name: "Client" }).click();
   await page.getByRole("option", { name: `Form Client ${suffix}` }).click();
