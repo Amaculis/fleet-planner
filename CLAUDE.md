@@ -31,10 +31,10 @@ schema rewrite. Handles personal data of drivers → GDPR applies.
   `handler → service → repository (sqlc)`. Handlers do HTTP + validation only; business
   logic lives in services; DB access only in repositories.
 - **PostgreSQL** via `pgx`. Migrations via `golang-migrate` (see `db-migrations` skill).
-- **Frontend:** the main UI is the Vue 3 + `@dativa-lv/lx-ui` SPA in `portal/`, served
-  under `/app/` and installable as a PWA (approved; it is where new features go). The older
-  server-rendered `templ` + `htmx` UI is still served but is feature-frozen (no clients,
-  statistics, trip series or payment status); whether to retire it is an open decision.
+- **Frontend:** the Vue 3 + `@dativa-lv/lx-ui` SPA in `portal/`, served by the Go binary
+  from disk under `/app/` and installable as a PWA. It talks to the JSON API (`/api/*`)
+  only. The earlier server-rendered `templ` + `htmx` UI was removed; its old URLs redirect
+  into the portal and `/sw.js` is a worker that unregisters itself.
 - **Package manager: npm** (root and `portal/`), with committed `package-lock.json` and
   `npm ci` in Docker/CI. This is a deliberate exception to the `lx-ui-frontend` skill's
   "bun for new projects" rule — do not switch to bun or pnpm.
@@ -72,7 +72,7 @@ schema rewrite. Handles personal data of drivers → GDPR applies.
 - RBAC middleware; a `driver` can reach only their own data (verify by `driver_id`, not by
   a client-supplied id).
 - CSRF protection on every non-GET request.
-- Server-side input validation on every field; `templ` auto-escaping for output.
+- Server-side input validation on every field; the portal renders text through Vue escaping (never `v-html`).
 - Rate limiting: strict on auth endpoints (brute-force), sane global default.
 - Security headers: CSP, `X-Content-Type-Options: nosniff`, `Referrer-Policy`,
   `X-Frame-Options: DENY`, HSTS (via Caddy).

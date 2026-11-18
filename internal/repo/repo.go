@@ -2,7 +2,7 @@
 // sqlc-generated code (db/queries/*.sql -> internal/repo/sqlcgen); there is no
 // hand-written or concatenated SQL anywhere in Go.
 //
-// Run `make generate` (sqlc + templ) after any schema or query change.
+// Run `make generate` (sqlc) after any schema or query change.
 package repo
 
 import (

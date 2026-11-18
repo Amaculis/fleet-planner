@@ -9,8 +9,7 @@ import (
 )
 
 // apiClient is a browser-like client for the JSON API: it keeps cookies (the session
-// is still an httpOnly cookie, same as the server-rendered app) but never follows
-// redirects, so a wrongly-redirecting handler fails loudly instead of silently
+// is an httpOnly cookie) but never follows redirects, so a wrongly-redirecting handler fails loudly instead of silently
 // returning whatever the redirect target happens to render.
 type apiClient struct{ *client }
 
@@ -72,8 +71,7 @@ func (c *apiClient) deleteJSON(path, csrfToken string) *http.Response {
 }
 
 // TestAPIMeBootstraps: the SPA's very first call must work whether or not anyone is
-// signed in, and always carries a CSRF token — the anonymous one pre-login, matching
-// what the server-rendered login form already embeds via the same LoadSession path.
+// signed in, and always carries a CSRF token: the anonymous one pre-login.
 func TestAPIMeBootstraps(t *testing.T) {
 	e := newEnv(t)
 	e.newAdmin("admin@example.lv", testPassword)

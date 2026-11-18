@@ -145,11 +145,8 @@ func Load() (Config, error) {
 	}
 	// 600 burst / 10-per-second sustained: the lx-ui SPA (portal/) loads on the order
 	// of a hundred small per-component chunks on a cold page load (no browser cache
-	// yet) — lx-ui's own aggressive code-splitting, see docs/lx-ui-integration.md's
-	// "known accepted costs". The old server-rendered app's single-HTML-plus-a-few-
-	// assets pattern never came close to the previous 120/500ms default; the SPA does
-	// on its very first paint. This still refuses a real flood, just not a legitimate
-	// page load.
+	// yet) — lx-ui's own aggressive code-splitting. This still refuses a real flood,
+	// just not a legitimate page load.
 	if cfg.GlobalRateBurst, err = intOr("GLOBAL_RATE_BURST", 600); err != nil {
 		errs = append(errs, err)
 	}

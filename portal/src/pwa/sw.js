@@ -121,7 +121,7 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
-  if (!url.pathname.startsWith(BASE)) return; // /api/*, the server-rendered pages
+  if (!url.pathname.startsWith(BASE)) return; // /api/*, other routes
   if (NEVER_CACHED.has(url.pathname)) return;
 
   if (request.mode === "navigate") {

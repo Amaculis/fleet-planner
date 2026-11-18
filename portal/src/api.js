@@ -11,8 +11,7 @@ import i18n from "@/i18n";
 // has. The browser attaches the session cookie automatically; the only thing this
 // client must do itself is echo the CSRF token the backend hands it (see
 // stores/auth.js) back on every state-changing request, via the same X-CSRF-Token
-// header the server-rendered app's htmx forms already use
-// (internal/httpapi/auth_middleware.go's CSRF middleware).
+// header (see internal/httpapi/auth_middleware.go's CSRF middleware).
 // A single shared instance, not one per call: harmless in the real app either way
 // (the interceptor reads the CSRF token fresh on every request regardless of when
 // the instance was created), but it's what lets demo mode (see src/demo/mockApi.js)

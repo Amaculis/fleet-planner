@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"path/filepath"
 	"time"
 
 	"log/slog"
@@ -14,8 +15,6 @@ import (
 	"github.com/buscompany/bus_fleet/internal/domain"
 	"github.com/buscompany/bus_fleet/internal/i18n"
 	"github.com/buscompany/bus_fleet/internal/service"
-	"github.com/buscompany/bus_fleet/web"
-	"github.com/buscompany/bus_fleet/web/templates"
 )
 
 // Pinger is the health check's view of the database.
@@ -71,9 +70,8 @@ func NewServer(cfg config.Config, log *slog.Logger, svc Services, bundle *i18n.B
 		db:          db,
 		// Strict on credentials, loose globally. Both per client IP.
 		loginLimiter: NewLimiter(orDuration(cfg.LoginRateEvery, time.Minute), orInt(cfg.LoginRateBurst, 5)),
-		// Same defaults as config.Load() — see the comment there on why 120/500ms
-		// (sized for the old server-rendered app) is too tight for the SPA's chunk
-		// waterfall on a cold load.
+		// Same defaults as config.Load() — see the comment there on why the SPA's
+		// chunk waterfall on a cold load needs a generous burst.
 		globalLimiter: NewLimiter(orDuration(cfg.GlobalRateEvery, 100*time.Millisecond), orInt(cfg.GlobalRateBurst, 600)),
 		// 10 failures, then one more try every 3 minutes (full refill: 30 minutes).
 		accountLimiter: NewLimiter(3*time.Minute, 10).WithIdleTTL(30 * time.Minute),
@@ -120,48 +118,31 @@ func (s *Server) Routes() http.Handler {
 	// Liveness/readiness for the container healthcheck. No session, no PII, no details.
 	r.Get("/healthz", s.handleHealth)
 
-	// Static assets: embedded in the binary, long-lived cache, no cookies needed.
-	r.Handle("/static/*", s.staticHandler())
+	// lx-ui's stylesheet refers to its fonts by absolute path (/lx-fonts/...), whatever
+	// base the app is built for, so they are served from the site root.
+	r.Handle("/lx-fonts/*", s.fontsHandler())
 
-	// lx-ui's pre-compiled dist bundle computes its own asset URLs — chunk imports and
-	// its @font-face url()s alike — as new URL(path, window.location.origin) /
-	// root-relative paths, resolving to the site root (/js/..., /css/..., /lx-fonts/...)
-	// regardless of where the files were actually deployed (/static/...). That logic
-	// is compiled into the dependency, not something this app's own Vite config
-	// controls. main.js also sets createLx's publicUrl option, which may be the
-	// "intended" fix — unverified without a real browser — so both are in place:
-	// whichever one lx-ui's runtime actually honours, the files exist where it looks.
-	// Named prefixes only (never the whole /static/ tree) so this can't shadow a real
-	// app route later.
-	r.Handle("/js/*", s.rootStaticHandler())
-	r.Handle("/css/*", s.rootStaticHandler())
-	r.Handle("/lx-fonts/*", s.rootStaticHandler())
-
-	// The lx-ui SPA (portal/). Served straight from disk, not go:embed'd — see
-	// config.PortalDir. No session/CSRF middleware here: the SPA authenticates
-	// itself entirely through /api/auth/* once loaded (see api_auth.go), the same
-	// way any other static asset needs no session to be fetched.
+	// The lx-ui SPA (portal/). Served straight from disk, see config.PortalDir. No
+	// session/CSRF middleware: the SPA authenticates itself through /api/auth/* once
+	// loaded, the same way any static asset needs no session to be fetched.
 	r.Handle("/app/*", s.portalHandler())
 
-	// The service worker must be served from the root to control the whole origin;
-	// /static/sw.js would only ever control /static/.
-	r.Get("/sw.js", s.handleServiceWorker)
+	// Bookmarks and the old server-rendered UI's URLs lead into the portal.
+	r.Get("/", redirectTo("/app/"))
+	r.Get("/login", redirectTo("/app/login"))
+
+	// A service worker registered at "/" by the retired server-rendered UI may still
+	// sit on a user's phone. This replacement unregisters it (see serviceWorkerRetired).
+	r.Get("/sw.js", s.handleRetiredServiceWorker)
 
 	r.Group(func(r chi.Router) {
 		// Static assets (above) are deliberately outside this limiter: lx-ui's cold
 		// load fetches a hundred-odd small chunks, and several concurrent page loads
-		// would exhaust any sane per-IP budget. Flood protection belongs on the dynamic,
-		// session-bearing endpoints below, not on cacheable static files.
+		// would exhaust any sane per-IP budget. Flood protection belongs on the
+		// dynamic, session-bearing endpoints below, not on cacheable static files.
 		r.Use(s.rateLimit(s.globalLimiter))
 		r.Use(s.LoadSession)
 		r.Use(s.CSRF)
-
-		// Public.
-		// The offline page is cached by the service worker, so it must render without
-		// a session and must never contain data.
-		r.Get("/offline", s.handleOffline)
-		r.Get("/login", s.handleLoginForm)
-		r.With(s.rateLimit(s.loginLimiter)).Post("/login", s.handleLoginSubmit)
 
 		// JSON API for the lx-ui SPA (portal/). Same LoadSession + CSRF pipeline as every
 		// other route here -- no separate auth mechanism, just a different response
@@ -176,9 +157,6 @@ func (s *Server) Routes() http.Handler {
 		// Authenticated.
 		r.Group(func(r chi.Router) {
 			r.Use(s.RequireAuth)
-
-			r.Post("/logout", s.handleLogout)
-			r.Get("/", s.handleHome)
 
 			// Planning: dispatchers and admins. Reading the fleet is included,
 			// because you cannot assign what you cannot see.
@@ -214,22 +192,7 @@ func (s *Server) Routes() http.Handler {
 // mountPlannerRoutes registers the planning routes (admin + dispatcher): trips, and read-only fleet
 // access, because you cannot assign what you cannot see. Includes the JSON mirror for the SPA (portal/).
 func (s *Server) mountPlannerRoutes(r chi.Router) {
-	r.Get("/timeline", s.handleTimeline)
-	r.Get("/trips", s.handleTripList)
-	r.Get("/trips/new", s.handleTripNew)
-	r.Post("/trips", s.handleTripCreate)
-	r.Get("/trips/{id}", s.handleTripDetail)
-	r.Get("/trips/{id}/edit", s.handleTripEdit)
-	r.Post("/trips/{id}", s.handleTripUpdate)
-	r.Post("/trips/{id}/status", s.handleTripStatus)
-	r.Post("/trips/{id}/delete", s.handleTripDelete)
-	r.Post("/trips/{id}/assign", s.handleTripAssign)
-	r.Post("/trips/{id}/unassign", s.handleTripUnassign)
 
-	r.Get("/buses", s.handleBusList)
-	r.Get("/drivers", s.handleDriverList)
-
-	// JSON mirror of the group above, for the SPA (portal/).
 	r.Get("/api/trips", s.handleAPITripList)
 	r.Post("/api/trips", s.handleAPITripCreate)
 	r.Post("/api/trip-series", s.handleAPITripSeriesCreate)
@@ -249,27 +212,7 @@ func (s *Server) mountPlannerRoutes(r chi.Router) {
 
 // mountAdminRoutes registers fleet and user management (admin only), with the JSON mirror for the SPA (portal/).
 func (s *Server) mountAdminRoutes(r chi.Router) {
-	r.Get("/buses/new", s.handleBusNew)
-	r.Post("/buses", s.handleBusCreate)
-	r.Get("/buses/{id}/edit", s.handleBusEdit)
-	r.Post("/buses/{id}", s.handleBusUpdate)
-	r.Post("/buses/{id}/delete", s.handleBusDelete)
 
-	r.Get("/drivers/new", s.handleDriverNew)
-	r.Post("/drivers", s.handleDriverCreate)
-	r.Get("/drivers/{id}/edit", s.handleDriverEdit)
-	r.Post("/drivers/{id}", s.handleDriverUpdate)
-	r.Post("/drivers/{id}/anonymize", s.handleDriverAnonymize)
-
-	r.Get("/users", s.handleUserList)
-	r.Get("/users/new", s.handleUserNew)
-	r.Post("/users", s.handleUserCreate)
-	r.Post("/users/{id}/activate", s.handleUserActivate)
-	r.Post("/users/{id}/deactivate", s.handleUserDeactivate)
-	r.Get("/users/{id}/password", s.handleUserPasswordForm)
-	r.Post("/users/{id}/password", s.handleUserPasswordSet)
-
-	// JSON mirror of the group above, for the SPA (portal/).
 	r.Get("/api/buses/{id}", s.handleAPIBusGet)
 	r.Post("/api/buses", s.handleAPIBusCreate)
 	r.Put("/api/buses/{id}", s.handleAPIBusUpdate)
@@ -291,32 +234,27 @@ func (s *Server) mountAdminRoutes(r chi.Router) {
 // mountDriverRoutes registers the driver's own trips. No route takes a driver id: ownership comes from the
 // session and is re-checked inside the SQL statement.
 func (s *Server) mountDriverRoutes(r chi.Router) {
-	r.Get("/my/trips", s.handleMyTrips)
-	r.Post("/my/trips/{id}/start", s.handleMyTripStart)
-	r.Post("/my/trips/{id}/finish", s.handleMyTripFinish)
 
-	// JSON mirror of the group above, for the SPA (portal/).
 	r.Get("/api/my/trips", s.handleAPIMyTrips)
 	r.Post("/api/my/trips/{id}/start", s.handleAPIMyTripStart)
 	r.Post("/api/my/trips/{id}/finish", s.handleAPIMyTripFinish)
 }
 
-func (s *Server) staticHandler() http.Handler {
-	fs := http.FileServer(http.FS(web.StaticFS()))
-	return http.StripPrefix("/static/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Cache-Control", "public, max-age=3600")
-		fs.ServeHTTP(w, r)
-	}))
+// fontsHandler serves the lx-ui fonts the portal build ships in <PortalDir>/lx-fonts.
+func (s *Server) fontsHandler() http.Handler {
+	dir := http.Dir(filepath.Join(s.cfg.PortalDir, "lx-fonts"))
+	files := http.StripPrefix("/lx-fonts/", http.FileServer(dir))
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Font files never change under the same name.
+		w.Header().Set("Cache-Control", "public, max-age=86400")
+		files.ServeHTTP(w, r)
+	})
 }
 
-// rootStaticHandler serves the same embedded tree with no prefix stripped — see the
-// comment above its /js/ and /css/ mount points in Routes().
-func (s *Server) rootStaticHandler() http.Handler {
-	fs := http.FileServer(http.FS(web.StaticFS()))
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Cache-Control", "public, max-age=3600")
-		fs.ServeHTTP(w, r)
-	})
+func redirectTo(path string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, path, http.StatusFound)
+	}
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
@@ -331,46 +269,40 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte("ok"))
 }
 
-// handleServiceWorker serves the worker from the origin root so its scope is "/".
-// It is revalidated on every load: a stale worker would pin an old app shell.
-func (s *Server) handleServiceWorker(w http.ResponseWriter, r *http.Request) {
-	file, err := web.StaticFS().Open("sw.js")
-	if err != nil {
-		s.renderError(w, r, http.StatusNotFound, "error.not_found")
-		return
-	}
-	defer file.Close()
+// serviceWorkerRetired replaces the worker the old server-rendered UI registered at
+// "/": it drops that worker's caches and unregisters itself. The portal's own worker
+// lives at /app/pwa-sw.js with scope /app/ and is unaffected.
+const serviceWorkerRetired = `self.addEventListener("install", () => self.skipWaiting());
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    caches
+      .keys()
+      .then((keys) => Promise.all(keys.map((key) => caches.delete(key))))
+      .then(() => self.registration.unregister())
+  );
+});
+`
 
+func (s *Server) handleRetiredServiceWorker(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "text/javascript; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-cache")
-	w.Header().Set("Service-Worker-Allowed", "/")
-	if _, err := io.Copy(w, file); err != nil {
-		s.log.Error("serving service worker", "request_id", RequestIDFrom(r.Context()), "error", err)
-	}
+	_, _ = io.WriteString(w, serviceWorkerRetired)
 }
 
-// handleOffline renders the page the service worker falls back to. Public and static:
-// it holds no data, so caching it leaks nothing.
-func (s *Server) handleOffline(w http.ResponseWriter, r *http.Request) {
-	s.render(w, r, http.StatusOK, templates.OfflinePage(s.view(r)))
-}
-
-// renderError renders a generic, translated message. Internal detail never reaches the
-// client; it is logged against the request id instead.
+// renderError answers with a generic, translated message. Internal detail never reaches
+// the client; it is logged against the request id instead. API callers get JSON, anyone
+// else plain text.
 func (s *Server) renderError(w http.ResponseWriter, r *http.Request, status int, messageKey string) {
 	s.renderErrorText(w, r, status, s.printerFor(r).T(messageKey))
 }
 
-// renderErrorText renders an already-translated message.
+// renderErrorText answers with an already-translated message.
 func (s *Server) renderErrorText(w http.ResponseWriter, r *http.Request, status int, text string) {
-	printer := s.printerFor(r)
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.WriteHeader(status)
-
-	page := templates.ErrorPage(printer, cspNonceFrom(r.Context()), text)
-	if err := page.Render(r.Context(), w); err != nil {
-		s.log.Error("rendering error page", "request_id", RequestIDFrom(r.Context()), "error", err)
+	if isAPI(r) {
+		s.writeJSON(w, r, status, apiError{Error: text})
+		return
 	}
+	http.Error(w, text, status)
 }
 
 // printerFor never returns nil, even for a request that failed before LoadSession ran.

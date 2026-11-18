@@ -200,13 +200,17 @@ test("offline, starting or finishing a trip is not faked: the request fails", as
   }
 });
 
-// The server-rendered UI has its own worker (/sw.js, scope "/"). A phone that used it
-// before must still end up with the portal's worker in charge of /app/.
-test("the server-rendered UI's worker doesn't take over the portal", async ({ page }) => {
-  await page.goto("/login");
-  await page.evaluate(() => navigator.serviceWorker.ready);
-  const rootScope = await page.evaluate(async () => (await navigator.serviceWorker.getRegistration("/"))?.scope);
-  expect(new URL(rootScope).pathname).toBe("/");
+// The retired server-rendered UI registered a worker at "/" (scope "/"). A phone that
+// still has it must end up with only the portal's worker: /sw.js is now a worker whose
+// only job is to remove itself and its caches.
+test("a worker left over from the old UI removes itself and does not take over the portal", async ({ page }) => {
+  await page.goto("/app/");
+  await page.evaluate(() => navigator.serviceWorker.register("/sw.js", { scope: "/" }));
+  await expect
+    .poll(() => page.evaluate(async () => (await navigator.serviceWorker.getRegistration("/")) === undefined), {
+      timeout: 15000,
+    })
+    .toBe(true);
 
   await openControlled(page);
   await page.reload();

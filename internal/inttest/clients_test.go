@@ -5,7 +5,6 @@ import (
 	"errors"
 	"io"
 	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
 	"testing"
@@ -323,47 +322,6 @@ func TestSeriesClientAndInvoiceNumbers(t *testing.T) {
 	}, time.UTC, service.Meta{})
 	if !errors.Is(err, domain.ErrValidation) {
 		t.Errorf("series with unknown client: err = %v, want validation error", err)
-	}
-}
-
-// TestLegacyTripUpdateKeepsClient: the frozen server-rendered edit form has no client
-// field, so saving through it must not clear the client or bill number.
-func TestLegacyTripUpdateKeepsClient(t *testing.T) {
-	ctx := context.Background()
-	e := newEnv(t)
-	admin := e.newAdmin("admin@example.lv", testPassword)
-	actor := e.identityFor(admin, nil)
-	client := e.newClientRecord(actor, "Acme Tours")
-	invoice := "INV-1"
-	trip, err := e.trips.Create(ctx, actor, domain.Trip{
-		Origin: "Riga", Destination: "Liepaja", ScheduledStart: at(8), ScheduledEnd: at(12),
-		PaymentStatus: domain.PaymentUnpaid, ClientID: &client.ID, InvoiceNumber: &invoice,
-	}, service.Meta{})
-	if err != nil {
-		t.Fatalf("creating trip: %v", err)
-	}
-
-	base := e.serve(t)
-	c := newClient(t, base)
-	c.login("admin@example.lv")
-	tripPath := "/trips/" + strconv.FormatInt(trip.ID, 10)
-	form := url.Values{
-		"origin": {"Riga"}, "destination": {"Ventspils"},
-		"scheduled_start": {at(8).Format("2006-01-02T15:04")},
-		"scheduled_end":   {at(12).Format("2006-01-02T15:04")},
-	}
-	resp := c.post(tripPath+"/edit", tripPath, form)
-	resp.Body.Close()
-
-	after, err := e.trips.Get(ctx, actor, trip.ID)
-	if err != nil {
-		t.Fatalf("reading trip: %v", err)
-	}
-	if after.Destination != "Ventspils" {
-		t.Fatalf("legacy update did not apply (status %d, destination %q)", resp.StatusCode, after.Destination)
-	}
-	if after.ClientID == nil || *after.ClientID != client.ID || after.InvoiceNumber == nil || *after.InvoiceNumber != invoice {
-		t.Errorf("legacy update dropped client/bill number: %+v", after)
 	}
 }
 

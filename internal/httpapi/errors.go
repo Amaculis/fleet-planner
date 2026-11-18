@@ -111,10 +111,3 @@ func (s *Server) failed(r *http.Request, err error) (int, UserMessage) {
 	}
 	return status, msg
 }
-
-// abort renders the standalone error page. Handlers that can re-render their own form
-// with the message inline should do that instead.
-func (s *Server) abort(w http.ResponseWriter, r *http.Request, err error) {
-	status, msg := s.failed(r, err)
-	s.renderErrorText(w, r, status, msg.Text)
-}

@@ -7,8 +7,6 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
-	"net/url"
-	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -22,8 +20,6 @@ import (
 // its guard, these would catch it.
 
 const testPassword = "correct-horse-battery-staple"
-
-var csrfPattern = regexp.MustCompile(`name="csrf_token" value="([^"]+)"`)
 
 // client is a browser-like client: it keeps cookies and does not follow redirects, so
 // tests can assert on the redirect itself.
@@ -58,47 +54,6 @@ func (c *client) get(path string) *http.Response {
 	return resp
 }
 
-func (c *client) body(path string) string {
-	c.t.Helper()
-	resp := c.get(path)
-	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		c.t.Fatalf("reading %s: %v", path, err)
-	}
-	return string(body)
-}
-
-// post sends a form with the CSRF token taken from the given page, exactly as a browser
-// would after rendering it.
-func (c *client) post(tokenFrom, path string, form url.Values) *http.Response {
-	c.t.Helper()
-	form.Set("csrf_token", c.csrfToken(tokenFrom))
-	resp, err := c.http.PostForm(c.base+path, form)
-	if err != nil {
-		c.t.Fatalf("POST %s: %v", path, err)
-	}
-	return resp
-}
-
-func (c *client) csrfToken(page string) string {
-	c.t.Helper()
-	match := csrfPattern.FindStringSubmatch(c.body(page))
-	if match == nil {
-		c.t.Fatalf("no CSRF token on %s", page)
-	}
-	return match[1]
-}
-
-func (c *client) login(email string) {
-	c.t.Helper()
-	resp := c.post("/login", "/login", url.Values{"email": {email}, "password": {testPassword}})
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusSeeOther {
-		c.t.Fatalf("login as %s: status %d, want 303", email, resp.StatusCode)
-	}
-}
-
 func (e *env) serve(t *testing.T) string {
 	t.Helper()
 	srv := httptest.NewServer(e.server.Routes())
@@ -106,7 +61,7 @@ func (e *env) serve(t *testing.T) string {
 	return srv.URL
 }
 
-// TestRoleBoundaries walks every role over every route group.
+// TestRoleBoundaries walks every role over the API routes of each role group.
 func TestRoleBoundaries(t *testing.T) {
 	ctx := context.Background()
 	e := newEnv(t)
@@ -115,7 +70,7 @@ func TestRoleBoundaries(t *testing.T) {
 	e.newDispatcher("dispatcher@example.lv", testPassword)
 	driver, _ := e.newDriverWithLogin("Driver A", "driver@example.lv", testPassword)
 
-	// One assigned trip so the pages have something to render.
+	// One assigned trip so the endpoints have something to return.
 	bus := e.newBus("AA-1111")
 	trip := e.newTrip("Riga", "Liepaja", 8, 12)
 	if _, err := e.assignments.Assign(ctx, e.identityFor(admin, nil), trip.ID, bus.ID, driver.ID, service.Meta{}); err != nil {
@@ -123,7 +78,9 @@ func TestRoleBoundaries(t *testing.T) {
 	}
 
 	base := e.serve(t)
-	tripPath := "/trips/" + strconv.FormatInt(trip.ID, 10)
+	tripPath := "/api/trips/" + strconv.FormatInt(trip.ID, 10)
+	busPath := "/api/buses/" + strconv.FormatInt(bus.ID, 10)
+	driverPath := "/api/drivers/" + strconv.FormatInt(driver.ID, 10)
 
 	tests := []struct {
 		email string
@@ -131,43 +88,44 @@ func TestRoleBoundaries(t *testing.T) {
 		want  int
 	}{
 		// Admin reaches everything.
-		{"admin@example.lv", "/trips", http.StatusOK},
+		{"admin@example.lv", "/api/trips", http.StatusOK},
 		{"admin@example.lv", tripPath, http.StatusOK},
-		{"admin@example.lv", "/buses", http.StatusOK},
-		{"admin@example.lv", "/buses/new", http.StatusOK},
-		{"admin@example.lv", "/drivers", http.StatusOK},
-		{"admin@example.lv", "/drivers/new", http.StatusOK},
-		{"admin@example.lv", "/users", http.StatusOK},
-		{"admin@example.lv", "/users/new", http.StatusOK},
+		{"admin@example.lv", "/api/buses", http.StatusOK},
+		{"admin@example.lv", busPath, http.StatusOK},
+		{"admin@example.lv", "/api/drivers", http.StatusOK},
+		{"admin@example.lv", driverPath, http.StatusOK},
+		{"admin@example.lv", "/api/clients", http.StatusOK},
+		{"admin@example.lv", "/api/users", http.StatusOK},
 
-		// A dispatcher plans, but cannot manage the fleet or accounts.
-		{"dispatcher@example.lv", "/trips", http.StatusOK},
+		// A dispatcher plans and can list the fleet, but cannot read single fleet records
+		// (those carry pay and licence data) or manage accounts.
+		{"dispatcher@example.lv", "/api/trips", http.StatusOK},
 		{"dispatcher@example.lv", tripPath, http.StatusOK},
-		{"dispatcher@example.lv", "/buses", http.StatusOK},
-		{"dispatcher@example.lv", "/drivers", http.StatusOK},
-		{"dispatcher@example.lv", "/buses/new", http.StatusForbidden},
-		{"dispatcher@example.lv", "/drivers/new", http.StatusForbidden},
-		{"dispatcher@example.lv", "/users", http.StatusForbidden},
-		{"dispatcher@example.lv", "/users/new", http.StatusForbidden},
+		{"dispatcher@example.lv", "/api/buses", http.StatusOK},
+		{"dispatcher@example.lv", "/api/drivers", http.StatusOK},
+		{"dispatcher@example.lv", "/api/clients", http.StatusOK},
+		{"dispatcher@example.lv", busPath, http.StatusForbidden},
+		{"dispatcher@example.lv", driverPath, http.StatusForbidden},
+		{"dispatcher@example.lv", "/api/users", http.StatusForbidden},
 
 		// A driver sees their own trips and nothing else.
-		{"driver@example.lv", "/my/trips", http.StatusOK},
-		{"driver@example.lv", "/trips", http.StatusForbidden},
+		{"driver@example.lv", "/api/my/trips", http.StatusOK},
+		{"driver@example.lv", "/api/trips", http.StatusForbidden},
 		{"driver@example.lv", tripPath, http.StatusForbidden},
-		{"driver@example.lv", "/buses", http.StatusForbidden},
-		{"driver@example.lv", "/drivers", http.StatusForbidden},
-		{"driver@example.lv", "/users", http.StatusForbidden},
-		{"driver@example.lv", "/users/new", http.StatusForbidden},
+		{"driver@example.lv", "/api/buses", http.StatusForbidden},
+		{"driver@example.lv", "/api/drivers", http.StatusForbidden},
+		{"driver@example.lv", "/api/clients", http.StatusForbidden},
+		{"driver@example.lv", "/api/users", http.StatusForbidden},
 
 		// Planners have no driver view.
-		{"admin@example.lv", "/my/trips", http.StatusForbidden},
-		{"dispatcher@example.lv", "/my/trips", http.StatusForbidden},
+		{"admin@example.lv", "/api/my/trips", http.StatusForbidden},
+		{"dispatcher@example.lv", "/api/my/trips", http.StatusForbidden},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.email+" GET "+tt.path, func(t *testing.T) {
-			c := newClient(t, base)
-			c.login(tt.email)
+			c := &apiClient{newClient(t, base)}
+			c.apiLogin(tt.email)
 
 			resp := c.get(tt.path)
 			defer resp.Body.Close()
@@ -178,21 +136,41 @@ func TestRoleBoundaries(t *testing.T) {
 	}
 }
 
-// TestAnonymousCannotReachAnything: every non-public route redirects to the login page.
+// TestAnonymousCannotReachAnything: every API route answers 401 without a session.
 func TestAnonymousCannotReachAnything(t *testing.T) {
 	e := newEnv(t)
 	base := e.serve(t)
 
-	for _, path := range []string{"/", "/trips", "/trips/1", "/buses", "/drivers", "/users", "/my/trips"} {
+	for _, path := range []string{"/api/trips", "/api/trips/1", "/api/buses", "/api/drivers", "/api/clients", "/api/users", "/api/my/trips"} {
 		c := newClient(t, base)
 		resp := c.get(path)
 		resp.Body.Close()
-		if resp.StatusCode != http.StatusSeeOther {
-			t.Errorf("GET %s anonymously: status %d, want 303", path, resp.StatusCode)
+		if resp.StatusCode != http.StatusUnauthorized {
+			t.Errorf("GET %s anonymously: status %d, want 401", path, resp.StatusCode)
 		}
-		if location := resp.Header.Get("Location"); location != "/login" {
-			t.Errorf("GET %s anonymously redirected to %q, want /login", path, location)
+	}
+}
+
+// TestOldUIAddressesLeadIntoThePortal: bookmarks to the retired server-rendered UI do
+// not 404 or reach any data; they redirect into the portal.
+func TestOldUIAddressesLeadIntoThePortal(t *testing.T) {
+	e := newEnv(t)
+	base := e.serve(t)
+
+	for path, want := range map[string]string{"/": "/app/", "/login": "/app/login"} {
+		resp := newClient(t, base).get(path)
+		resp.Body.Close()
+		if resp.StatusCode != http.StatusFound || resp.Header.Get("Location") != want {
+			t.Errorf("GET %s: status %d, Location %q; want 302 to %s", path, resp.StatusCode, resp.Header.Get("Location"), want)
 		}
+	}
+
+	// A worker the old UI registered on someone's phone is replaced by one that removes it.
+	resp := newClient(t, base).get("/sw.js")
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK || !strings.Contains(string(body), "unregister") {
+		t.Errorf("GET /sw.js: status %d; want the self-unregistering worker", resp.StatusCode)
 	}
 }
 
@@ -220,11 +198,11 @@ func TestDriverCannotReachAnotherDriversData(t *testing.T) {
 	}
 
 	base := e.serve(t)
-	c := newClient(t, base)
-	c.login("b@example.lv")
+	c := &apiClient{newClient(t, base)}
+	csrf := c.apiLogin("b@example.lv")
 
 	t.Run("the list shows only the caller's own trips", func(t *testing.T) {
-		body := c.body("/my/trips")
+		body := readBody(t, c.get("/api/my/trips"))
 		if !strings.Contains(body, "Ventspils") {
 			t.Error("driver B cannot see their own trip")
 		}
@@ -237,7 +215,7 @@ func TestDriverCannotReachAnotherDriversData(t *testing.T) {
 	})
 
 	t.Run("starting another driver's trip is refused", func(t *testing.T) {
-		resp := c.post("/my/trips", "/my/trips/"+strconv.FormatInt(tripA.ID, 10)+"/start", url.Values{})
+		resp := c.postJSON("/api/my/trips/"+strconv.FormatInt(tripA.ID, 10)+"/start", csrf, struct{}{})
 		defer resp.Body.Close()
 		if resp.StatusCode != http.StatusNotFound {
 			t.Fatalf("status %d, want 404", resp.StatusCode)
@@ -257,7 +235,7 @@ func TestDriverCannotReachAnotherDriversData(t *testing.T) {
 		if _, err := e.trips.StartMine(ctx, e.identityFor(driverAUser, &driverA.ID), tripA.ID, service.Meta{}); err != nil {
 			t.Fatalf("driver A starting their own trip: %v", err)
 		}
-		resp := c.post("/my/trips", "/my/trips/"+strconv.FormatInt(tripA.ID, 10)+"/finish", url.Values{})
+		resp := c.postJSON("/api/my/trips/"+strconv.FormatInt(tripA.ID, 10)+"/finish", csrf, struct{}{})
 		defer resp.Body.Close()
 		if resp.StatusCode != http.StatusNotFound {
 			t.Fatalf("status %d, want 404", resp.StatusCode)
@@ -302,15 +280,15 @@ func TestDriverOwnTripLifecycle(t *testing.T) {
 	}
 
 	base := e.serve(t)
-	c := newClient(t, base)
-	c.login("driver@example.lv")
+	c := &apiClient{newClient(t, base)}
+	csrf := c.apiLogin("driver@example.lv")
 
-	tripPath := "/my/trips/" + strconv.FormatInt(trip.ID, 10)
+	tripPath := "/api/my/trips/" + strconv.FormatInt(trip.ID, 10)
 
-	resp := c.post("/my/trips", tripPath+"/start", url.Values{})
+	resp := c.postJSON(tripPath+"/start", csrf, struct{}{})
 	resp.Body.Close()
-	if resp.StatusCode != http.StatusSeeOther {
-		t.Fatalf("starting own trip: status %d, want 303", resp.StatusCode)
+	if resp.StatusCode != http.StatusNoContent {
+		t.Fatalf("starting own trip: status %d, want 204", resp.StatusCode)
 	}
 
 	started, err := e.trips.Get(ctx, actor, trip.ID)
@@ -321,10 +299,10 @@ func TestDriverOwnTripLifecycle(t *testing.T) {
 		t.Fatalf("trip not started: status=%s actual_start=%v", started.Status, started.ActualStart)
 	}
 
-	resp = c.post("/my/trips", tripPath+"/finish", url.Values{})
+	resp = c.postJSON(tripPath+"/finish", csrf, struct{}{})
 	resp.Body.Close()
-	if resp.StatusCode != http.StatusSeeOther {
-		t.Fatalf("finishing own trip: status %d, want 303", resp.StatusCode)
+	if resp.StatusCode != http.StatusNoContent {
+		t.Fatalf("finishing own trip: status %d, want 204", resp.StatusCode)
 	}
 
 	finished, err := e.trips.Get(ctx, actor, trip.ID)
@@ -362,9 +340,9 @@ func TestDriverErasureKeepsHistory(t *testing.T) {
 	}
 
 	base := e.serve(t)
-	driverClient := newClient(t, base)
-	driverClient.login("janis@example.lv")
-	if resp := driverClient.get("/my/trips"); resp.StatusCode != http.StatusOK {
+	driverClient := &apiClient{newClient(t, base)}
+	driverClient.apiLogin("janis@example.lv")
+	if resp := driverClient.get("/api/my/trips"); resp.StatusCode != http.StatusOK {
 		resp.Body.Close()
 		t.Fatalf("driver cannot reach their trips before erasure: %d", resp.StatusCode)
 	}
@@ -395,13 +373,15 @@ func TestDriverErasureKeepsHistory(t *testing.T) {
 	}
 
 	// The login is dead: the session was revoked and the account deactivated.
-	resp := driverClient.get("/my/trips")
+	resp := driverClient.get("/api/my/trips")
 	resp.Body.Close()
-	if resp.StatusCode != http.StatusSeeOther {
+	if resp.StatusCode != http.StatusUnauthorized {
 		t.Fatalf("an erased driver's live session still works: status %d", resp.StatusCode)
 	}
-	fresh := newClient(t, base)
-	loginResp := fresh.post("/login", "/login", url.Values{"email": {"janis@example.lv"}, "password": {testPassword}})
+	fresh := &apiClient{newClient(t, base)}
+	loginResp := fresh.postJSON("/api/auth/login", fresh.me().CSRFToken, map[string]string{
+		"email": "janis@example.lv", "password": testPassword,
+	})
 	loginResp.Body.Close()
 	if loginResp.StatusCode != http.StatusUnauthorized {
 		t.Fatalf("an erased driver could still sign in: status %d", loginResp.StatusCode)

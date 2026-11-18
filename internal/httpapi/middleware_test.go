@@ -113,21 +113,19 @@ func TestRequireAuth(t *testing.T) {
 		if rec.Code != http.StatusSeeOther {
 			t.Fatalf("status = %d, want 303", rec.Code)
 		}
-		if got := rec.Header().Get("Location"); got != "/login" {
-			t.Fatalf("Location = %q, want /login", got)
+		if got := rec.Header().Get("Location"); got != "/app/login" {
+			t.Fatalf("Location = %q, want /app/login", got)
 		}
 	})
 
-	t.Run("anonymous htmx request gets HX-Redirect", func(t *testing.T) {
+	t.Run("anonymous API request gets 401 JSON, not a redirect", func(t *testing.T) {
 		rec := httptest.NewRecorder()
-		r := requestAs(t, s, http.MethodGet, "/", nil)
-		r.Header.Set("HX-Request", "true")
-		s.RequireAuth(okHandler()).ServeHTTP(rec, r)
+		s.RequireAuth(okHandler()).ServeHTTP(rec, requestAs(t, s, http.MethodGet, "/api/trips", nil))
 		if rec.Code != http.StatusUnauthorized {
 			t.Fatalf("status = %d, want 401", rec.Code)
 		}
-		if got := rec.Header().Get("HX-Redirect"); got != "/login" {
-			t.Fatalf("HX-Redirect = %q, want /login", got)
+		if got := rec.Header().Get("Location"); got != "" {
+			t.Fatalf("unexpected redirect to %q", got)
 		}
 	})
 
@@ -179,14 +177,14 @@ func TestCSRF(t *testing.T) {
 		}
 	})
 
-	t.Run("post with the form token passes", func(t *testing.T) {
+	t.Run("a valid token in the form body is not accepted: header only", func(t *testing.T) {
 		rec := post(t, url.Values{"csrf_token": {validToken}}, "")
-		if rec.Code != http.StatusOK {
-			t.Fatalf("status = %d, want 200", rec.Code)
+		if rec.Code != http.StatusForbidden {
+			t.Fatalf("status = %d, want 403", rec.Code)
 		}
 	})
 
-	t.Run("htmx header token passes", func(t *testing.T) {
+	t.Run("header token passes", func(t *testing.T) {
 		rec := post(t, url.Values{}, validToken)
 		if rec.Code != http.StatusOK {
 			t.Fatalf("status = %d, want 200", rec.Code)
@@ -248,13 +246,13 @@ func TestSecurityHeadersRelaxesStyleSrcOnlyForThePortal(t *testing.T) {
 	}
 
 	rec2 := httptest.NewRecorder()
-	s.SecurityHeaders(okHandler()).ServeHTTP(rec2, httptest.NewRequest(http.MethodGet, "/trips", nil))
+	s.SecurityHeaders(okHandler()).ServeHTTP(rec2, httptest.NewRequest(http.MethodGet, "/api/trips", nil))
 	csp2 := rec2.Header().Get("Content-Security-Policy")
 	if strings.Contains(csp2, "unsafe-inline") {
-		t.Errorf("CSP for /trips = %q, the server-rendered app must not get the relaxed style-src", csp2)
+		t.Errorf("CSP for /api/trips = %q, only /app/ may get the relaxed style-src", csp2)
 	}
 	if !strings.Contains(csp2, "style-src 'self' 'nonce-") {
-		t.Errorf("CSP for /trips = %q, want a nonce-only style-src", csp2)
+		t.Errorf("CSP for /api/trips = %q, want a nonce-only style-src", csp2)
 	}
 }
 

@@ -18,7 +18,6 @@ type apiDriverTrip struct {
 	Status         string `json:"status"`
 	BusPlate       string `json:"busPlate"`
 	// The dispatcher's instructions for this trip and the driver's own recorded times —
-	// the same the server-rendered driver page shows.
 	Notes       *string `json:"notes,omitempty"`
 	ActualStart string  `json:"actualStart,omitempty"`
 	ActualEnd   string  `json:"actualEnd,omitempty"`

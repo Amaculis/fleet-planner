@@ -1,17 +1,15 @@
 .PHONY: generate build test test-unit vet fmt fmt-check vuln hooks portal-build portal-test verify-schema verify-app verify-e2e up down
 
 # Pinned tool versions. Go 1.26+ is required: the module graph (x/text, x/crypto,
-# x/time) needs it, and so does the templ generator.
+# x/time) needs it.
 SQLC_IMAGE  ?= sqlc/sqlc:1.28.0
-TEMPL_VER   ?= v0.3.1020
 VULN_VER    ?= v1.9.0 # keep in step with .github/workflows/ci.yml
 
 # Code generation. sqlc runs from its official image: `go run sqlc` uses a wasm build of
 # the Postgres parser that crashes ("out of bounds memory access") in this environment.
-# Both outputs are committed, so building the app needs neither tool.
+# The output is committed, so building the app does not need sqlc.
 generate:
 	docker run --rm -v "$(CURDIR):/src" -w /src $(SQLC_IMAGE) generate
-	go run github.com/a-h/templ/cmd/templ@$(TEMPL_VER) generate
 
 build:
 	go build ./...

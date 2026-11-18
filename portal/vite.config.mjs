@@ -13,8 +13,8 @@ process.env.CUSTOM_VERSION = BUILD_ID;
 // Rewrites the lx-ui carbon theme's hardcoded-absolute font URLs
 // (url(/lx-fonts/IBMPlexMono-Regular.ttf), see lx-fonts-carbon.css) to be
 // base-prefixed, for the GitHub Pages demo build only. The real build leaves
-// these untouched on purpose: internal/httpapi/server.go serves the exact same
-// files at literal /lx-fonts/* (see the Dockerfile's copy step), which only
+// these untouched on purpose: internal/httpapi/server.go serves the same files
+// at literal /lx-fonts/* (copied by scripts/copy-fonts.mjs), which only
 // works because the real app is deployed at its domain's root — rewriting them
 // there would break font loading, not fix it. GitHub Pages project sites are
 // served from a /<repo>/ subpath, where the un-rewritten absolute path resolves

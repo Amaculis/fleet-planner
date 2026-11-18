@@ -8,6 +8,7 @@ import (
 
 	"github.com/buscompany/bus_fleet/internal/domain"
 	"github.com/buscompany/bus_fleet/internal/i18n"
+	"github.com/buscompany/bus_fleet/internal/service"
 )
 
 type ctxKey int
@@ -68,4 +69,9 @@ func sessionTokenFrom(ctx context.Context) string {
 
 func withValue(r *http.Request, key ctxKey, val any) *http.Request {
 	return r.WithContext(context.WithValue(r.Context(), key, val))
+}
+
+// meta carries the request facts an audit entry needs into the service layer.
+func (s *Server) meta(r *http.Request) service.Meta {
+	return service.Meta{IP: s.clientIP(r), RequestID: RequestIDFrom(r.Context())}
 }

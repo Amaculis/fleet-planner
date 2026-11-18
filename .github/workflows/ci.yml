@@ -65,14 +65,6 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
-      # The tests check that the built static assets are served, so build them with the
-      # Dockerfile's own assets stage rather than a copy of its commands.
-      - name: Build static assets (Dockerfile "assets" stage)
-        run: |
-          docker build --target assets -t bus-fleet-assets .
-          id=$(docker create bus-fleet-assets)
-          docker cp "$id:/src/web/static/." web/static/
-          docker rm "$id"
       - name: Run test suite
         run: bash scripts/verify-tests.sh
 

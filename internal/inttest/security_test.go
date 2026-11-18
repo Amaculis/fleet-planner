@@ -23,9 +23,8 @@ import (
 var publicRoutes = map[string]bool{
 	"GET /healthz":         true,
 	"GET /sw.js":           true,
-	"GET /offline":         true,
+	"GET /":                true,
 	"GET /login":           true,
-	"POST /login":          true,
 	"GET /api/auth/me":     true,
 	"POST /api/auth/login": true,
 }
@@ -54,7 +53,7 @@ func appRoutes(t *testing.T, e *env) []route {
 	if err != nil {
 		t.Fatalf("walking routes: %v", err)
 	}
-	if len(out) < 50 {
+	if len(out) < 30 {
 		t.Fatalf("only %d routes found; the walk is not seeing the whole router", len(out))
 	}
 	return out
@@ -95,9 +94,9 @@ func TestEveryRouteRequiresAuth(t *testing.T) {
 		resp := anon.do(rt.method, rt.path, token)
 		switch {
 		case resp.StatusCode == http.StatusUnauthorized:
-		case resp.StatusCode == http.StatusSeeOther && resp.Header.Get("Location") == "/login":
+		case resp.StatusCode == http.StatusSeeOther && resp.Header.Get("Location") == "/app/login":
 		default:
-			t.Errorf("%s %s as anonymous: status %d (Location %q), want 401 or a redirect to /login",
+			t.Errorf("%s %s as anonymous: status %d (Location %q), want 401 or a redirect to /app/login",
 				rt.method, rt.path, resp.StatusCode, resp.Header.Get("Location"))
 		}
 	}
@@ -128,20 +127,8 @@ func TestEveryMutationRequiresCSRF(t *testing.T) {
 			}
 		}
 	}
-	if checked < 30 {
+	if checked < 20 {
 		t.Fatalf("only %d state-changing routes found", checked)
-	}
-
-	// The login form path must also refuse a form post that carries no token.
-	resp, err := newClient(t, base).http.PostForm(base+"/login", url.Values{
-		"email": {"admin@example.lv"}, "password": {testPassword},
-	})
-	if err != nil {
-		t.Fatalf("posting login form: %v", err)
-	}
-	resp.Body.Close()
-	if resp.StatusCode != http.StatusForbidden {
-		t.Errorf("form login without token: status %d, want 403", resp.StatusCode)
 	}
 }
 
@@ -385,11 +372,10 @@ func TestNoCredentialsInResponses(t *testing.T) {
 	}
 
 	bodies := map[string]string{
-		"login":     login,
-		"me":        readBody(t, c.get("/api/auth/me")),
-		"users":     readBody(t, c.get("/api/users")),
-		"drivers":   readBody(t, c.get("/api/drivers")),
-		"user page": readBody(t, c.get("/users")),
+		"login":   login,
+		"me":      readBody(t, c.get("/api/auth/me")),
+		"users":   readBody(t, c.get("/api/users")),
+		"drivers": readBody(t, c.get("/api/drivers")),
 	}
 	for name, body := range bodies {
 		for _, secret := range []string{"$argon2", "password_hash", "passwordHash", testPassword, token, "csrf_secret", "csrfSecret"} {
@@ -445,29 +431,22 @@ func TestLogsCarryNoSecretsOrPersonalData(t *testing.T) {
 	}
 }
 
-// TestUserContentIsEscaped: text a user typed is output-encoded, so it can never run as
-// markup in the server-rendered pages.
-func TestUserContentIsEscaped(t *testing.T) {
+// TestUserContentIsStoredAsText: text a user typed comes back as plain JSON data, never
+// as HTML; the portal renders it through Vue's escaping (it uses no v-html anywhere).
+func TestUserContentIsStoredAsText(t *testing.T) {
 	e := newEnv(t)
 	e.newAdmin("admin@example.lv", testPassword)
-	const payload = `<script>alert("xss")</script><img src=x onerror=alert(1)>`
-	e.newDriver(payload)
+	e.newDriver(`<script>alert("xss")</script>`)
 	base := e.serve(t)
-
-	c := newClient(t, base)
-	c.login("admin@example.lv")
-	page := c.body("/drivers")
-	if strings.Contains(page, "<script>alert") || strings.Contains(page, "<img src=x") {
-		t.Fatal("driver name rendered as raw HTML on /drivers")
-	}
-	if !strings.Contains(page, "&lt;script&gt;") {
-		t.Error("escaped driver name not found on /drivers; the test is not seeing the row")
-	}
 
 	api := &apiClient{newClient(t, base)}
 	api.apiLogin("admin@example.lv")
-	if body := readBody(t, api.get("/api/drivers")); strings.Contains(body, "<script>") {
-		t.Error("JSON response carries a raw <script> tag")
+	resp := api.get("/api/drivers")
+	if ct := resp.Header.Get("Content-Type"); !strings.HasPrefix(ct, "application/json") {
+		t.Errorf("Content-Type = %q, want application/json", ct)
+	}
+	if body := readBody(t, resp); strings.Contains(body, "<script>") {
+		t.Errorf("JSON response carries a raw <script> tag: %s", body)
 	}
 }
 

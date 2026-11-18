@@ -84,16 +84,8 @@ func (s *Server) CSRF(next http.Handler) http.Handler {
 			return
 		}
 
-		// Accept the token from the form field or the htmx-friendly header.
+		// The portal sends the token in a header on every state-changing request.
 		submitted := r.Header.Get("X-CSRF-Token")
-		if submitted == "" {
-			// ParseForm is bounded by MaxBytesReader in SecurityHeaders.
-			if err := r.ParseForm(); err != nil {
-				s.renderError(w, r, http.StatusBadRequest, "error.csrf")
-				return
-			}
-			submitted = r.PostFormValue("csrf_token")
-		}
 
 		if !auth.ValidCSRFToken(CSRFTokenFrom(r.Context()), submitted) {
 			s.log.Warn("csrf rejected",
@@ -118,13 +110,7 @@ func (s *Server) RequireAuth(next http.Handler) http.Handler {
 				s.writeJSON(w, r, http.StatusUnauthorized, apiError{Error: s.printerFor(r).T("error.forbidden")})
 				return
 			}
-			if isHTMX(r) {
-				// Tell htmx to reload the page so the login form replaces the fragment.
-				w.Header().Set("HX-Redirect", "/login")
-				w.WriteHeader(http.StatusUnauthorized)
-				return
-			}
-			http.Redirect(w, r, "/login", http.StatusSeeOther)
+			http.Redirect(w, r, "/app/login", http.StatusSeeOther)
 			return
 		}
 		next.ServeHTTP(w, r)
@@ -145,7 +131,7 @@ func (s *Server) RequireRole(allowed ...domain.Role) func(http.Handler) http.Han
 					s.writeJSON(w, r, http.StatusUnauthorized, apiError{Error: s.printerFor(r).T("error.forbidden")})
 					return
 				}
-				http.Redirect(w, r, "/login", http.StatusSeeOther)
+				http.Redirect(w, r, "/app/login", http.StatusSeeOther)
 				return
 			}
 			for _, role := range allowed {
@@ -169,8 +155,5 @@ func (s *Server) RequireRole(allowed ...domain.Role) func(http.Handler) http.Han
 	}
 }
 
-func isHTMX(r *http.Request) bool { return r.Header.Get("HX-Request") == "true" }
-
-// isAPI reports whether r is a call to the JSON API (portal/), rather than a
-// server-rendered page or an htmx fragment request.
+// isAPI reports whether r is a call to the JSON API (portal/).
 func isAPI(r *http.Request) bool { return strings.HasPrefix(r.URL.Path, "/api/") }

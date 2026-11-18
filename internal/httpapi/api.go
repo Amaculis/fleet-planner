@@ -79,7 +79,7 @@ func jsonDate(v, fieldKey string) (*time.Time, error) {
 // jsonTimestamp parses a "YYYY-MM-DDTHH:MM" (or with seconds) local wall-clock string
 // — what a plain <input type="datetime-local"> submits — in the given zone, mirroring
 // formTimestamp exactly so a trip's scheduling behaves identically whether it came
-// through the server-rendered form or the SPA.
+// through any client.
 func jsonTimestamp(v, fieldKey string, loc *time.Location) (time.Time, error) {
 	if v == "" {
 		return time.Time{}, service.FieldMessage(domain.ErrValidation, "validation.required", fieldKey)

@@ -50,7 +50,6 @@ func (s *Server) RequestID(next http.Handler) http.Handler {
 // set by Caddy, which terminates TLS.
 //
 // The CSP is nonce-based and allow-lists nothing external: no CDN, no inline handler.
-// htmx is served from /static, so 'self' covers it.
 func (s *Server) SecurityHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		raw := make([]byte, 16)
@@ -73,7 +72,7 @@ func (s *Server) SecurityHeaders(next http.Handler) http.Handler {
 		// by any browser that understands nonce-sources at all once a nonce-source is
 		// present in the same directive — so style-src for /app/ drops its nonce
 		// entirely rather than keep a nonce that would silently defeat the
-		// 'unsafe-inline' meant to replace it. The SPA has no server-rendered inline
+		// 'unsafe-inline' meant to replace it. The SPA has no inline
 		// <style nonce> blocks to lose (its CSS is Vite-built external stylesheets,
 		// already covered by 'self') — this costs nothing there. Every other route
 		// keeps the strict nonce-only style-src.

@@ -70,7 +70,7 @@ test("the portal's CSP never weakens script-src, and relaxes style-src only for 
   expect(spaCsp).toContain("style-src 'self' 'unsafe-inline'");
 
   const htmlCsp = await page.evaluate(async () => {
-    const res = await fetch("/login", { cache: "no-store" });
+    const res = await fetch("/api/auth/me", { cache: "no-store" });
     return res.headers.get("content-security-policy") || "";
   });
   expect(htmlCsp).not.toContain("unsafe-inline");
