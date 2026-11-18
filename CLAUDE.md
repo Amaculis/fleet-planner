@@ -31,8 +31,10 @@ schema rewrite. Handles personal data of drivers → GDPR applies.
   `handler → service → repository (sqlc)`. Handlers do HTTP + validation only; business
   logic lives in services; DB access only in repositories.
 - **PostgreSQL** via `pgx`. Migrations via `golang-migrate` (see `db-migrations` skill).
-- **Frontend:** server-rendered `templ` + `htmx` + Tailwind. Minimal client JS. Driver
-  view is a PWA. (A small SPA is allowed only after explicit approval.)
+- **Frontend:** the main UI is the Vue 3 + `@dativa-lv/lx-ui` SPA in `portal/`, served
+  under `/app/` and installable as a PWA (approved; it is where new features go). The older
+  server-rendered `templ` + `htmx` UI is still served but is feature-frozen (no clients,
+  statistics, trip series or payment status); whether to retire it is an open decision.
 - **Package manager: npm** (root and `portal/`), with committed `package-lock.json` and
   `npm ci` in Docker/CI. This is a deliberate exception to the `lx-ui-frontend` skill's
   "bun for new projects" rule — do not switch to bun or pnpm.
@@ -98,7 +100,8 @@ Minimum before merge:
 - Run: `docker compose up --build`
 - Migrate: `migrate -path db/migrations -database "$DATABASE_URL" up`
 - Generate queries: `sqlc generate`
-- Test: `go test ./...`
+- Test: `make test` (unit + DB-backed integration, needs Docker). `go test ./...` alone
+  SKIPS the integration tests when `TEST_DATABASE_URL` is unset; set `REQUIRE_DB_TESTS=1` to make that a failure.
 - E2E (stack running): `bash scripts/verify-e2e.sh` — also runs in CI
 - Vuln scan: `govulncheck ./...`
 

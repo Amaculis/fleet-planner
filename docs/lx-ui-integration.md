@@ -1,5 +1,10 @@
 # lx-ui integration
 
+> **Status:** this file describes the *islands* integration inside the server-rendered
+> UI. The main UI is now the full lx-ui single-page app in `portal/` (served at `/app/`),
+> which supersedes the "SPA is a different architecture" reasoning below. The islands UI
+> is feature-frozen and kept only until it is formally retired.
+
 The app's frontend is server-rendered `templ` + `htmx` (see `CLAUDE.md`, `stack-conventions`
 skill). This is the deliberate exception: a set of individual UI controls —
 [`@dativa-lv/lx-ui`](https://github.com/dativa-lv/lx-ui) components — mounted as isolated
@@ -136,7 +141,7 @@ one of those requests 404'd. This logic is compiled into the dependency — noth
 this project's own Vite config affects it. Fixed two ways, since it wasn't possible to
 verify from source alone which one lx-ui's runtime actually honours: `createLx()`'s
 `publicUrl` option is set (their documented field for exactly this), **and**
-`internal/http/server.go` mirrors the same embedded static tree at root-level `/js/*`,
+`internal/httpapi/server.go` mirrors the same embedded static tree at root-level `/js/*`,
 `/css/*`, `/lx-fonts/*` routes (see the comment there) — whichever mechanism is real,
 the files exist where the compiled code looks for them either way.
 
