@@ -16,8 +16,8 @@ import (
 // token, who is signed in, and the display time zone. Templates take it as their first
 // argument instead of a growing parameter list.
 //
-// These types live in the templates package (not internal/http) because templ-generated
-// code is imported by internal/http — the dependency only points one way.
+// These types live in the templates package (not internal/httpapi) because templ-generated
+// code is imported by internal/httpapi — the dependency only points one way.
 type View struct {
 	P        *i18n.Printer
 	Nonce    string

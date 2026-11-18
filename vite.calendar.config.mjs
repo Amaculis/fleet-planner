@@ -13,7 +13,7 @@ export default defineConfig({
   // Vite computes every asset URL — including lazily `import()`-ed chunk URLs at
   // runtime, not just <link>/<script> tags in the HTML it would generate — relative to
   // `base`, which defaults to "/". Since these files are actually served under
-  // /static/ (see internal/http/server.go's staticHandler, and outDir below), leaving
+  // /static/ (see internal/httpapi/server.go's staticHandler, and outDir below), leaving
   // this unset meant every one of lx-ui's ~1,700 lazy chunks resolved to
   // /js/calendar-assets/... instead of /static/js/calendar-assets/... — a 404 for
   // every single one, the moment any of them was actually needed (e.g. opening the
