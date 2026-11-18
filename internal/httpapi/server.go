@@ -1,4 +1,4 @@
-package http
+package httpapi
 
 import (
 	"context"
@@ -148,15 +148,10 @@ func (s *Server) Routes() http.Handler {
 	r.Get("/sw.js", s.handleServiceWorker)
 
 	r.Group(func(r chi.Router) {
-		// Static asset serving (above) is deliberately outside this limiter — found
-		// via the e2e suite's own first parallel run: a handful of concurrent page
-		// loads (lx-ui's cold-load chunk waterfall, see docs/lx-ui-integration.md)
-		// blew straight through even the 600-burst raised earlier this session,
-		// because that earlier fix only sized for one page load, not several at
-		// once. Flood protection belongs on dynamic, session-bearing, stateful
-		// endpoints — the ones below — not on serving a cacheable static file,
-		// which costs the server nothing extra to hand out in volume and which
-		// nothing here treats as sensitive.
+		// Static assets (above) are deliberately outside this limiter: lx-ui's cold
+		// load fetches a hundred-odd small chunks, and several concurrent page loads
+		// would exhaust any sane per-IP budget. Flood protection belongs on the dynamic,
+		// session-bearing endpoints below, not on cacheable static files.
 		r.Use(s.rateLimit(s.globalLimiter))
 		r.Use(s.LoadSession)
 		r.Use(s.CSRF)
@@ -189,96 +184,20 @@ func (s *Server) Routes() http.Handler {
 			// because you cannot assign what you cannot see.
 			r.Group(func(r chi.Router) {
 				r.Use(s.RequireRole(domain.RoleAdmin, domain.RoleDispatcher))
-
-				r.Get("/timeline", s.handleTimeline)
-				r.Get("/trips", s.handleTripList)
-				r.Get("/trips/new", s.handleTripNew)
-				r.Post("/trips", s.handleTripCreate)
-				r.Get("/trips/{id}", s.handleTripDetail)
-				r.Get("/trips/{id}/edit", s.handleTripEdit)
-				r.Post("/trips/{id}", s.handleTripUpdate)
-				r.Post("/trips/{id}/status", s.handleTripStatus)
-				r.Post("/trips/{id}/delete", s.handleTripDelete)
-				r.Post("/trips/{id}/assign", s.handleTripAssign)
-				r.Post("/trips/{id}/unassign", s.handleTripUnassign)
-
-				r.Get("/buses", s.handleBusList)
-				r.Get("/drivers", s.handleDriverList)
-
-				// JSON mirror of the group above, for the SPA (portal/).
-				r.Get("/api/trips", s.handleAPITripList)
-				r.Post("/api/trips", s.handleAPITripCreate)
-				r.Post("/api/trip-series", s.handleAPITripSeriesCreate)
-				r.Get("/api/trips/{id}", s.handleAPITripGet)
-				r.Put("/api/trips/{id}", s.handleAPITripUpdate)
-				r.Delete("/api/trips/{id}", s.handleAPITripDelete)
-				r.Post("/api/trips/{id}/status", s.handleAPITripStatus)
-				r.Post("/api/trips/{id}/assign", s.handleAPITripAssign)
-				r.Post("/api/trips/{id}/unassign", s.handleAPITripUnassign)
-				r.Get("/api/buses", s.handleAPIBusList)
-				r.Get("/api/drivers", s.handleAPIDriverList)
-				r.Get("/api/clients", s.handleAPIClientList)
-				r.Get("/api/clients/{id}", s.handleAPIClientGet)
-				r.Post("/api/clients", s.handleAPIClientCreate)
-				r.Put("/api/clients/{id}", s.handleAPIClientUpdate)
+				s.mountPlannerRoutes(r)
 			})
 
 			// Fleet and user management: admins only.
 			r.Group(func(r chi.Router) {
 				r.Use(s.RequireRole(domain.RoleAdmin))
-
-				r.Get("/buses/new", s.handleBusNew)
-				r.Post("/buses", s.handleBusCreate)
-				r.Get("/buses/{id}/edit", s.handleBusEdit)
-				r.Post("/buses/{id}", s.handleBusUpdate)
-				r.Post("/buses/{id}/delete", s.handleBusDelete)
-
-				r.Get("/drivers/new", s.handleDriverNew)
-				r.Post("/drivers", s.handleDriverCreate)
-				r.Get("/drivers/{id}/edit", s.handleDriverEdit)
-				r.Post("/drivers/{id}", s.handleDriverUpdate)
-				r.Post("/drivers/{id}/anonymize", s.handleDriverAnonymize)
-
-				r.Get("/users", s.handleUserList)
-				r.Get("/users/new", s.handleUserNew)
-				r.Post("/users", s.handleUserCreate)
-				r.Post("/users/{id}/activate", s.handleUserActivate)
-				r.Post("/users/{id}/deactivate", s.handleUserDeactivate)
-				r.Get("/users/{id}/password", s.handleUserPasswordForm)
-				r.Post("/users/{id}/password", s.handleUserPasswordSet)
-
-				// JSON mirror of the group above, for the SPA (portal/).
-				r.Get("/api/buses/{id}", s.handleAPIBusGet)
-				r.Post("/api/buses", s.handleAPIBusCreate)
-				r.Put("/api/buses/{id}", s.handleAPIBusUpdate)
-				r.Delete("/api/buses/{id}", s.handleAPIBusDelete)
-
-				r.Get("/api/drivers/{id}", s.handleAPIDriverGet)
-				r.Post("/api/drivers", s.handleAPIDriverCreate)
-				r.Put("/api/drivers/{id}", s.handleAPIDriverUpdate)
-				r.Post("/api/drivers/{id}/anonymize", s.handleAPIDriverAnonymize)
-				r.Post("/api/clients/{id}/anonymize", s.handleAPIClientAnonymize)
-
-				r.Get("/api/users", s.handleAPIUserList)
-				r.Post("/api/users", s.handleAPIUserCreate)
-				r.Post("/api/users/{id}/activate", s.handleAPIUserActivate)
-				r.Post("/api/users/{id}/deactivate", s.handleAPIUserDeactivate)
-				r.Post("/api/users/{id}/password", s.handleAPIUserSetPassword)
+				s.mountAdminRoutes(r)
 			})
 
 			// The driver's own trips. No route here takes a driver id: ownership comes
 			// from the session and is re-checked inside the SQL statement.
 			r.Group(func(r chi.Router) {
 				r.Use(s.RequireRole(domain.RoleDriver))
-
-				r.Get("/my/trips", s.handleMyTrips)
-				r.Post("/my/trips/{id}/start", s.handleMyTripStart)
-				r.Post("/my/trips/{id}/finish", s.handleMyTripFinish)
-
-				// JSON mirror of the group above, for the SPA (portal/).
-				r.Get("/api/my/trips", s.handleAPIMyTrips)
-				r.Post("/api/my/trips/{id}/start", s.handleAPIMyTripStart)
-				r.Post("/api/my/trips/{id}/finish", s.handleAPIMyTripFinish)
+				s.mountDriverRoutes(r)
 			})
 		})
 	})
@@ -290,6 +209,96 @@ func (s *Server) Routes() http.Handler {
 		s.renderError(w, r, http.StatusMethodNotAllowed, "error.not_found")
 	})
 	return r
+}
+
+// mountPlannerRoutes registers the planning routes (admin + dispatcher): trips, and read-only fleet
+// access, because you cannot assign what you cannot see. Includes the JSON mirror for the SPA (portal/).
+func (s *Server) mountPlannerRoutes(r chi.Router) {
+	r.Get("/timeline", s.handleTimeline)
+	r.Get("/trips", s.handleTripList)
+	r.Get("/trips/new", s.handleTripNew)
+	r.Post("/trips", s.handleTripCreate)
+	r.Get("/trips/{id}", s.handleTripDetail)
+	r.Get("/trips/{id}/edit", s.handleTripEdit)
+	r.Post("/trips/{id}", s.handleTripUpdate)
+	r.Post("/trips/{id}/status", s.handleTripStatus)
+	r.Post("/trips/{id}/delete", s.handleTripDelete)
+	r.Post("/trips/{id}/assign", s.handleTripAssign)
+	r.Post("/trips/{id}/unassign", s.handleTripUnassign)
+
+	r.Get("/buses", s.handleBusList)
+	r.Get("/drivers", s.handleDriverList)
+
+	// JSON mirror of the group above, for the SPA (portal/).
+	r.Get("/api/trips", s.handleAPITripList)
+	r.Post("/api/trips", s.handleAPITripCreate)
+	r.Post("/api/trip-series", s.handleAPITripSeriesCreate)
+	r.Get("/api/trips/{id}", s.handleAPITripGet)
+	r.Put("/api/trips/{id}", s.handleAPITripUpdate)
+	r.Delete("/api/trips/{id}", s.handleAPITripDelete)
+	r.Post("/api/trips/{id}/status", s.handleAPITripStatus)
+	r.Post("/api/trips/{id}/assign", s.handleAPITripAssign)
+	r.Post("/api/trips/{id}/unassign", s.handleAPITripUnassign)
+	r.Get("/api/buses", s.handleAPIBusList)
+	r.Get("/api/drivers", s.handleAPIDriverList)
+	r.Get("/api/clients", s.handleAPIClientList)
+	r.Get("/api/clients/{id}", s.handleAPIClientGet)
+	r.Post("/api/clients", s.handleAPIClientCreate)
+	r.Put("/api/clients/{id}", s.handleAPIClientUpdate)
+}
+
+// mountAdminRoutes registers fleet and user management (admin only), with the JSON mirror for the SPA (portal/).
+func (s *Server) mountAdminRoutes(r chi.Router) {
+	r.Get("/buses/new", s.handleBusNew)
+	r.Post("/buses", s.handleBusCreate)
+	r.Get("/buses/{id}/edit", s.handleBusEdit)
+	r.Post("/buses/{id}", s.handleBusUpdate)
+	r.Post("/buses/{id}/delete", s.handleBusDelete)
+
+	r.Get("/drivers/new", s.handleDriverNew)
+	r.Post("/drivers", s.handleDriverCreate)
+	r.Get("/drivers/{id}/edit", s.handleDriverEdit)
+	r.Post("/drivers/{id}", s.handleDriverUpdate)
+	r.Post("/drivers/{id}/anonymize", s.handleDriverAnonymize)
+
+	r.Get("/users", s.handleUserList)
+	r.Get("/users/new", s.handleUserNew)
+	r.Post("/users", s.handleUserCreate)
+	r.Post("/users/{id}/activate", s.handleUserActivate)
+	r.Post("/users/{id}/deactivate", s.handleUserDeactivate)
+	r.Get("/users/{id}/password", s.handleUserPasswordForm)
+	r.Post("/users/{id}/password", s.handleUserPasswordSet)
+
+	// JSON mirror of the group above, for the SPA (portal/).
+	r.Get("/api/buses/{id}", s.handleAPIBusGet)
+	r.Post("/api/buses", s.handleAPIBusCreate)
+	r.Put("/api/buses/{id}", s.handleAPIBusUpdate)
+	r.Delete("/api/buses/{id}", s.handleAPIBusDelete)
+
+	r.Get("/api/drivers/{id}", s.handleAPIDriverGet)
+	r.Post("/api/drivers", s.handleAPIDriverCreate)
+	r.Put("/api/drivers/{id}", s.handleAPIDriverUpdate)
+	r.Post("/api/drivers/{id}/anonymize", s.handleAPIDriverAnonymize)
+	r.Post("/api/clients/{id}/anonymize", s.handleAPIClientAnonymize)
+
+	r.Get("/api/users", s.handleAPIUserList)
+	r.Post("/api/users", s.handleAPIUserCreate)
+	r.Post("/api/users/{id}/activate", s.handleAPIUserActivate)
+	r.Post("/api/users/{id}/deactivate", s.handleAPIUserDeactivate)
+	r.Post("/api/users/{id}/password", s.handleAPIUserSetPassword)
+}
+
+// mountDriverRoutes registers the driver's own trips. No route takes a driver id: ownership comes from the
+// session and is re-checked inside the SQL statement.
+func (s *Server) mountDriverRoutes(r chi.Router) {
+	r.Get("/my/trips", s.handleMyTrips)
+	r.Post("/my/trips/{id}/start", s.handleMyTripStart)
+	r.Post("/my/trips/{id}/finish", s.handleMyTripFinish)
+
+	// JSON mirror of the group above, for the SPA (portal/).
+	r.Get("/api/my/trips", s.handleAPIMyTrips)
+	r.Post("/api/my/trips/{id}/start", s.handleAPIMyTripStart)
+	r.Post("/api/my/trips/{id}/finish", s.handleAPIMyTripFinish)
 }
 
 func (s *Server) staticHandler() http.Handler {

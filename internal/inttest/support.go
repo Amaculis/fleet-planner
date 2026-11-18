@@ -21,7 +21,7 @@ import (
 	"github.com/buscompany/bus_fleet/internal/auth"
 	"github.com/buscompany/bus_fleet/internal/config"
 	"github.com/buscompany/bus_fleet/internal/domain"
-	apphttp "github.com/buscompany/bus_fleet/internal/http"
+	"github.com/buscompany/bus_fleet/internal/httpapi"
 	"github.com/buscompany/bus_fleet/internal/i18n"
 	"github.com/buscompany/bus_fleet/internal/repo"
 	"github.com/buscompany/bus_fleet/internal/service"
@@ -39,7 +39,7 @@ type env struct {
 	clients     *service.ClientService
 	assignments *service.AssignmentService
 	users       *service.UserService
-	server      *apphttp.Server
+	server      *httpapi.Server
 	cfg         config.Config
 	logs        *lockedBuffer
 }
@@ -76,6 +76,11 @@ func newEnv(t *testing.T) *env {
 
 	dsn := os.Getenv("TEST_DATABASE_URL")
 	if dsn == "" {
+		// CI and scripts/verify-tests.sh set REQUIRE_DB_TESTS so a missing database is
+		// a failure there, not a silent skip that reports the suite as green.
+		if os.Getenv("REQUIRE_DB_TESTS") != "" {
+			t.Fatal("TEST_DATABASE_URL is not set but REQUIRE_DB_TESTS is")
+		}
 		t.Skip("TEST_DATABASE_URL is not set; run scripts/verify-tests.sh")
 	}
 
@@ -135,7 +140,7 @@ func newEnv(t *testing.T) *env {
 		cfg:         cfg,
 		logs:        logs,
 	}
-	e.server = apphttp.NewServer(cfg, log, apphttp.Services{
+	e.server = httpapi.NewServer(cfg, log, httpapi.Services{
 		Auth:        service.NewAuthService(r, sessions, auditor, log, testHashParams(), dummyHash),
 		Fleet:       e.fleet,
 		Trips:       e.trips,

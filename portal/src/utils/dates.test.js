@@ -123,7 +123,7 @@ describe("parseServerTimestamp", () => {
   });
 
   it("does not apply any timezone conversion — the wall-clock numbers pass straight through", () => {
-    // Regression guard for the original Timeline bug this session found: treating
+    // Regression guard for a Timeline bug: treating
     // "T" as UTC or converting it would shift the hour depending on the machine's
     // local timezone offset, silently breaking every block's horizontal position.
     const date = parseServerTimestamp("2026-09-24T23:45");

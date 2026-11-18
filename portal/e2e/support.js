@@ -1,11 +1,8 @@
 // Shared helpers for the e2e suite.
 //
-// trackConsoleErrors(page) is the one mechanism behind almost every assertion here:
-// every bug found in this app's SPA this session (missing CSS modules didn't error,
-// but the CSP eval violation, the CSP inline-style violations, and the invalid
-// dynamic icon imports all did) showed up as a console error in a real browser.
-// Collecting those and asserting the list is empty is what actually would have
-// caught them automatically, instead of needing a human to paste console output.
+// trackConsoleErrors(page) backs most assertions: CSP violations, invalid icon imports
+// and failed module loads all surface as console errors in a real browser, so asserting
+// that the list stays empty catches them without a human reading the console.
 export function trackConsoleErrors(page) {
   const errors = [];
   page.on("console", (msg) => {

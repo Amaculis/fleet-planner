@@ -1,6 +1,6 @@
 // Package http contains handlers and middleware only: HTTP parsing, authorization
 // wiring and rendering. Business logic lives in internal/service.
-package http
+package httpapi
 
 import (
 	"context"

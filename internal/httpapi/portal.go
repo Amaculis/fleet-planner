@@ -1,4 +1,4 @@
-package http
+package httpapi
 
 import (
 	"net/http"
@@ -29,9 +29,7 @@ func (s *Server) portalHandler() http.Handler {
 		// though it's a real file that "/" resolves to (rel defaults to it above) —
 		// it's the one file whose content legitimately changes between deploys at a
 		// fixed URL (unlike the content-hashed assets it references), and a stale
-		// cached copy keeps referencing yesterday's JS/CSS hashes. Confirmed live: a
-		// plain visit to /app/ was caching index.html for an hour, silently masking a
-		// just-deployed CSS fix behind the previous build until the cache expired.
+		// cached copy keeps referencing yesterday's JS/CSS hashes.
 		if rel != "index.html" {
 			if f, err := dir.Open("/" + rel); err == nil {
 				_ = f.Close() // only opened to test existence
