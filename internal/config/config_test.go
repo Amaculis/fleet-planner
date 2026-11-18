@@ -13,7 +13,7 @@ func validEnv() map[string]string {
 		"APP_ENV":      "production",
 		"APP_BASE_URL": "https://fleet.example.lv",
 		"DATABASE_URL": "postgres://fleet_app:pw@db:5432/fleet",
-		"APP_SECRET":   strings.Repeat("ab", 32), // 32 bytes, hex
+		"APP_SECRET":   "3f9a1c7e5b2d8046a1f3c9e7d5b20846fa31c97e5d2b8064a9f1c3e7b5d20948", // 32 random bytes, hex
 	}
 }
 
@@ -61,6 +61,8 @@ func TestLoadRejectsBadConfig(t *testing.T) {
 		{name: "relative base url", mutate: func(e map[string]string) { e["APP_BASE_URL"] = "/fleet" }, wantMsg: "APP_BASE_URL"},
 		{name: "missing app secret", mutate: func(e map[string]string) { delete(e, "APP_SECRET") }, wantMsg: "APP_SECRET"},
 		{name: "short app secret", mutate: func(e map[string]string) { e["APP_SECRET"] = "abcd" }, wantMsg: "APP_SECRET"},
+		{name: "all-zero placeholder secret", mutate: func(e map[string]string) { e["APP_SECRET"] = strings.Repeat("00", 32) }, wantMsg: "placeholder"},
+		{name: "repeating-pattern secret", mutate: func(e map[string]string) { e["APP_SECRET"] = strings.Repeat("ab", 32) }, wantMsg: "placeholder"},
 		{name: "non-hex app secret", mutate: func(e map[string]string) { e["APP_SECRET"] = strings.Repeat("zz", 32) }, wantMsg: "APP_SECRET"},
 		{name: "unknown environment", mutate: func(e map[string]string) { e["APP_ENV"] = "staging" }, wantMsg: "APP_ENV"},
 		{name: "bad duration", mutate: func(e map[string]string) { e["SESSION_IDLE_TIMEOUT"] = "soon" }, wantMsg: "SESSION_IDLE_TIMEOUT"},
