@@ -66,6 +66,7 @@ done
 echo "==> go test ./..."
 docker run --rm --network "$NET" \
   -v "$(hostpath "$ROOT"):/src" -v bus-fleet-gomod:/go/pkg/mod -w /src \
+  -e REQUIRE_DB_TESTS=1 \
   -e TEST_DATABASE_URL="postgres://fleet_owner:$OWNER_PW@$PG:5432/fleet?sslmode=disable" \
   "$GOIMAGE" go test ./... "$@"
 
