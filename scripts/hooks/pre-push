@@ -12,7 +12,7 @@ ROOT="$(git rev-parse --show-toplevel)"
 cd "$ROOT"
 export MSYS_NO_PATHCONV=1
 
-GOVULNCHECK_VERSION="v1.9.0"
+GOVULNCHECK_VERSION="v1.10.0"
 
 fail() {
   echo "pre-push: $*" >&2

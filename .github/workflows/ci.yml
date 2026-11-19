@@ -20,7 +20,7 @@ concurrency:
 env:
   # Keep in step with scripts/hooks/pre-commit and scripts/hooks/pre-push.
   GOSEC_VERSION: v2.30.0
-  GOVULNCHECK_VERSION: v1.9.0
+  GOVULNCHECK_VERSION: v1.10.0
 
 jobs:
   go-lint:

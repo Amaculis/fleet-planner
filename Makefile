@@ -3,7 +3,7 @@
 # Pinned tool versions. Go 1.26+ is required: the module graph (x/text, x/crypto,
 # x/time) needs it.
 SQLC_IMAGE  ?= sqlc/sqlc:1.28.0
-VULN_VER    ?= v1.9.0 # keep in step with .github/workflows/ci.yml
+VULN_VER    ?= v1.10.0 # keep in step with .github/workflows/ci.yml
 
 # Code generation. sqlc runs from its official image: `go run sqlc` uses a wasm build of
 # the Postgres parser that crashes ("out of bounds memory access") in this environment.
