@@ -11,7 +11,7 @@
 # --- portal: the lx-ui Vue SPA (see docs/lx-ui-integration.md) ----------------------
 # Its output is NOT go:embed'd into the binary (see config.PortalDir): it is copied
 # straight into the runtime image below and served from disk.
-FROM node:26-alpine@sha256:8996bb5821d62a8fd9bb27c1cb07462f3fdce6e47d640c6a881ead0b064ce216 AS portal
+FROM node:26-alpine@sha256:6bd9ab43c0ec0190ca7b2d193906cb8b7edf6e7f4afa43ddeccd6452710bffb5 AS portal
 WORKDIR /src/portal
 COPY portal/package.json portal/package-lock.json ./
 # npm ci installs exactly what the lockfile says and fails if it disagrees with
