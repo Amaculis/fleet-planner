@@ -39,6 +39,7 @@ import "@dativa-lv/lx-ui/dist/styles/lx-forms-grid.css";
 import "@dativa-lv/lx-ui/dist/styles/lx-notifications.css"; // LxShell's alert/toast panel
 import "@dativa-lv/lx-ui/dist/styles/lx-loaders.css"; // LxLoaderView
 import "@dativa-lv/lx-ui/dist/styles/lx-data-grid.css"; // LxDataGrid
+import "@dativa-lv/lx-ui/dist/styles/lx-toolbars.css"; // LxDataGrid toolbar (search + actions row)
 import "@dativa-lv/lx-ui/dist/styles/lx-value-pickers.css"; // LxValuePicker
 import "@dativa-lv/lx-ui/dist/styles/lx-date-pickers.css"; // LxDateTimePicker
 import "@dativa-lv/lx-ui/dist/styles/lx-toggles.css"; // LxToggle
@@ -56,6 +57,7 @@ import "@dativa-lv/lx-ui/dist/styles/lx-popovers.css"; // LxValuePicker's dropdo
 // in lx-value-pickers.css — without it the panel renders unstyled/unsized ("big logo" bug).
 import "@dativa-lv/lx-ui/dist/styles/lx-data-visualizer.css"; // LxDataVisualizer (Statistics)
 import "@dativa-lv/lx-ui/dist/styles/lx-modals.css"; // LxModalForm (user password reset)
+import "@/assets/styles.css"; // the few overrides lx-ui needs
 
 import App from "@/App.vue";
 import router from "@/router";

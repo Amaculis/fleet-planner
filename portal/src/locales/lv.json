@@ -44,6 +44,7 @@
     "myTrips": { "title": "Mani reisi" }
   },
   "login": {
+    "subtitle": "Reisu, autobusu un vadītāju plānošana",
     "title": "Pieteikties",
     "email": "E-pasts",
     "password": "Parole",

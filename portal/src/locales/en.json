@@ -44,6 +44,7 @@
     "myTrips": { "title": "My trips" }
   },
   "login": {
+    "subtitle": "Plan trips, buses and drivers",
     "title": "Sign in",
     "email": "Email",
     "password": "Password",

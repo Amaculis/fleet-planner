@@ -1,0 +1,5 @@
+/* lx-ui pins the header avatar to the top of the user button (align-self: flex-start),
+   which puts it above the vertical centre of the two-line name next to it. */
+.lx-user-button > .lx-avatar-display {
+  align-self: center;
+}

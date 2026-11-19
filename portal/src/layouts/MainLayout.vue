@@ -82,22 +82,17 @@ const pageLabel = computed(() => {
   return route.meta?.title ? i18n.t(route.meta.title) : "";
 });
 
-// LxShell's default (has-avatar unset) is a bare placeholder icon — no photo field
-// exists on LxAvatar at all (checked its props directly): it only ever generates a
-// deterministic color + icon or initials from a name, never displays an uploaded
-// image. This app stores no first/last name for non-driver accounts (users only have
-// an email — data minimisation, see CLAUDE.md's GDPR baseline), and LxShell's avatar
-// needs both userInfo.firstName and userInfo.lastName truthy or it silently falls
-// back to no initials at all (checked HeaderButtons' source) — so those two fields
-// are synthesized from data the account actually has, not fabricated.
+// The shell shows "<firstName> <lastName>" next to the avatar and only renders it when
+// both are truthy. Accounts have no real name (users only have an email — data
+// minimisation, see CLAUDE.md's GDPR baseline), so the role is the display name and the
+// last name is a zero-width space that satisfies the check without printing anything.
+// The email goes in the description line below the name.
 const userInfo = computed(() => {
   if (!authStore.isAuthorized) return null;
-  const email = authStore.session.email;
-  const localPart = email.split("@")[0] || email;
   return {
-    description: email,
-    firstName: localPart.charAt(0).toUpperCase() + localPart.slice(1),
-    lastName: i18n.t(`roles.${authStore.session.role}`),
+    description: authStore.session.email,
+    firstName: i18n.t(`roles.${authStore.session.role}`),
+    lastName: "​",
   };
 });
 
